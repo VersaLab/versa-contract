@@ -1,0 +1,6 @@
+[submodule "@safe-contracts"]
+	path = @safe-contracts
+	url = https://github.com/safe-global/safe-contracts
+[submodule "@aa-template"]
+	path = @aa-template
+	url = https://github.com/eth-infinitism/account-abstraction.git

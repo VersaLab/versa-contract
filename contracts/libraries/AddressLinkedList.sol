@@ -43,8 +43,7 @@ library AddressLinkedList {
     function remove(mapping(address => address) storage self, address prevAddr, address addr) internal {
         require(isExist(self, addr), "Adddress not exists");
         require(self[prevAddr] == addr, "Invalid prev address");
-        address next = self[addr];
-        self[prevAddr] = next;
+        self[prevAddr] = self[addr];
         self[addr] = address(0);
     }
 
@@ -77,7 +76,8 @@ library AddressLinkedList {
     }
 
     function isEmpty(mapping(address => address) storage self) internal view returns (bool) {
-        return self[SENTINEL_ADDRESS] == address(0);
+        return
+            self[SENTINEL_ADDRESS] == address(0) || self[SENTINEL_ADDRESS] == SENTINEL_ADDRESS;
     }
 
     /**

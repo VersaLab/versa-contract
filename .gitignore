@@ -9,5 +9,3 @@ artifacts
 package-lock.json
 .DS_Store
 typechain-types
-
-yarn.lock

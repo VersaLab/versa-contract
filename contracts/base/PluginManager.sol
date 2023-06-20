@@ -3,22 +3,28 @@ pragma solidity ^0.8.17;
 
 import "../common/Enum.sol";
 import "../common/Executor.sol";
-import "../base/HookManager.sol";
+import "../base/HooksManager.sol";
 import "../base/ModuleManager.sol";
 import "../base/ValidatorManager.sol";
 
-abstract contract PluginManager is Executor, HookManager, ModuleManager, ValidatorManager {
+/**
+ * @title PluginManager
+ * @notice A contract managing plugins(Hooks, Module, Validator) and their execution within a system.
+ * @dev The `PluginManager` contract provides a mechanism for executing transactions from plugins
+ * and checking if a plugin is enabled before execution.
+ */
+abstract contract PluginManager is Executor, HooksManager, ModuleManager, ValidatorManager {
     event ExecutionFromPluginSuccess(address indexed plugin);
     event ExecutionFromPluginFailure(address indexed plugin);
 
     /**
-     * @notice Execute `operation` (0: Call, 1: DelegateCall) to `to` with `value` (Native Token)
-     * @dev Function is virtual to allow overriding for L2 singleton to emit an event for indexing.
-     * @notice Subclass must override _checkPluginEnabled to make sure plugin is enabled.
-     * @param to Destination address of module transaction.
-     * @param value Ether value of module transaction.
-     * @param data Data payload of module transaction.
-     * @param operation Operation type of module transaction.
+     * @notice Execute `operation` (0: Call, 1: DelegateCall) to `to` with `value` (Native Token).
+     * @dev This function is marked as virtual to allow overriding for L2 singleton to emit an event for indexing.
+     * @notice Subclasses must override `_isPluginEnabled` to ensure the plugin is enabled.
+     * @param to Destination address of the module transaction.
+     * @param value Ether value of the module transaction.
+     * @param data Data payload of the module transaction.
+     * @param operation Operation type of the module transaction.
      * @return success Boolean flag indicating if the call succeeded.
      */
     function execTransactionFromPlugin(
@@ -35,11 +41,11 @@ abstract contract PluginManager is Executor, HookManager, ModuleManager, Validat
     }
 
     /**
-     * @notice Execute `operation` (0: Call, 1: DelegateCall) to `to` with `value` (Native Token) and return data
-     * @param to Destination address of module transaction.
-     * @param value Ether value of module transaction.
-     * @param data Data payload of module transaction.
-     * @param operation Operation type of module transaction.
+     * @notice Execute `operation` (0: Call, 1: DelegateCall) to `to` with `value` (Native Token) and return data.
+     * @param to Destination address of the module transaction.
+     * @param value Ether value of the module transaction.
+     * @param data Data payload of the module transaction.
+     * @param operation Operation type of the module transaction.
      * @return success Boolean flag indicating if the call succeeded.
      * @return returnData Data returned by the call.
      */
@@ -53,6 +59,11 @@ abstract contract PluginManager is Executor, HookManager, ModuleManager, Validat
         returnData = getReturnData(type(uint256).max);
     }
 
+    /**
+     * @notice Internal function to check if a plugin is enabled.
+     * @param plugin The address of the plugin to check.
+     * @return True if the plugin is enabled.
+     */
     function _isPluginEnabled(address plugin) internal virtual view returns(bool) {
         return
             isModuleEnabled(plugin) || isHooksEnabled(plugin) || isValidatorEnabled(plugin);

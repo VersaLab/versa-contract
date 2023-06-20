@@ -7,7 +7,14 @@ import "../common/Executor.sol";
 import "../libraries/AddressLinkedList.sol";
 import "../interfaces/IHooks.sol";
 
-abstract contract HookManager is SelfAuthorized, Executor {
+/**
+ * @title HooksManager
+ * @dev A contract managing hooks for transaction execution in a Versa wallet.
+ * @notice Hooks are wallet extensions that can be executed before and after each transaction in a Versa wallet.
+ * Hooks provide additional functionality and customization options for transaction processing.
+ * It is important to only enable trusted and audited hooks to prevent potential security risks.
+ */
+abstract contract HooksManager is SelfAuthorized, Executor {
     using AddressLinkedList for mapping(address => address);
 
     event EnabledHooks(address indexed hooks);
@@ -17,21 +24,35 @@ abstract contract HookManager is SelfAuthorized, Executor {
     mapping(address => address) internal beforeTxHooks;
     mapping(address => address) internal afterTxHooks;
 
-    ///@dev If the `Hooks` has before transaction hook or after transaction hook,
-    ///        add the needed hooks to linked list
-    function enbaleHooks(address hooks, bytes calldata initData) public authorized {
+    /**
+     * @dev Enable hooks for a versa wallet.
+     * @param hooks The address of the `hooks` contract.
+     * @param initData Initialization data for the `hooks` contract.
+     */
+    function enableHooks(address hooks, bytes calldata initData) public authorized {
         _enableHooks(hooks, initData);
     }
 
-    ///@dev If the `Hooks` has before transaction hook or after transaction hook,
-    ///        remove the existing hooks from linked list
-    function disableHooks(address prevBeforeTxHooks, address prevAfterTxHooks, address hooks) public authorized {
+    /**
+     * @dev Disable `hooks` for a versa wallet.
+     * @param prevBeforeTxHooks The address of the previous preTxHook in the linked list, will
+     * be unused if the `hooks` contract doesn't have a preTxHook.
+     * @param prevAfterTxHooks The address of the previous afterTxHook in the linked list.will
+     * be unused if the `hooks` contract doesn't have a afterTxHook.
+     * @param hooks The address of the `hooks` contract to be disabled.
+     */
+    function disableHooks(
+        address prevBeforeTxHooks,
+        address prevAfterTxHooks,
+        address hooks
+    ) public authorized {
         _disableHooks(prevBeforeTxHooks, prevAfterTxHooks, hooks);
     }
 
     /**
-     * @notice Returns if an module is enabled
-     * @return enabled True if the module is enabled
+     * @dev Check if hooks are enabled for a versa wallet.
+     * @param hooks The address of the hooks contract.
+     * @return enabled True if hooks are enabled for the contract.
      */
     function isHooksEnabled(address hooks) public view returns (bool) {
         uint256 hasHooks = IHooks(hooks).hasHooks();
@@ -46,30 +67,35 @@ abstract contract HookManager is SelfAuthorized, Executor {
     }
 
     /**
-     * @notice Returns an array of pre tx hooks.
-     * @param start Start of the page. Has to be a hooks or start pointer (0x1 address)
-     * @param pageSize Maximum number of hooks that should be returned. Has to be > 0
-     * @return array Array of hooks.
+     * @dev Get a paginated array of before transaction hooks.
+     * @param start The start of the page. Must be a hooks or start pointer (0x1 address).
+     * @param pageSize The maximum number of hooks to be returned. Must be > 0.
+     * @return array An array of hooks.
      */
     function getPreHooksPaginated(address start, uint256 pageSize) external view returns (address[] memory array) {
         return beforeTxHooks.list(start, pageSize);
     }
 
     /**
-     * @notice Returns an array of post tx hooks.
-     * @param start Start of the page. Has to be a hooks or start pointer (0x1 address)
-     * @param pageSize Maximum number of hooks that should be returned. Has to be > 0
-     * @return array Array of hooks.
+     * @dev Get a paginated array of after transaction hooks.
+     * @param start The start of the page. Must be a hooks or start pointer (0x1 address).
+     * @param pageSize The maximum number of hooks to be returned. Must be > 0.
+     * @return array An array of hooks.
      */
     function getPostHooksPaginated(address start, uint256 pageSize) external view returns (address[] memory array) {
         return afterTxHooks.list(start, pageSize);
     }
 
+    /**
+     * @dev Internal function to enable hooks for a versa wallet.
+     * @param hooks The address of the hooks contract.
+     * @param initData Initialization data for the hooks contract.
+     */
     function _enableHooks(address hooks, bytes calldata initData) internal {
         // Add hooks to linked list
         require(
             IHooks(hooks).supportsInterface(type(IHooks).interfaceId),
-            "Not a hooks hooks"
+            "Not a valid `hooks`"
         );
         uint256 hasHooks = IHooks(hooks).hasHooks();
         if (hasHooks >> 128 == 1) {
@@ -78,12 +104,19 @@ abstract contract HookManager is SelfAuthorized, Executor {
         if (uint128(hasHooks) == 1) {
             afterTxHooks.add(hooks);
         }
-        // Init wallet configs
+        // Initialize wallet configurations
         IHooks(hooks).initWalletConfig(initData);
         emit EnabledHooks(hooks);
     }
 
+    /**
+     * @dev Internal function to disable hooks for a specific contract.
+     * @param prevBeforeTxHook The previous before transaction hooks contract address in the linked list.
+     * @param prevAfterTxHooks The previous after transaction hooks contract address in the linked list.
+     * @param hooks The address of the hooks contract to be disabled.
+     */
     function _disableHooks(address prevBeforeTxHook, address prevAfterTxHooks, address hooks) internal {
+        // Remove hooks from exsiting linked list
         uint256 hasHooks = IHooks(hooks).hasHooks();
         if (hasHooks >> 128 == 1) {
             beforeTxHooks.remove(prevBeforeTxHook, hooks);
@@ -91,7 +124,7 @@ abstract contract HookManager is SelfAuthorized, Executor {
         if (uint128(hasHooks) == 1) {
             afterTxHooks.remove(prevAfterTxHooks, hooks);
         }
-        // Try clearing wallet configs
+        // Try to clear wallet configurations
         try IHooks(hooks).clearWalletConfig() {
             emit DisabledHooks(hooks);
         } catch {
@@ -99,7 +132,13 @@ abstract contract HookManager is SelfAuthorized, Executor {
         }
     }
 
-    ///@dev Loop the beforeTransactionHooks list and execute all before transaction hooks
+    /**
+     * @dev Loop through the beforeTransactionHooks list and execute all before transaction hooks.
+     * @param to The address of the transaction recipient.
+     * @param value The value of the transaction.
+     * @param data The data of the transaction.
+     * @param operation The type of operation being performed.
+     */
     function _beforeTransaction(
         address to,
         uint256 value,
@@ -116,7 +155,13 @@ abstract contract HookManager is SelfAuthorized, Executor {
         }
     }
 
-    ///@dev Loop the afterTransactionHooks list and execute all after transaction hooks
+    /**
+     * @dev Loop through the afterTransactionHooks list and execute all after transaction hooks.
+     * @param to The address of the transaction recipient.
+     * @param value The value of the transaction.
+     * @param data The data of the transaction.
+     * @param operation The type of operation being performed.
+     */
     function _afterTransaction(
         address to,
         uint256 value,

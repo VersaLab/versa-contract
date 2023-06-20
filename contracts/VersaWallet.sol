@@ -12,7 +12,9 @@ import "./base/EntryPointManager.sol";
 import "./base/PluginManager.sol";
 import "./interfaces/IValidator.sol";
 
-/// @title VersaWallet - A Smart contract wallet supports EIP4337 based on Safe
+/**
+ * @title VersaWallet - A Smart contract wallet that supports EIP4337
+ */
 contract VersaWallet is
     Singleton,
     Initializable,
@@ -21,6 +23,11 @@ contract VersaWallet is
     FallbackManager,
     IAccount
 {
+    /**
+     * @dev The execution type of a transaction.
+     * - Sudo: Transaction executed with full permissions.
+     * - Normal: Regular transaction executed limited access.
+     */
     enum ExecutionType {
         Sudo,
         Normal
@@ -33,13 +40,25 @@ contract VersaWallet is
     // `batchSudoExecute` function selector
     bytes4 internal constant BATCH_SUDO_EXECUTE = 0x7e5f1c3f;
 
-    /// @dev Disable initializers to prevent the implementation contract
-    /// from being used
+    /**
+     * @dev Disable initializers to prevent the implementation contract
+     * from being used
+     */
     constructor(address entryPoint) EntryPointManager(entryPoint) {
         _disableInitializers();
     }
 
-    /// @dev Set up fallbackmanager and initial plugins
+    /**
+     * @dev Initializes the VersaWallet contract.
+     * @param fallbackHandler The address of the fallback handler contract.
+     * @param validators The addresses of the validators.
+     * @param validatorInitData The initialization data for each validator.
+     * @param validatorType The types of the validators.
+     * @param hooks The addresses of the hooks.
+     * @param hooksInitData The initialization data for each hook.
+     * @param modules The addresses of the modules.
+     * @param moduleInitData The initialization data for each module.
+     */
     function initialize(
         address fallbackHandler,
         address[] memory validators,
@@ -74,6 +93,13 @@ contract VersaWallet is
         }
     }
 
+    /**
+     * @dev Validates an user operation before execution.
+     * @param userOp The user operation data.
+     * @param userOpHash The hash of the user operation.
+     * @param missingAccountFunds The amount of missing account funds to be paid.
+     * @return validationData The validation data returned by the validator.
+     */
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash,
@@ -89,6 +115,13 @@ contract VersaWallet is
         _payPrefund(missingAccountFunds);
     }
 
+    /**
+     * @dev Executes a sudo transaction.
+     * @param to The address to which the transaction is directed.
+     * @param value The value of the transaction.
+     * @param data The data of the transaction.
+     * @param operation The operation type of the transaction.
+     */
     function sudoExecute(
         address to,
         uint256 value,
@@ -98,6 +131,13 @@ contract VersaWallet is
         _internalExecute(to, value, data, operation, ExecutionType.Sudo);
     }
 
+    /**
+     * @dev Executes a normal transaction.
+     * @param to The address to which the transaction is directed.
+     * @param value The value of the transaction.
+     * @param data The data of the transaction.
+     * @param operation The operation type of the transaction.
+     */
     function normalExecute(
         address to,
         uint256 value,
@@ -107,6 +147,13 @@ contract VersaWallet is
         _internalExecute(to, value, data, operation, ExecutionType.Normal);
     }
 
+    /**
+     * @dev Executes a batch transaction with sudo privileges.
+     * @param to The addresses to which the transactions are directed.
+     * @param value The values of the transactions.
+     * @param data The data of the transactions.
+     * @param operation The operation types of the transactions.
+     */
     function batchSudoExecute(
         address[] memory to,
         uint256[] memory value,
@@ -119,6 +166,13 @@ contract VersaWallet is
         }
     }
 
+    /**
+     * @dev Executes a batch normal transaction.
+     * @param to The addresses to which the transactions are directed.
+     * @param value The values of the transactions.
+     * @param data The data of the transactions.
+     * @param operation The operation types of the transactions.
+     */
     function batchNormalExecute(
         address[] memory to,
         uint256[] memory value,
@@ -131,6 +185,14 @@ contract VersaWallet is
         }
     }
 
+    /**
+     * @dev Internal function to execute a transaction.
+     * @param to The address to which the transaction is directed.
+     * @param value The value of the transaction.
+     * @param data The data of the transaction.
+     * @param operation The operation type of the transaction.
+     * @param execution The execution type of the transaction.
+     */
     function _internalExecute(
         address to,
         uint256 value,
@@ -149,27 +211,36 @@ contract VersaWallet is
     }
 
     /**
-     * sends to the entrypoint (msg.sender) the missing funds for this transaction.
-     * subclass MAY override this method for better funds management
-     * (e.g. send to the entryPoint more than the minimum required, so that in future transactions
-     * it will not be required to send again)
-     * @param _missingAccountFunds the minimum value this method should send the entrypoint.
-     *  this value MAY be zero, in case there is enough deposit, or the userOp has a paymaster.
+     * @dev Sends the missing funds for this transaction to the entry point (msg.sender).
+     * Subclasses may override this method for better funds management
+     * (e.g., send more than the minimum required to the entry point so that in future transactions
+     * it will not be required to send again).
+     * @param missingAccountFunds The minimum value this method should send to the entry point.
+     * This value may be zero in case there is enough deposit or the userOp has a paymaster.
      */
-    function _payPrefund(uint256 _missingAccountFunds) internal {
-        if (_missingAccountFunds > 0) {
-            //Note: MAY pay more than the minimum, to deposit for future transactions
-            (bool success, ) = payable(entryPoint()).call{value: _missingAccountFunds, gas: type(uint256).max}("");
+    function _payPrefund(uint256 missingAccountFunds) internal {
+        if (missingAccountFunds > 0) {
+            // Note: May pay more than the minimum to deposit for future transactions
+            (bool success, ) = payable(entryPoint()).call{value: missingAccountFunds, gas: type(uint256).max}("");
             (success);
-            //ignore failure (its EntryPoint's job to verify, not account.)
+            // Ignore failure (it's EntryPoint's job to verify, not the account)
         }
     }
 
-    /// @dev Extract the validator address from the first 20 bytes of the signature
+    /**
+     * @dev Extracts the validator address from the first 20 bytes of the signature.
+     * @param signature The signature from which to extract the validator address.
+     * @return The extracted validator address.
+     */
     function _getValidator(bytes calldata signature) internal pure returns(address) {
         return address(bytes20(signature[0:20]));
     }
 
+    /**
+     * @dev Validates the validator and selector for a user operation.
+     * @param _validator The address of the validator to validate.
+     * @param _selector The selector of the user operation.
+     */
     function _validateValidatorAndSelector(address _validator, bytes4 _selector) internal view {
         ValidatorType validatorType = getValidatorType(_validator);
         require(validatorType != ValidatorType.Disabled, "Versa: invalid validator");
@@ -178,10 +249,14 @@ contract VersaWallet is
         }
     }
 
-    /// @dev Normal transactions have following restrictions:
-    ///     1. Cannot selfcall, i.e., change wallet's config
-    ///     2. Cannot call to an enabled plugin, i.e, change plugin's config
-    ///     3. Cannot perform a delegatecall(besides `to` is the MultiSendOnly contract)
+    /**
+     * @dev A normal execution has following restrictions:
+     * 1. Cannot selfcall, i.e., change wallet's config
+     * 2. Cannot call to an enabled plugin, i.e, change plugin's config or call wallet from plugin
+     * 3. Cannot perform a delegatecall
+     * @param to The address to which the transaction is directed.
+     * @param _operation The operation type of the transaction.
+     */
     function _checkNormalExecute(address to, Enum.Operation _operation) internal view {
         require(
             to != address(this) &&
@@ -191,10 +266,16 @@ contract VersaWallet is
         );
     }
 
+    /**
+     * @dev Checks the lengths of the batch transaction data arrays.
+     */
     function _checkBatchDataLength(uint256 toLen, uint256 valueLen, uint256 dataLen, uint256 operationLen) internal pure {
-        require(toLen == valueLen && dataLen == operationLen && toLen == dataLen, "Data length doesn't match");
+        require(toLen == valueLen && dataLen == operationLen && toLen == dataLen, "Versa: invalid batch data");
     }
 
+    /** 
+     * @dev Check the length of the initialization data arrays
+    */
     function _checkInitializationDataLength(
         uint256 validatorsLen,
         uint256 validatorInitLen,

@@ -11,7 +11,7 @@ import "../interfaces/IValidator.sol";
  * The validators are classified as "sudo" or "normal" based on their security level. If a
  * signature passes the authentication of a sudo validator, then the operation being signed
  * will have full permissions of the wallet. Otherwise it will only have limited access.
- * ⚠️ WARNING: A wallet MUST always have at least one sudo validator    
+ * ⚠️ WARNING: A wallet MUST always have at least one sudo validator.
  */
 abstract contract ValidatorManager is SelfAuthorized {
     using AddressLinkedList for mapping(address => address);
@@ -30,7 +30,14 @@ abstract contract ValidatorManager is SelfAuthorized {
 
     mapping(address => address) internal sudoValidators;
     mapping(address => address) internal normalValidators;
- 
+
+    /**
+     * @notice Enables the validator `validator` for the Versa Wallet with the specified `validatorType`.
+     * @dev This can only be done via a Versa Wallet transaction.
+     * @param validator The validator to be enabled.
+     * @param validatorType The type of the validator (Sudo or Normal).
+     * @param initData Initialization data for the validator contract.
+     */
     function enableValidator(
         address validator,
         ValidatorType validatorType,
@@ -39,15 +46,32 @@ abstract contract ValidatorManager is SelfAuthorized {
         _enableValidator(validator, validatorType, initData);
     }
 
+    /**
+     * @notice Disables the validator `validator` for the Versa Wallet.
+     * @dev This can only be done via a Versa Wallet transaction.
+     * @param prevValidator The previous validator in the validators linked list.
+     * @param validator The validator to be removed.
+     */
     function disableValidator(address prevValidator, address validator) public authorized {
         _disableValidator(prevValidator, validator);
     }
 
+    /**
+     * @notice Toggles the type of the validator `validator` between Sudo and Normal.
+     * @dev This can only be done via a Versa Wallet transaction.
+     * @param prevValidator The previous validator in the validators linked list.
+     * @param validator The validator to toggle the type.
+     */
     function toggleValidatorType(address prevValidator, address validator) public authorized {
         _toggleValidatorType(prevValidator, validator);
     }
 
-    function getValidatorType(address validator) public view returns(ValidatorType) {
+    /**
+     * @notice Returns the type of the validator `validator`.
+     * @param validator The validator to check.
+     * @return The type of the validator (Disabled, Sudo, or Normal).
+     */
+    function getValidatorType(address validator) public view returns (ValidatorType) {
         if (normalValidators.isExist(validator)) {
             return ValidatorType.Normal;
         } else if (sudoValidators.isExist(validator)) {
@@ -57,7 +81,12 @@ abstract contract ValidatorManager is SelfAuthorized {
         }
     }
 
-    function isValidatorEnabled(address validator) public view returns(bool) {
+    /**
+     * @notice Checks if the validator `validator` is enabled.
+     * @param validator The validator to check.
+     * @return True if the validator is enabled, false otherwise.
+     */
+    function isValidatorEnabled(address validator) public view returns (bool) {
         if (getValidatorType(validator) != ValidatorType.Disabled) {
             return true;
         }
@@ -65,10 +94,11 @@ abstract contract ValidatorManager is SelfAuthorized {
     }
 
     /**
-     * @notice Returns an array of validators.
-     * @param start Start of the page. Has to be a validator or start pointer (0x1 address)
-     * @param pageSize Maximum number of validators that should be returned. Has to be > 0
-     * @return array Array of validators.
+     * @notice Returns an array of validators based on the specified `validatorType`.
+     * @param start Start of the page. Has to be a validator or start pointer (0x1 address).
+     * @param pageSize Maximum number of validators that should be returned. Must be greater than 0.
+     * @param validatorType The type of validators to retrieve (Sudo or Normal).
+     * @return array An array of validators.
      */
     function getValidatorsPaginated(
         address start,
@@ -76,6 +106,7 @@ abstract contract ValidatorManager is SelfAuthorized {
         ValidatorType validatorType
     ) external view returns (address[] memory array) {
         require(validatorType != ValidatorType.Disabled, "Only valid validators");
+
         if (validatorType == ValidatorType.Sudo) {
             return sudoValidators.list(start, pageSize);
         } else if (validatorType == ValidatorType.Normal) {
@@ -83,6 +114,12 @@ abstract contract ValidatorManager is SelfAuthorized {
         }
     }
 
+    /**
+     * @notice Internal function to enable a validator with the specified type and initialization data.
+     * @param validator The validator to be enabled.
+     * @param validatorType The type of the validator (Sudo or Normal).
+     * @param initData Initialization data for the validator contract.
+     */
     function _enableValidator(address validator, ValidatorType validatorType, bytes calldata initData) internal {
         require(
             validatorType != ValidatorType.Disabled
@@ -93,15 +130,22 @@ abstract contract ValidatorManager is SelfAuthorized {
             !sudoValidators.isExist(validator) && !normalValidators.isExist(validator),
             "Validator has already been added"
         );
-        if(validatorType == ValidatorType.Sudo) {
+
+        if (validatorType == ValidatorType.Sudo) {
             sudoValidators.add(validator);
         } else {
             normalValidators.add(validator);
         }
+
         IValidator(validator).initWalletConfig(initData);
         emit EnabledValidator(validator);
     }
 
+    /**
+     * @notice Internal function to disable a validator from the Versa Wallet.
+     * @param prevValidator The previous validator in the validators linked list.
+     * @param validator The validator to be disabled.
+     */
     function _disableValidator(address prevValidator, address validator) internal {
         if (sudoValidators.isExist(validator)) {
             sudoValidators.remove(prevValidator, validator);
@@ -111,6 +155,7 @@ abstract contract ValidatorManager is SelfAuthorized {
         } else {
             revert("Validator doesn't exist");
         }
+
         try IValidator(validator).clearWalletConfig() {
             emit DisabledValidator(validator);
         } catch {
@@ -118,6 +163,11 @@ abstract contract ValidatorManager is SelfAuthorized {
         }
     }
 
+    /**
+     * @notice Internal function to toggle the type of a validator between Sudo and Normal.
+     * @param prevValidator The previous validator in the validators linked list.
+     * @param validator The validator to toggle the type.
+     */
     function _toggleValidatorType(address prevValidator, address validator) internal {
         if (normalValidators.isExist(validator)) {
             normalValidators.remove(prevValidator, validator);
@@ -131,6 +181,10 @@ abstract contract ValidatorManager is SelfAuthorized {
         }
     }
 
+    /**
+     * @notice Internal function to check if there is at least one sudo validator remaining.
+     * @dev Throws an error if there are no remaining sudo validators.
+     */
     function _checkRemovingSudoValidator() internal view {
         require(
             !sudoValidators.isEmpty(),

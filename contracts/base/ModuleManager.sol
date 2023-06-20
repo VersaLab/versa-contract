@@ -30,7 +30,7 @@ abstract contract ModuleManager is SelfAuthorized {
      * @param module The module to be enabled.
      * @param initData Initialization data for the module.
      */
-    function enableModule(address module, bytes calldata initData) public authorized {
+    function enableModule(address module, bytes memory initData) public authorized {
         _enableModule(module, initData);
     }
 
@@ -62,12 +62,16 @@ abstract contract ModuleManager is SelfAuthorized {
         return modules.list(start, pageSize);
     }
 
+    function moduleSize() external view returns(uint256) {
+        return modules.size();
+    }
+
     /**
      * @dev Internal function to enable a module for the Versa Wallet.
      * @param module The module to be enabled.
      * @param initData Initialization data for the module.
      */
-    function _enableModule(address module, bytes calldata initData) internal {
+    function _enableModule(address module, bytes memory initData) internal {
         require(
             IModule(module).supportsInterface(type(IModule).interfaceId),
             "Not a module"

@@ -3,7 +3,6 @@ pragma solidity ^0.8.17;
 
 import "../common/SelfAuthorized.sol";
 import "../common/Enum.sol";
-import "../common/Executor.sol";
 import "../libraries/AddressLinkedList.sol";
 import "../interfaces/IHooks.sol";
 
@@ -14,7 +13,7 @@ import "../interfaces/IHooks.sol";
  * Hooks provide additional functionality and customization options for transaction processing.
  * It is important to only enable trusted and audited hooks to prevent potential security risks.
  */
-abstract contract HooksManager is SelfAuthorized, Executor {
+abstract contract HooksManager is SelfAuthorized {
     using AddressLinkedList for mapping(address => address);
 
     event EnabledHooks(address indexed hooks);
@@ -29,7 +28,7 @@ abstract contract HooksManager is SelfAuthorized, Executor {
      * @param hooks The address of the `hooks` contract.
      * @param initData Initialization data for the `hooks` contract.
      */
-    function enableHooks(address hooks, bytes calldata initData) public authorized {
+    function enableHooks(address hooks, bytes memory initData) public authorized {
         _enableHooks(hooks, initData);
     }
 
@@ -86,12 +85,17 @@ abstract contract HooksManager is SelfAuthorized, Executor {
         return afterTxHooks.list(start, pageSize);
     }
 
+    function hooksSize() external view returns(uint256 beforeTxHooksSize, uint256 afterTxHooksSize) {
+        beforeTxHooksSize = beforeTxHooks.size();
+        afterTxHooksSize = afterTxHooks.size();
+    }
+
     /**
      * @dev Internal function to enable hooks for a versa wallet.
      * @param hooks The address of the hooks contract.
      * @param initData Initialization data for the hooks contract.
      */
-    function _enableHooks(address hooks, bytes calldata initData) internal {
+    function _enableHooks(address hooks, bytes memory initData) internal {
         // Add hooks to linked list
         require(
             IHooks(hooks).supportsInterface(type(IHooks).interfaceId),

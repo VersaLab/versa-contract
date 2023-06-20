@@ -41,7 +41,7 @@ abstract contract ValidatorManager is SelfAuthorized {
     function enableValidator(
         address validator,
         ValidatorType validatorType,
-        bytes calldata initData
+        bytes memory initData
     ) public authorized {
         _enableValidator(validator, validatorType, initData);
     }
@@ -64,6 +64,12 @@ abstract contract ValidatorManager is SelfAuthorized {
      */
     function toggleValidatorType(address prevValidator, address validator) public authorized {
         _toggleValidatorType(prevValidator, validator);
+    }
+
+
+    function validatorSize() external view returns(uint256 sudoSize, uint256 normalSize) {
+        sudoSize = sudoValidators.size();
+        normalSize = normalValidators.size();
     }
 
     /**
@@ -120,7 +126,7 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @param validatorType The type of the validator (Sudo or Normal).
      * @param initData Initialization data for the validator contract.
      */
-    function _enableValidator(address validator, ValidatorType validatorType, bytes calldata initData) internal {
+    function _enableValidator(address validator, ValidatorType validatorType, bytes memory initData) internal {
         require(
             validatorType != ValidatorType.Disabled
             && IValidator(validator).supportsInterface(type(IValidator).interfaceId),

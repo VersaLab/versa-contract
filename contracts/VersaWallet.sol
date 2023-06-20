@@ -62,12 +62,12 @@ contract VersaWallet is
     function initialize(
         address fallbackHandler,
         address[] memory validators,
-        bytes[] calldata validatorInitData,
+        bytes[] memory validatorInitData,
         ValidatorType[] memory validatorType,
         address[] memory hooks,
-        bytes[] calldata hooksInitData,
+        bytes[] memory hooksInitData,
         address[] memory modules,
-        bytes[] calldata moduleInitData
+        bytes[] memory moduleInitData
     ) external initializer {
         _checkInitializationDataLength(
             validators.length, validatorInitData.length, validatorType.length,

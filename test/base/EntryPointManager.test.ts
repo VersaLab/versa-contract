@@ -16,7 +16,8 @@ describe('EntryPointManager', () => {
   });
 
   it('should return the correct nonce', async () => {
-    const nonce = await entryPointManager.getNonce();
+    let key = 0
+    const nonce = await entryPointManager.getNonce(key);
     expect(nonce).to.equal(0); // Replace with the expected nonce value
 
     // Mock the getNonce function on the mock entrypoint
@@ -24,7 +25,7 @@ describe('EntryPointManager', () => {
     await mockEntryPoint.setNonce(expectedNonce)
 
     // Call the getNonce function on the entry point manager
-    const updatedNonce = await entryPointManager.getNonce();
+    const updatedNonce = await entryPointManager.getNonce(key);
     expect(updatedNonce).to.equal(expectedNonce);
   });
 
@@ -34,12 +35,13 @@ describe('EntryPointManager', () => {
   });
 
   it('should require requests from the entrypoint', async () => {
+    let key = 0
     // Call a function on the entry point manager from an account other than the entrypoint
     await expect(entryPointManager.connect((await ethers.getSigners())[1]).checkFromEntryPoint()).to.be.revertedWith(
       'account: not from EntryPoint'
     );
 
     // Call a function on the entry point manager from the entrypoint
-    await expect(entryPointManager.getNonce()).to.not.be.reverted;
+    await expect(entryPointManager.getNonce(key)).to.not.be.reverted;
   });
 });

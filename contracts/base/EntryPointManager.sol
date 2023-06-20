@@ -31,8 +31,8 @@ abstract contract EntryPointManager is SelfAuthorized {
     /**
      * Helper for wallet to get the next nonce.
      */
-    function getNonce() public view returns (uint256) {
-        return IEntryPoint(_entryPoint).getNonce(address(this), 0);
+    function getNonce(uint192 key) public view returns (uint256) {
+        return IEntryPoint(_entryPoint).getNonce(address(this), key);
     }
 
     /**

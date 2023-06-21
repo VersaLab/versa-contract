@@ -1,18 +1,17 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { MockEntryPoint, MockEntryPointManager } from "../../typechain-types"
+import { MockEntryPoint, MockEntryPointManager, MockEntryPointManager__factory, MockEntryPoint__factory } from "../../typechain-types"
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 
 describe('EntryPointManager', () => {
   let entryPointManager: MockEntryPointManager;
   let mockEntryPoint: MockEntryPoint
+  let owner: SignerWithAddress
 
   beforeEach(async () => {
-    let EntryPointManager = await ethers.getContractFactory('MockEntryPointManager');
-    let MockEntryPoint = await ethers.getContractFactory('MockEntryPoint');
-
-    mockEntryPoint = await MockEntryPoint.deploy();
-    entryPointManager = await EntryPointManager.deploy(mockEntryPoint.address);
+    [owner] = await ethers.getSigners()
+    mockEntryPoint = await new MockEntryPoint__factory(owner).deploy()
+    entryPointManager = await new MockEntryPointManager__factory(owner).deploy(mockEntryPoint.address)
   });
 
   it('should return the correct nonce', async () => {

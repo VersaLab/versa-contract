@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../../interfaces/IHooks.sol";
+import "../../base/PluginManager.sol";
 
 contract MockHooks is IHooks {
     bool public beforeTransactionCalled;
@@ -40,5 +41,14 @@ contract MockHooks is IHooks {
         returns (bool)
     {
         return interfaceId == type(IHooks).interfaceId;
+    }
+
+    function executeToWallet(address wallet, address to, uint256 value) external {
+        PluginManager(wallet).execTransactionFromPluginReturnData(
+            to,
+            value,
+            '0x',
+            Enum.Operation.Call
+        );
     }
 }

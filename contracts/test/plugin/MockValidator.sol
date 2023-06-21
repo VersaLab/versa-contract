@@ -5,6 +5,8 @@ import "../../interfaces/IModule.sol";
 import "../../interfaces/IValidator.sol";
 
 contract MockValidator is IValidator {
+    bytes4 internal constant UPDATED_MAGIC_VALUE = 0x1626ba7e;
+
     function initWalletConfig(bytes calldata) external override {}
 
     function clearWalletConfig() external override {}

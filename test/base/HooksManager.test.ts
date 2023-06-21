@@ -32,13 +32,40 @@ describe("HooksManager", () => {
     HooksManagerInterface = hooksManager.interface
   });
 
-  it('should enable and disable hooks', async () => {
+  it('should enable hooks', async () => {
     // Enable hooks
     await enablePlugin(hooksManager, mockHooks.address)
     expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
+  });
 
+  it('should disable hooks', async () => {
+    // Enable hooks
+    await enablePlugin(hooksManager, mockHooks.address);
+    expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
+  
+    // Disable hooks
     await disablePlugin(hooksManager, mockHooks.address)
     expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.false;
+  
+    // Check if hooks are removed from the list
+    const prehooksList = await hooksManager.getPreHooksPaginated(SENTINEL, 1);
+    const afterhooksList = await hooksManager.getPostHooksPaginated(SENTINEL, 1);
+    expect(prehooksList[0]).to.be.equal(ethers.constants.AddressZero);
+    expect(afterhooksList[0]).to.be.equal(ethers.constants.AddressZero);
+  
+    const hooksSize = await hooksManager.hooksSize();
+    expect(hooksSize.beforeTxHooksSize).to.be.equal(0);
+    expect(hooksSize.afterTxHooksSize).to.be.equal(0);
+  });
+
+  it('should not enable invalid hooks contract', async () => {
+    // Try to enable an invalid hooks contract
+    const invalidHooks = owner.address
+  
+    await expect(enablePlugin(hooksManager, invalidHooks)).to.be.revertedWithoutReason()
+  
+    // Ensure the hooks are not enabled
+    expect(await hooksManager.isHooksEnabled(invalidHooks)).to.be.false;
   });
 
   it('should execute before and after transaction hooks', async () => {

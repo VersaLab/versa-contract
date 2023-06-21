@@ -11,7 +11,6 @@ describe('VersaFactory', () => {
   let hooks: MockHooks
   let owner: SignerWithAddress
 
-
   beforeEach(async () => {
     [owner] = await ethers.getSigners()
 

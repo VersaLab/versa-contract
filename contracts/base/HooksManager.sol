@@ -53,16 +53,20 @@ abstract contract HooksManager is SelfAuthorized {
      * @param hooks The address of the hooks contract.
      * @return enabled True if hooks are enabled for the contract.
      */
-    function isHooksEnabled(address hooks) public view returns (bool) {
-        uint256 hasHooks = IHooks(hooks).hasHooks();
-        if (
-            !beforeTxHooks.isExist(hooks) && !afterTxHooks.isExist(hooks)
-            || uint128(hasHooks) == 1 && !afterTxHooks.isExist(hooks)
-            || (hasHooks >> 128) == 1 && !beforeTxHooks.isExist(hooks)
-        ) {
-            return false;
+    function isHooksEnabled(address hooks) public view returns (bool enabled) {
+        bool isBeforeHookExist = beforeTxHooks.isExist(hooks);
+        bool isAfterHookExist = afterTxHooks.isExist(hooks);
+
+        if (isBeforeHookExist || isAfterHookExist) {
+            uint256 hasHooks = IHooks(hooks).hasHooks();
+            if (
+                (uint128(hasHooks) == 1 && !isAfterHookExist)
+                || ((hasHooks >> 128) == 1 && !isBeforeHookExist)
+            ) {
+                return false;
+            }
+            return true;
         }
-        return true;
     }
 
     /**
@@ -99,7 +103,7 @@ abstract contract HooksManager is SelfAuthorized {
         // Add hooks to linked list
         require(
             IHooks(hooks).supportsInterface(type(IHooks).interfaceId),
-            "Not a valid `hooks`"
+            "Not a valid hooks contract"
         );
         uint256 hasHooks = IHooks(hooks).hasHooks();
         if (hasHooks >> 128 == 1) {

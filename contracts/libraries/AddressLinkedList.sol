@@ -57,10 +57,9 @@ library AddressLinkedList {
     function isExist(mapping(address => address) storage self, address addr)
         internal
         view
-        onlyAddress(addr)
         returns (bool)
     {
-        return self[addr] != address(0);
+        return self[addr] != address(0) && uint160(addr) > SENTINEL_UINT;
     }
 
     function size(mapping(address => address) storage self) internal view returns (uint256) {

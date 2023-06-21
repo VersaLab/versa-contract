@@ -6,19 +6,16 @@ import "@safe-contracts/contracts/proxies/SafeProxyFactory.sol";
 import "./VersaWallet.sol";
 
 /**
- * A wrapper factory contract to deploy Safe as an ERC-4337 account contract.
+ * A wrapper factory contract to deploy Versa account proxy.
  */
-contract VersaAccountFactory {
-    SafeProxyFactory public immutable proxyFactory;
+contract VersaAccountFactory is SafeProxyFactory {
     address public immutable versaSingleton;
     address public immutable defaultFallbackHandler;
 
     constructor(
-        SafeProxyFactory _proxyFactory,
         address _versaSingleton,
         address _fallbackHandler
     ) {
-        proxyFactory = _proxyFactory;
         versaSingleton = _versaSingleton;
         defaultFallbackHandler = _fallbackHandler;
     }
@@ -43,7 +40,7 @@ contract VersaAccountFactory {
         if (codeSize > 0) {
             return addr;
         }
-        return address(proxyFactory.createProxyWithNonce(
+        return address(createProxyWithNonce(
             versaSingleton, getInitializer(
                 validators, validatorInitData, validatorType,
                 hooks, hooksInitData,
@@ -95,7 +92,7 @@ contract VersaAccountFactory {
         );
         //copied from deployProxyWithNonce
         bytes32 salt2 = keccak256(abi.encodePacked(keccak256(initializer), salt));
-        bytes memory deploymentData = abi.encodePacked(proxyFactory.proxyCreationCode(), uint256(uint160(versaSingleton)));
-        return Create2.computeAddress(bytes32(salt2), keccak256(deploymentData), address (proxyFactory));
+        bytes memory deploymentData = abi.encodePacked(proxyCreationCode(), uint256(uint160(versaSingleton)));
+        return Create2.computeAddress(bytes32(salt2), keccak256(deploymentData), address(this));
     }
 }

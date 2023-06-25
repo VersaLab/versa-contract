@@ -2,7 +2,6 @@
 pragma solidity ^0.8.12;
 
 import "@aa-template/contracts/interfaces/UserOperation.sol";
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./IModule.sol";
 
 interface IValidator is IModule {

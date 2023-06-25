@@ -25,7 +25,7 @@ const DEPLOYER_PRIVATE_KEY =
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [{
-      version: "0.8.17",
+      version: "0.8.18",
       settings: {
         optimizer: {
           enabled: true,
@@ -39,14 +39,6 @@ const config: HardhatUserConfig = {
   ]
   },
   networks: {
-    hardhat: {
-      forking: {
-        url: `https://scroll-alphanet.public.blastapi.io`,
-        // accounts: [`${DEPLOYER_PRIVATE_KEY}`,`${DEPLOYER_PRIVATE_KEY_2}`,`${DEPLOYER_PRIVATE_KEY_3}`],
-        blockNumber: 
-        2791233
-      }
-    },
     mumbai: {
       url: `https://polygon-testnet.public.blastapi.io`,
       accounts: [`${DEPLOYER_PRIVATE_KEY}`,`${DEPLOYER_PRIVATE_KEY_2}`,`${DEPLOYER_PRIVATE_KEY_3}`,`${DEPLOYER_PRIVATE_KEY_4}`],

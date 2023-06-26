@@ -23,7 +23,7 @@ describe('PluginManager', () => {
 
   it('should execute transaction from enabled plugin', async () => {
     // Enable plugin
-    await enablePlugin(pluginManager, plugin.address)
+    await enablePlugin({executor: pluginManager, plugin: plugin.address})
 
     // Execute transaction from plugin
     let tx = await plugin.executeToWallet(

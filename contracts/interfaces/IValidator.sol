@@ -10,5 +10,5 @@ interface IValidator is IModule {
         view
         returns (uint256 validationData);
 
-    function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns(uint256 validationData);
+    function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns(bool);
 }

@@ -34,9 +34,9 @@ contract MockValidator is IValidator {
         external
         view
         override
-        returns (uint256 validationData)
+        returns (bool)
     {
-        // Mock implementation, always return 0 validation data
-        return 0;
+        // Mock implementation, always return true validation data
+        return true;
     }
 }

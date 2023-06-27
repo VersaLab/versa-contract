@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import { VersaAccountFactory, VersaWallet, VersaAccountFactory__factory, VersaWallet__factory, MockValidator, MockModule, MockHooks, MockValidator__factory, MockHooks__factory, MockModule__factory, MockEntryPoint, MockEntryPoint__factory } from "../typechain-types"
+import { VersaAccountFactory, VersaWallet, VersaAccountFactory__factory, VersaWallet__factory, MockValidator, MockModule, MockHooks, MockValidator__factory, MockHooks__factory, MockModule__factory, MockEntryPoint, MockEntryPoint__factory, CompilityFallbackHandler__factory } from "../typechain-types"
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { parseEther } from 'ethers/lib/utils';
 import * as helpers from "@nomicfoundation/hardhat-network-helpers"
@@ -18,17 +18,18 @@ describe('VersaWallet', () => {
   let wallet: VersaWallet
 
   beforeEach(async () => {
-    [owner, entryPoint] = await ethers.getSigners()
+    [entryPoint, owner] = await ethers.getSigners()
 
     opHasher = await new MockEntryPoint__factory(owner).deploy()
 
-    let fallbackHandler = ethers.constants.AddressZero
+    let fallbackHandler = await new CompilityFallbackHandler__factory(owner).deploy()
+
     // Deploy versa singleton
     versaWalletSingleton = await new VersaWallet__factory(owner).deploy(entryPoint.address)
     // Deploy VersaAccountFactory
     versaFactory = await new VersaAccountFactory__factory(owner).deploy(
       versaWalletSingleton.address,
-      fallbackHandler
+      fallbackHandler.address
     )
 
     sudoValidator = await new MockValidator__factory(owner).deploy()
@@ -60,6 +61,13 @@ describe('VersaWallet', () => {
   
     wallet = VersaWallet__factory.connect(walletAddress, owner)
     expect(await wallet.VERSA_VERSION()).to.be.equal("0.0.1")
+  });
+
+  it('should receive native token', async () => {
+    const balanceBefore = await ethers.provider.getBalance(wallet.address)
+    await owner.sendTransaction({to: wallet.address, value: parseEther("0.1")})
+    const balanceAfter = await ethers.provider.getBalance(wallet.address)
+    expect(balanceAfter.sub(balanceBefore)).to.be.equal(parseEther("0.1"))
   });
 
   it('should valdiate userOp correctly', async () => {

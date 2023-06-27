@@ -2,12 +2,13 @@
 pragma solidity ^0.8.17;
 
 import "../common/SelfAuthorized.sol";
+import "../common/NativeCurrencyPaymentFallback.sol";
 
 /**
  * @title Fallback Manager - A contract managing fallback calls made to this contract
  * @author Richard Meissner - @rmeissner
  */
-abstract contract FallbackManager is SelfAuthorized {
+abstract contract FallbackManager is NativeCurrencyPaymentFallback, SelfAuthorized {
     event ChangedFallbackHandler(address indexed handler);
 
     // keccak256("fallback_manager.handler.address")

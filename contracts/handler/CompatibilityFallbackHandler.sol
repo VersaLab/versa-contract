@@ -8,10 +8,10 @@ import "../interfaces/IValidator.sol";
 import "../base/ValidatorManager.sol";
 
 /**
- * @title CompilityFallbackHandler
+ * @title CompatibilityFallbackHandler
  * @notice A contract that handles compatibility fallback operations for token callbacks.
  */
-contract CompilityFallbackHandler is TokenCallbackHandler, IERC1271 {
+contract CompatibilityFallbackHandler is TokenCallbackHandler, IERC1271 {
     /**
      * @notice Validates the provided signature for a given hash,
      * this function is not gas optimized and is not supposed to be called on chain.

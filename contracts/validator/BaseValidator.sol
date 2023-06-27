@@ -29,7 +29,7 @@ abstract contract BaseValidator is IValidator {
      */
     modifier onlyEnabledValidator {
         require(
-            VersaWallet(msg.sender).isValidatorEnabled(address(this)),
+            VersaWallet(payable(msg.sender)).isValidatorEnabled(address(this)),
             "Validator is not enabled"
         );
         _;

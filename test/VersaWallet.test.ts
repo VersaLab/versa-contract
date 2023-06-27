@@ -1,6 +1,6 @@
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
-import { VersaAccountFactory, VersaWallet, VersaAccountFactory__factory, VersaWallet__factory, MockValidator, MockModule, MockHooks, MockValidator__factory, MockHooks__factory, MockModule__factory, MockEntryPoint, MockEntryPoint__factory, CompilityFallbackHandler__factory } from "../typechain-types"
+import { VersaAccountFactory, VersaWallet, VersaAccountFactory__factory, VersaWallet__factory, MockValidator, MockModule, MockHooks, MockValidator__factory, MockHooks__factory, MockModule__factory, MockEntryPoint, MockEntryPoint__factory, CompatibilityFallbackHandler__factory } from "../typechain-types"
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers';
 import { parseEther } from 'ethers/lib/utils';
 import * as helpers from "@nomicfoundation/hardhat-network-helpers"
@@ -22,7 +22,7 @@ describe('VersaWallet', () => {
 
     opHasher = await new MockEntryPoint__factory(owner).deploy()
 
-    let fallbackHandler = await new CompilityFallbackHandler__factory(owner).deploy()
+    let fallbackHandler = await new CompatibilityFallbackHandler__factory(owner).deploy()
 
     // Deploy versa singleton
     versaWalletSingleton = await new VersaWallet__factory(owner).deploy(entryPoint.address)

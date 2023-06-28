@@ -10,7 +10,7 @@ import "./common/Enum.sol";
 import "./base/FallbackManager.sol";
 import "./base/EntryPointManager.sol";
 import "./base/PluginManager.sol";
-import "./interfaces/IValidator.sol";
+import "./interface/IValidator.sol";
 
 /**
  * @title VersaWallet - A Smart contract wallet that supports EIP4337

@@ -17,14 +17,6 @@ abstract contract BaseValidator is IValidator {
     mapping(address => bool) _walletInited;
 
     /**
-     * @dev Modifier to check if the wallet has already been initialized.
-     */
-    modifier initializer {
-        require(!_walletInited[msg.sender], "Has already inited");
-        _;
-    }
-
-    /**
      * @dev Modifier to check if the validator is enabled for the caller wallet.
      */
     modifier onlyEnabledValidator {
@@ -41,19 +33,23 @@ abstract contract BaseValidator is IValidator {
      */
     function initWalletConfig(bytes memory data)
         external
-        initializer
         onlyEnabledValidator
     {
-        _init(data);
-        emit WalletInited(msg.sender);
+        if(!_walletInited[msg.sender]) {
+            _init(data);
+            emit WalletInited(msg.sender);
+        }
     }
 
     /**
      * @dev Clears the wallet configuration. Triggered when disabled by a wallet
      */
     function clearWalletConfig() external onlyEnabledValidator {
-        _clear();
-        emit WalletCleared(msg.sender);
+        if (_walletInited[msg.sender]) {
+            _clear();
+            _walletInited[msg.sender] = false;
+            emit WalletCleared(msg.sender);
+        }
     }
 
     /**

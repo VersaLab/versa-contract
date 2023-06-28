@@ -19,8 +19,6 @@ abstract contract ModuleManager is SelfAuthorized {
     event EnabledModule(address indexed module);
     event DisabledModule(address indexed module);
     event DisabledModuleWithError(address indexed module);
-    event ExecutionFromModuleSuccess(address indexed module);
-    event ExecutionFromModuleFailure(address indexed module);
 
     mapping(address => address) internal modules;
 

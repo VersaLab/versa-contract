@@ -19,8 +19,6 @@ abstract contract ValidatorManager is SelfAuthorized {
     event EnabledValidator(address indexed validator);
     event DisabledValidator(address indexed validator);
     event DisabledValidatorWithError(address indexed validator);
-    event ExecutionFromValidatorSuccess(address indexed validator);
-    event ExecutionFromMValidatorFailure(address indexed validator);
 
     enum ValidatorType {
         Disabled,

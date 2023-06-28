@@ -40,9 +40,8 @@ const config: HardhatUserConfig = {
   },
   networks: {
     mumbai: {
-      url: `https://polygon-testnet.public.blastapi.io`,
+      url: `https://polygon-mumbai.g.alchemy.com/v2/KMLDaHX-yLBbJhxYBEE5HhoUQ68OpFK7`,
       accounts: [`${DEPLOYER_PRIVATE_KEY}`,`${DEPLOYER_PRIVATE_KEY_2}`,`${DEPLOYER_PRIVATE_KEY_3}`,`${DEPLOYER_PRIVATE_KEY_4}`],
-      gasPrice: 5000000000 // 2 gwei
     },
     scroll_test: {
       url: `https://scroll-alphanet.public.blastapi.io`,

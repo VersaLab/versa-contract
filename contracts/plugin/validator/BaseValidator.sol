@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.18;
 
-import "../interfaces/IValidator.sol";
-import "../VersaWallet.sol";
+import "../../interface/IValidator.sol";
+import "../../VersaWallet.sol";
 
 /**
  * @title BaseValidator

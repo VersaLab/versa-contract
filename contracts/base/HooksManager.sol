@@ -3,8 +3,8 @@ pragma solidity ^0.8.17;
 
 import "../common/SelfAuthorized.sol";
 import "../common/Enum.sol";
-import "../libraries/AddressLinkedList.sol";
-import "../interfaces/IHooks.sol";
+import "../library/AddressLinkedList.sol";
+import "../interface/IHooks.sol";
 
 /**
  * @title HooksManager

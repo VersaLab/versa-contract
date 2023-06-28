@@ -3,8 +3,8 @@ pragma solidity ^0.8.17;
 
 import "../common/Enum.sol";
 import "../common/SelfAuthorized.sol";
-import "../interfaces/IModule.sol";
-import "../libraries/AddressLinkedList.sol";
+import "../interface/IModule.sol";
+import "../library/AddressLinkedList.sol";
 
 /**
  * @title Module Manager

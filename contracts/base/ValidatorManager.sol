@@ -2,8 +2,8 @@
 pragma solidity ^0.8.17;
 
 import "../common/SelfAuthorized.sol";
-import "../libraries/AddressLinkedList.sol";
-import "../interfaces/IValidator.sol";
+import "../library/AddressLinkedList.sol";
+import "../interface/IValidator.sol";
 
 /**
  * @title ValidatorManager

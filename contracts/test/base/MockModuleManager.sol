@@ -3,7 +3,7 @@ pragma solidity ^0.8.17;
 
 import "../../base/ModuleManager.sol";
 import "../../common/Executor.sol";
-import "../../interfaces/IModule.sol";
+import "../../interface/IModule.sol";
 
 contract MockModuleManager is ModuleManager, Executor {
     function execute(

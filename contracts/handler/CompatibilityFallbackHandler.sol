@@ -3,8 +3,8 @@ pragma solidity ^0.8.17;
 
 import "@aa-template/contracts/core/Helpers.sol";
 import "./TokenCallbackHandler.sol";
-import "../interfaces/IERC1271.sol";
-import "../interfaces/IValidator.sol";
+import "../interface/IERC1271.sol";
+import "../interface/IValidator.sol";
 import "../base/ValidatorManager.sol";
 
 /**

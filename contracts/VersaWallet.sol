@@ -9,7 +9,9 @@ import "./common/Singleton.sol";
 import "./common/Enum.sol";
 import "./base/FallbackManager.sol";
 import "./base/EntryPointManager.sol";
-import "./base/PluginManager.sol";
+import "./base/ValidatorManager.sol";
+import "./base/HooksManager.sol";
+import "./base/ModuleManager.sol";
 import "./interface/IValidator.sol";
 
 /**
@@ -19,7 +21,9 @@ contract VersaWallet is
     Singleton,
     Initializable,
     EntryPointManager,
-    PluginManager,
+    ValidatorManager,
+    HooksManager,
+    ModuleManager,
     FallbackManager,
     IAccount
 {
@@ -260,7 +264,9 @@ contract VersaWallet is
     function _checkNormalExecute(address to, Enum.Operation _operation) internal view {
         require(
             to != address(this) &&
-            !_isPluginEnabled(to) &&
+            !isValidatorEnabled(to) &&
+            !isHooksEnabled(to) &&
+            !isModuleEnabled(to) &&
             _operation != Enum.Operation.DelegateCall,
             "Versa: operation is not allowed"
         );

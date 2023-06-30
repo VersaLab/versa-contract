@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../../interface/IModule.sol";
+import "../../base/ModuleManager.sol";
 
 contract MockModule is IModule {
     function initWalletConfig(bytes calldata) external override {}
@@ -15,5 +16,14 @@ contract MockModule is IModule {
         returns (bool)
     {
         return interfaceId == type(IModule).interfaceId;
+    }
+
+    function executeToWallet(address wallet, address to, uint256 value) external {
+        ModuleManager(wallet).execTransactionFromPluginReturnData(
+            to,
+            value,
+            '0x',
+            Enum.Operation.Call
+        );
     }
 }

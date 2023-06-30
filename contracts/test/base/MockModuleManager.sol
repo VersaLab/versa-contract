@@ -2,10 +2,9 @@
 pragma solidity ^0.8.17;
 
 import "../../base/ModuleManager.sol";
-import "../../common/Executor.sol";
 import "../../interface/IModule.sol";
 
-contract MockModuleManager is ModuleManager, Executor {
+contract MockModuleManager is ModuleManager {
     function execute(
         address to,
         uint256 value,

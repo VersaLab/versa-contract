@@ -1,6 +1,7 @@
 import { ethers } from "hardhat"
-import { VersaWallet__factory, VersaAccountFactory__factory, MockValidator__factory, MockHooks__factory, MockModule__factory } from "../typechain-types"
+import { VersaWallet__factory, VersaAccountFactory__factory, MockValidator__factory } from "../typechain-types"
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers"
+import { hexConcat } from "ethers/lib/utils";
 
 export async function deployVersaWallet(options: {
         signer: SignerWithAddress,
@@ -52,6 +53,55 @@ export async function deployVersaWallet(options: {
         0
     )
     return VersaWallet__factory.connect(walletAddress, signer)
+}
+
+export async function generateWalletInitCode(options: {
+    versaFacotryAddr: string,
+    salt: number
+    sudoValidator: string,
+    sudoValidatorInitData: string,
+    hooks?: string[],
+    hooksInitData?: string[],
+    modules?: string[],
+    moduleInitData?: string[],
+}) {
+    const {
+        versaFacotryAddr,
+        salt,
+        sudoValidator,
+        sudoValidatorInitData,
+        hooks = [],
+        hooksInitData = [],
+        modules = [],
+        moduleInitData = []
+        } = options;
+    const versaFactory = await ethers.getContractAt("VersaAccountFactory", versaFacotryAddr)
+    
+
+    let tx = await versaFactory.populateTransaction.createAccount(
+        [sudoValidator],
+        [sudoValidatorInitData],
+        [1],
+        hooks,
+        hooksInitData,
+        modules,
+        moduleInitData,
+        salt
+    )
+
+    let initCode = hexConcat([versaFacotryAddr, tx.data!])
+    let walletAddress = await versaFactory.getAddress(
+        [sudoValidator],
+        [sudoValidatorInitData],
+        [1],
+        hooks,
+        hooksInitData,
+        modules,
+        moduleInitData,
+        salt
+    )
+
+    return { initCode, walletAddress }
 }
 
 export interface userOp {

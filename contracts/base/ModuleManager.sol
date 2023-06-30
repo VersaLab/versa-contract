@@ -56,7 +56,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param operation Operation type of the module transaction.
      * @return success Boolean flag indicating if the call succeeded.
      */
-    function execTransactionFromPlugin(
+    function execTransactionFromModule(
         address to,
         uint256 value,
         bytes memory data,
@@ -78,13 +78,13 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @return success Boolean flag indicating if the call succeeded.
      * @return returnData Data returned by the call.
      */
-    function execTransactionFromPluginReturnData(
+    function execTransactionFromModuleReturnData(
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation
     ) public returns (bool success, bytes memory returnData) {
-        success = execTransactionFromPlugin(to, value, data, operation);
+        success = execTransactionFromModule(to, value, data, operation);
         returnData = getReturnData(type(uint256).max);
     }
 
@@ -131,12 +131,12 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param module The module to be disabled.
      */
     function _disableModule(address prevModule, address module) internal {
-        modules.remove(prevModule, module);
         try IModule(module).clearWalletConfig() {
             emit DisabledModule(module);
         } catch {
             emit DisabledModuleWithError(module);
         }
+        modules.remove(prevModule, module);
     }
 
     /**

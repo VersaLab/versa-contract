@@ -151,6 +151,11 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @param validator The validator to be disabled.
      */
     function _disableValidator(address prevValidator, address validator) internal {
+        try IValidator(validator).clearWalletConfig() {
+            emit DisabledValidator(validator);
+        } catch {
+            emit DisabledValidatorWithError(validator);
+        }
         if (sudoValidators.isExist(validator)) {
             sudoValidators.remove(prevValidator, validator);
             _checkRemovingSudoValidator();
@@ -158,12 +163,6 @@ abstract contract ValidatorManager is SelfAuthorized {
             normalValidators.remove(prevValidator, validator);
         } else {
             revert("Validator doesn't exist");
-        }
-
-        try IValidator(validator).clearWalletConfig() {
-            emit DisabledValidator(validator);
-        } catch {
-            emit DisabledValidatorWithError(validator);
         }
     }
 

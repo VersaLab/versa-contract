@@ -1,6 +1,11 @@
 import { BigNumber } from "ethers";
-import { MockHooksManager, MockModuleManager, MockValidatorManager } from "../../typechain-types";
+import { MockHooksManager, MockModuleManager, MockValidatorManager, VersaWallet } from "../../typechain-types";
 import { parseEther } from "ethers/lib/utils";
+import { Buffer } from 'buffer';
+
+export function numberToFixedHex(value: number, length: number): string {
+  return '0x' + value.toString(16).padStart(length*2,'0')
+}
 
 export const SENTINEL = "0x0000000000000000000000000000000000000001"
 
@@ -9,7 +14,7 @@ export interface clase {
 }
 
 export async function execute(options: {
-    executor: MockHooksManager | MockModuleManager | MockValidatorManager,
+    executor: MockHooksManager | MockModuleManager | MockValidatorManager | VersaWallet,
     to?: string,
     value?: BigNumber,
     data?: string,
@@ -22,24 +27,47 @@ export async function execute(options: {
       data = "0x",
       operation = 0,
     } = options;
-  
-    await executor.execute(to, value, data, operation);
+
+    let tx
+    if (!isVersaWallet(executor)) {
+        tx = await executor.execute(to, value, data, operation);
+    } else {
+        tx = await executor.sudoExecute(to, value, data, operation)
+    }
+    return tx
 }
 
-export async function enablePlugin(
+export async function enablePlugin(options: {
     executor: MockHooksManager | any,
     plugin: string,
-    type?: number
-) {
+    initData?: string,
+    type?: number,
+    selector?: string
+}) {
+    const {
+        executor,
+        plugin,
+        initData = '0x',
+        type = 1,
+        selector = 'enableValidator'
+    } = options;
+
     let data
     if (isHooksManager(executor)) {
-        data = executor.interface.encodeFunctionData('enableHooks', [plugin, "0x"])
+        data = executor.interface.encodeFunctionData('enableHooks', [plugin, initData])
     } else if (isModuleManager(executor)) {
-        data = executor.interface.encodeFunctionData('enableModule', [plugin, "0x"])
-    } else {
-        data = executor.interface.encodeFunctionData('enableValidator', [plugin, type, "0x"])
+        data = executor.interface.encodeFunctionData('enableModule', [plugin, initData])
+    } else if (isValidatorManger(executor)) {
+        data = executor.interface.encodeFunctionData('enableValidator', [plugin, type, initData])
     }
-    await execute({executor, data})
+    if (isVersaWallet(executor)){
+        if (selector == 'enableValidator') {
+            data = executor.interface.encodeFunctionData('enableValidator', [plugin, type, initData])
+        } else {
+            data = executor.interface.encodeFunctionData(selector, [plugin, initData])
+        }
+    }
+    return await execute({executor, data})
 }
 
 export async function disablePlugin(
@@ -68,7 +96,8 @@ export async function disablePlugin(
         let prevValidator = getPrevPlugin(plugin, list)
         data = executor.interface.encodeFunctionData('disableValidator', [prevValidator, plugin])
     }
-    await execute({executor, data})
+
+    return await execute({executor, data})
 }
 
 export async function toggleValidator(
@@ -82,7 +111,7 @@ export async function toggleValidator(
     list = await executor.getValidatorsPaginated(SENTINEL, size, type)
     let prevValidator = getPrevPlugin(validator, list)
     let data = executor.interface.encodeFunctionData('toggleValidatorType', [prevValidator, validator])
-    await execute({executor, data})
+    return await execute({executor, data})
 }
 
 function isHooksManager(value: any): value is MockHooksManager {
@@ -95,6 +124,11 @@ function isModuleManager(value: any): value is MockModuleManager {
 
 function isValidatorManger(value: any): value is MockValidatorManager {
     return typeof value === 'object' && value !== null && 'enableValidator' in value;
+}
+
+function isVersaWallet(value: any): value is VersaWallet {
+    return typeof value === 'object' && value !== null
+        && 'sudoExecute' in value;
 }
 
 function getPrevPlugin(

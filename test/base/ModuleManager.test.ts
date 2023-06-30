@@ -22,14 +22,15 @@ describe('ModuleManager', () => {
 
   it('should enable and disable modules correctly', async () => {
     // Enable Module 1
-    await enablePlugin(moduleManager, MODULE_1)
+    await enablePlugin({executor: moduleManager, plugin: MODULE_1})
     // await moduleManager.enableModule(MODULE_1, '0x');
 
     expect(await moduleManager.isModuleEnabled(MODULE_1)).to.be.true;
     expect(await moduleManager.isModuleEnabled(MODULE_2)).to.be.false;
 
     // Enable Module 2
-    await enablePlugin(moduleManager, MODULE_2)
+    await enablePlugin({executor: moduleManager, plugin: MODULE_2})
+
     // await moduleManager.enableModule(MODULE_2, '0x');
     expect(await moduleManager.isModuleEnabled(MODULE_2)).to.be.true;
 
@@ -45,9 +46,9 @@ describe('ModuleManager', () => {
 
   it('should return the correct module array', async () => {
     // Enable multiple modules
-    await enablePlugin(moduleManager, MODULE_1)
-    await enablePlugin(moduleManager, MODULE_2)
-    await enablePlugin(moduleManager, MODULE_3)
+    await enablePlugin({executor: moduleManager, plugin: MODULE_1})
+    await enablePlugin({executor: moduleManager, plugin: MODULE_2})
+    await enablePlugin({executor: moduleManager, plugin: MODULE_3})
 
     // Get paginated modules
     const pageSize = 2;

@@ -3,8 +3,8 @@ pragma solidity ^0.8.17;
 
 import "../common/Enum.sol";
 import "../common/SelfAuthorized.sol";
-import "../interfaces/IModule.sol";
-import "../libraries/AddressLinkedList.sol";
+import "../interface/IModule.sol";
+import "../library/AddressLinkedList.sol";
 
 /**
  * @title Module Manager
@@ -19,8 +19,6 @@ abstract contract ModuleManager is SelfAuthorized {
     event EnabledModule(address indexed module);
     event DisabledModule(address indexed module);
     event DisabledModuleWithError(address indexed module);
-    event ExecutionFromModuleSuccess(address indexed module);
-    event ExecutionFromModuleFailure(address indexed module);
 
     mapping(address => address) internal modules;
 

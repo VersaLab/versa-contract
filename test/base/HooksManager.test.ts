@@ -34,13 +34,13 @@ describe("HooksManager", () => {
 
   it('should enable hooks', async () => {
     // Enable hooks
-    await enablePlugin(hooksManager, mockHooks.address)
+    await enablePlugin({executor: hooksManager, plugin: mockHooks.address})
     expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
   });
 
   it('should disable hooks', async () => {
     // Enable hooks
-    await enablePlugin(hooksManager, mockHooks.address);
+    await enablePlugin({executor: hooksManager, plugin: mockHooks.address})
     expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
   
     // Disable hooks
@@ -61,8 +61,7 @@ describe("HooksManager", () => {
   it('should not enable invalid hooks contract', async () => {
     // Try to enable an invalid hooks contract
     const invalidHooks = owner.address
-  
-    await expect(enablePlugin(hooksManager, invalidHooks)).to.be.revertedWithoutReason()
+    await expect(enablePlugin({executor: hooksManager, plugin: invalidHooks})).to.be.revertedWithoutReason()
   
     // Ensure the hooks are not enabled
     expect(await hooksManager.isHooksEnabled(invalidHooks)).to.be.false;
@@ -70,7 +69,7 @@ describe("HooksManager", () => {
 
   it('should execute before and after transaction hooks', async () => {
     // Enable hooks
-    await enablePlugin(hooksManager, mockHooks.address)
+    await enablePlugin({executor: hooksManager, plugin: mockHooks.address})
     expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
 
     await helpers.setBalance(hooksManager.address, parseEther("1"))
@@ -89,7 +88,7 @@ describe("HooksManager", () => {
 
   it('should return hooks list', async () => {
     // Enable hooks
-    await enablePlugin(hooksManager, mockHooks.address)
+    await enablePlugin({executor: hooksManager, plugin: mockHooks.address})
     expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
 
     let prehooksList = await hooksManager.getPreHooksPaginated(SENTINEL, 5)
@@ -109,7 +108,7 @@ describe("HooksManager", () => {
     await mockHooks2.deployed();
 
     // Enable the second hooks contract
-    await enablePlugin(hooksManager, mockHooks2.address)
+    await enablePlugin({executor: hooksManager, plugin: mockHooks2.address})
     expect(await hooksManager.isHooksEnabled(mockHooks2.address)).to.be.true;
 
     prehooksList = await hooksManager.getPreHooksPaginated(SENTINEL, 5)

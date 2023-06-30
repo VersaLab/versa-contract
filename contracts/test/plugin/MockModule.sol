@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.0;
 
-import "../../interfaces/IModule.sol";
+import "../../interface/IModule.sol";
 
 contract MockModule is IModule {
     function initWalletConfig(bytes calldata) external override {}

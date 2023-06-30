@@ -2,8 +2,8 @@
 pragma solidity ^0.8.17;
 
 import "../common/SelfAuthorized.sol";
-import "../libraries/AddressLinkedList.sol";
-import "../interfaces/IValidator.sol";
+import "../library/AddressLinkedList.sol";
+import "../interface/IValidator.sol";
 
 /**
  * @title ValidatorManager
@@ -19,8 +19,6 @@ abstract contract ValidatorManager is SelfAuthorized {
     event EnabledValidator(address indexed validator);
     event DisabledValidator(address indexed validator);
     event DisabledValidatorWithError(address indexed validator);
-    event ExecutionFromValidatorSuccess(address indexed validator);
-    event ExecutionFromMValidatorFailure(address indexed validator);
 
     enum ValidatorType {
         Disabled,

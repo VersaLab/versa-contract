@@ -2,9 +2,9 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-import "../interfaces/ERC1155TokenReceiver.sol";
-import "../interfaces/ERC721TokenReceiver.sol";
-import "../interfaces/ERC777TokensRecipient.sol";
+import "../interface/ERC1155TokenReceiver.sol";
+import "../interface/ERC721TokenReceiver.sol";
+import "../interface/ERC777TokensRecipient.sol";
 
 /**
  * @title Default Callback Handler - Handles supported tokens' callbacks, allowing Safes receiving these tokens.

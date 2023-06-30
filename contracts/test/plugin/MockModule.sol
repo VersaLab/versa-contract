@@ -19,7 +19,7 @@ contract MockModule is IModule {
     }
 
     function executeToWallet(address wallet, address to, uint256 value) external {
-        ModuleManager(wallet).execTransactionFromPluginReturnData(
+        ModuleManager(wallet).execTransactionFromModuleReturnData(
             to,
             value,
             '0x',

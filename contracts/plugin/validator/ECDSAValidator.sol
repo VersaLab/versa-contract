@@ -68,12 +68,12 @@ contract ECDSAValidator is BaseValidator {
         if (sigLength != 86 && sigLength != 162) {
             return SIG_VALIDATION_FAILED;
         }
-        SignatureHandler.DecodedSignature memory decodedSig =
-            SignatureHandler.decodeUserOpSignature(_userOp, _userOpHash);
-        if (!_checkDecodedSig(
-            decodedSig.signatureType,
-            decodedSig.maxFeePerGas,
-            decodedSig.maxPriorityFeePerGas,
+        SignatureHandler.SplitedSignature memory splitedSig =
+            SignatureHandler.splitUserOpSignature(_userOp, _userOpHash);
+        if (!_checkTransactionTypeAndFee(
+            splitedSig.signatureType,
+            splitedSig.maxFeePerGas,
+            splitedSig.maxPriorityFeePerGas,
             _userOp.maxFeePerGas,
             _userOp.maxPriorityFeePerGas
         )) {
@@ -81,10 +81,10 @@ contract ECDSAValidator is BaseValidator {
         }
         validationData = _validateSignature(
             _signers[_userOp.sender],
-            decodedSig.signature,
-            decodedSig.hash,
-            decodedSig.validUntil,
-            decodedSig.validAfter
+            splitedSig.signature,
+            splitedSig.hash,
+            splitedSig.validUntil,
+            splitedSig.validAfter
         );
     }
 
@@ -124,13 +124,6 @@ contract ECDSAValidator is BaseValidator {
     }
 
     /**
-     * @dev Inherits from ERC165.
-     */
-    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
-        return interfaceId == type(IValidator).interfaceId;
-    }
-
-    /**
      * @dev Internal function to validate a signature.
      * @param signer The address of the signer.
      * @param signature The signature to validate.
@@ -152,42 +145,5 @@ contract ECDSAValidator is BaseValidator {
             sigFailed = SIG_VALIDATION_FAILED;
         }
         return _packValidationData(sigFailed, validUntil, validAfter);
-    }
-
-    /**
-     * @dev Pack the validation data.
-     * @param sigFailed The signature validation result.
-     * @param validUntil The valid until timestamp.
-     * @param validAfter The valid after timestamp.
-     * @return The packed validation data.
-     */
-    function _packValidationData(uint256 sigFailed, uint256 validUntil, uint256 validAfter) internal pure returns (uint256) {
-        return sigFailed | validUntil << 160 | validAfter << (160 + 48);
-    }
-
-    /**
-     * @dev Check the decoded signature.
-     * @param sigType The signature type.
-     * @param maxFeePerGas The maximum fee per gas.
-     * @param maxPriorityFeePerGas The maximum priority fee per gas.
-     * @param actualMaxFeePerGas The actual maximum fee per gas from the user operation.
-     * @param actualMaxPriorityFeePerGas The actual maximum priority fee per gas from the user operation.
-     * @return A boolean indicating whether the decoded signature is valid or not.
-     */
-    function _checkDecodedSig(
-        uint256 sigType,
-        uint256 maxFeePerGas,
-        uint256 maxPriorityFeePerGas,
-        uint256 actualMaxFeePerGas,
-        uint256 actualMaxPriorityFeePerGas
-    ) pure internal returns(bool) {
-        if (sigType != 0x00 && sigType != 0x01) {
-            return false;
-        }
-        if (sigType == 0x01
-            && (actualMaxFeePerGas >= maxFeePerGas || actualMaxPriorityFeePerGas >= maxPriorityFeePerGas)) {
-            return false;
-        }
-        return true;
     }
 }

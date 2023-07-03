@@ -36,6 +36,7 @@ abstract contract BaseValidator is IValidator {
         onlyEnabledValidator
     {
         if(!_walletInited[msg.sender]) {
+            _walletInited[msg.sender] = true;
             _init(data);
             emit WalletInited(msg.sender);
         }
@@ -46,8 +47,8 @@ abstract contract BaseValidator is IValidator {
      */
     function clearWalletConfig() external onlyEnabledValidator {
         if (_walletInited[msg.sender]) {
-            _clear();
             _walletInited[msg.sender] = false;
+            _clear();
             emit WalletCleared(msg.sender);
         }
     }
@@ -72,5 +73,49 @@ abstract contract BaseValidator is IValidator {
      */
     function isWalletInited(address wallet) external view returns(bool) {
         return _walletInited[wallet];
+    }
+
+    /**
+     * @dev Inherits from ERC165.
+     */
+    function supportsInterface(bytes4 interfaceId) external pure returns (bool) {
+        return interfaceId == type(IValidator).interfaceId;
+    }
+
+    /**
+     * @dev Check the decoded signature type and fee.
+     * @param sigType The signature type.
+     * @param maxFeePerGas The maximum fee per gas.
+     * @param maxPriorityFeePerGas The maximum priority fee per gas.
+     * @param actualMaxFeePerGas The actual maximum fee per gas from the user operation.
+     * @param actualMaxPriorityFeePerGas The actual maximum priority fee per gas from the user operation.
+     * @return A boolean indicating whether the decoded signature is valid or not.
+     */
+    function _checkTransactionTypeAndFee(
+        uint256 sigType,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas,
+        uint256 actualMaxFeePerGas,
+        uint256 actualMaxPriorityFeePerGas
+    ) pure internal returns(bool) {
+        if (sigType != 0x00 && sigType != 0x01) {
+            return false;
+        }
+        if (sigType == 0x01
+            && (actualMaxFeePerGas >= maxFeePerGas || actualMaxPriorityFeePerGas >= maxPriorityFeePerGas)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @dev Pack the validation data.
+     * @param sigFailed The signature validation result.
+     * @param validUntil The valid until timestamp.
+     * @param validAfter The valid after timestamp.
+     * @return The packed validation data.
+     */
+    function _packValidationData(uint256 sigFailed, uint256 validUntil, uint256 validAfter) internal pure returns (uint256) {
+        return sigFailed | validUntil << 160 | validAfter << (160 + 48);
     }
 }

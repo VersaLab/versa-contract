@@ -3,6 +3,7 @@ pragma solidity ^0.8.17;
 
 import "../common/Enum.sol";
 import "../common/SelfAuthorized.sol";
+import "../common/Executor.sol";
 import "../interface/IModule.sol";
 import "../library/AddressLinkedList.sol";
 
@@ -13,12 +14,15 @@ import "../library/AddressLinkedList.sol";
  * ⚠️ WARNING: Modules are a security risk since they can execute arbitrary transactions, so only trusted and audited
  *   modules should be added to a Versa wallet. A malicious module can completely take over a Versa wallet.
  */
-abstract contract ModuleManager is SelfAuthorized {
+abstract contract ModuleManager is Executor, SelfAuthorized {
     using AddressLinkedList for mapping(address => address);
 
     event EnabledModule(address indexed module);
     event DisabledModule(address indexed module);
     event DisabledModuleWithError(address indexed module);
+
+    event ExecutionFromModuleSuccess(address indexed module);
+    event ExecutionFromModuleFailure(address indexed module);
 
     mapping(address => address) internal modules;
 
@@ -40,6 +44,48 @@ abstract contract ModuleManager is SelfAuthorized {
      */
     function disableModule(address prevModule, address module) public authorized {
         _disableModule(prevModule, module);
+    }
+
+    /**
+     * @notice Execute `operation` (0: Call, 1: DelegateCall) to `to` with `value` (Native Token).
+     * @dev This function is marked as virtual to allow overriding for L2 singleton to emit an event for indexing.
+     * @notice Subclasses must override `_isPluginEnabled` to ensure the plugin is enabled.
+     * @param to Destination address of the module transaction.
+     * @param value Ether value of the module transaction.
+     * @param data Data payload of the module transaction.
+     * @param operation Operation type of the module transaction.
+     * @return success Boolean flag indicating if the call succeeded.
+     */
+    function execTransactionFromModule(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public virtual returns (bool success) {
+        require(_isModuleEnabled(msg.sender), "Only enabled module");
+        // Execute transaction without further confirmations.
+        success = execute(to, value, data, operation, type(uint256).max);
+        if (success) emit ExecutionFromModuleSuccess(msg.sender);
+        else emit ExecutionFromModuleFailure(msg.sender);
+    }
+
+    /**
+     * @notice Execute `operation` (0: Call, 1: DelegateCall) to `to` with `value` (Native Token) and return data.
+     * @param to Destination address of the module transaction.
+     * @param value Ether value of the module transaction.
+     * @param data Data payload of the module transaction.
+     * @param operation Operation type of the module transaction.
+     * @return success Boolean flag indicating if the call succeeded.
+     * @return returnData Data returned by the call.
+     */
+    function execTransactionFromModuleReturnData(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public returns (bool success, bytes memory returnData) {
+        success = execTransactionFromModule(to, value, data, operation);
+        returnData = getReturnData(type(uint256).max);
     }
 
     /**
@@ -85,12 +131,12 @@ abstract contract ModuleManager is SelfAuthorized {
      * @param module The module to be disabled.
      */
     function _disableModule(address prevModule, address module) internal {
-        modules.remove(prevModule, module);
         try IModule(module).clearWalletConfig() {
             emit DisabledModule(module);
         } catch {
             emit DisabledModuleWithError(module);
         }
+        modules.remove(prevModule, module);
     }
 
     /**

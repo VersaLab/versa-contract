@@ -2,6 +2,8 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { ModuleManager, MockModule } from '../../typechain-types';
 import { enablePlugin, disablePlugin, SENTINEL } from './utils';
+import { parseEther } from 'ethers/lib/utils';
+import * as helpers from "@nomicfoundation/hardhat-network-helpers"
 
 describe('ModuleManager', () => {
   let moduleManager: ModuleManager;
@@ -71,5 +73,42 @@ describe('ModuleManager', () => {
     expect(modules).to.include(MODULE_3);
 
     expect(await moduleManager.moduleSize()).to.be.equal(expectedLength)
+  });
+
+  it('should execute transaction from enabled module', async () => {
+    // Enable plugin
+    await enablePlugin({executor: moduleManager, plugin: MODULE_1})
+
+    let plugin = await ethers.getContractAt("MockModule", MODULE_1)
+
+    let [signer] = await ethers.getSigners()
+    // Execute transaction from plugin
+    let tx = await plugin.executeToWallet(
+      moduleManager.address,
+      signer.address,
+      parseEther("1")
+    );
+
+    // Check transaction failed
+    expect(tx).to.emit(moduleManager, 'ExecutionFromModuleFailure').withArgs(plugin.address);
+
+    await helpers.setBalance(moduleManager.address, parseEther("10"))
+    tx = await plugin.executeToWallet(
+        moduleManager.address,
+        signer.address,
+        parseEther('1')
+      );
+
+    expect(tx).to.emit(moduleManager, 'ExecutionFromPluginSuccess').withArgs(plugin.address);
+  });
+
+  it('should not execute transaction from disabled plugin', async () => {
+    // Execute transaction from plugin
+    await expect(moduleManager.execTransactionFromModule(
+      moduleManager.address,
+      parseEther('1'),
+      '0x',
+      0
+    )).to.be.revertedWith('Only enabled module')
   });
 });

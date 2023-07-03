@@ -68,7 +68,7 @@ abstract contract BaseHooks is IHooks {
     function hasHooks() external pure virtual returns (uint256) {}
 
     /**
-     * @dev Executes before the transaction is performed.
+     * @dev Perform before transaction actions.
      * @param _to The address to which the transaction is sent.
      * @param _value The value of the transaction.
      * @param _data Additional data of the transaction.
@@ -77,7 +77,7 @@ abstract contract BaseHooks is IHooks {
     function beforeTransaction(address _to, uint256 _value, bytes memory _data, Enum.Operation _operation) external virtual onlyEnabledHooks {}
 
     /**
-     * @dev Executes after the transaction is performed.
+     * @dev Perform after transaction actions.
      * @param _to The address to which the transaction is sent.
      * @param _value The value of the transaction.
      * @param _data Additional data of the transaction.

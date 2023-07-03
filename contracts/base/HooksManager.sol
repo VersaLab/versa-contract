@@ -124,6 +124,12 @@ abstract contract HooksManager is SelfAuthorized {
      * @param hooks The address of the hooks contract to be disabled.
      */
     function _disableHooks(address prevBeforeTxHook, address prevAfterTxHooks, address hooks) internal {
+        // Try to clear wallet configurations
+        try IHooks(hooks).clearWalletConfig() {
+            emit DisabledHooks(hooks);
+        } catch {
+            emit DisabledHooksWithError(hooks);
+        }
         // Remove hooks from exsiting linked list
         uint256 hasHooks = IHooks(hooks).hasHooks();
         if (hasHooks >> 128 == 1) {
@@ -131,12 +137,6 @@ abstract contract HooksManager is SelfAuthorized {
         }
         if (uint128(hasHooks) == 1) {
             afterTxHooks.remove(prevAfterTxHooks, hooks);
-        }
-        // Try to clear wallet configurations
-        try IHooks(hooks).clearWalletConfig() {
-            emit DisabledHooks(hooks);
-        } catch {
-            emit DisabledHooksWithError(hooks);
         }
     }
 

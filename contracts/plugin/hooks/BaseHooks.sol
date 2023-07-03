@@ -29,7 +29,7 @@ abstract contract BaseHooks is IHooks {
      * @dev Initializes the wallet configuration.
      * @param _data The initialization data.
      */
-    function initWalletConfig(bytes calldata _data) external onlyEnabledHooks {
+    function initWalletConfig(bytes memory _data) external onlyEnabledHooks {
         if (!_walletInitStatus[msg.sender]) {
             _walletInitStatus[msg.sender] = true;
             _init(_data);
@@ -53,7 +53,7 @@ abstract contract BaseHooks is IHooks {
      * Subclass must implement this function
      * @param _data The initialization data.
      */
-    function _init(bytes calldata _data) internal virtual {}
+    function _init(bytes memory _data) internal virtual {}
 
     /**
      * @dev Internal function to handle wallet configuration clearing.
@@ -65,9 +65,7 @@ abstract contract BaseHooks is IHooks {
      * @dev Returns the supported hooks of this contract.
      * @return The supported hooks (represented as a bitwise flag).
      */
-    function hasHooks() external pure virtual returns (uint256) {
-        return BEFORE_TXHOOKS_FLAG | AFTER_TXHOOKS_FLAG;
-    }
+    function hasHooks() external pure virtual returns (uint256) {}
 
     /**
      * @dev Executes before the transaction is performed.

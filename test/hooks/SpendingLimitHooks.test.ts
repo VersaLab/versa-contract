@@ -57,27 +57,23 @@ describe("SpendingLimitHooks", () => {
             initData: initData,
             selector: "enableHooks",
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: data length does not match");
+        await expect(tx).to.be.revertedWith("SpendingLimitHooks: parse error");
 
-        let nativeTokenAllowanceAmount = parseEther("100");
-        let nativeTokenResetBaseTimeMinutes = Math.floor((await helper.time.latest()) / 60);
-        let nativeTokenResetTimeIntervalMinutes = 30;
-        let erc20TokenAllowanceAmount = BigNumber.from(100).mul(BigNumber.from(10).pow(erc20TokenDecimal));
-        let erc20TokenResetBaseTimeMinutes = nativeTokenResetBaseTimeMinutes;
-        let erc20TokenResetTimeIntervalMinutes = nativeTokenResetTimeIntervalMinutes;
-        initData = abiCoder.encode(
-            ["address", "uint256", "uint32", "uint16", "address", "uint256", "uint32", "uint16"],
-            [
-                nativeTokenAddress,
-                nativeTokenAllowanceAmount,
-                nativeTokenResetBaseTimeMinutes,
-                nativeTokenResetTimeIntervalMinutes,
-                erc20TokenAddress,
-                erc20TokenAllowanceAmount,
-                erc20TokenResetBaseTimeMinutes,
-                erc20TokenResetTimeIntervalMinutes,
-            ]
-        );
+        let configs = [
+            {
+                tokenAddress: nativeTokenAddress,
+                allowanceAmount: parseEther("100"),
+                resetBaseTimeMinutes: Math.floor((await helper.time.latest()) / 60),
+                resetTimeIntervalMinutes: 30,
+            },
+            {
+                tokenAddress: erc20TokenAddress,
+                allowanceAmount: BigNumber.from(100).mul(BigNumber.from(10).pow(erc20TokenDecimal)),
+                resetBaseTimeMinutes: Math.floor((await helper.time.latest()) / 60),
+                resetTimeIntervalMinutes: 30,
+            },
+        ];
+        initData = abiCoder.encode(["tuple(address tokenAddress,uint256 allowanceAmount,uint32 resetBaseTimeMinutes,uint16 resetTimeIntervalMinutes)[]"], [configs]);
         tx = enablePlugin({
             executor: wallet,
             plugin: spendingLimitHooks.address,
@@ -86,23 +82,23 @@ describe("SpendingLimitHooks", () => {
         });
         await expect(tx)
             .to.emit(spendingLimitHooks, "SetSpendingLimit")
-            .withArgs(wallet.address, nativeTokenAddress, nativeTokenAllowanceAmount, nativeTokenResetBaseTimeMinutes, nativeTokenResetTimeIntervalMinutes)
+            .withArgs(wallet.address, nativeTokenAddress, configs[0].allowanceAmount, configs[0].resetBaseTimeMinutes, configs[0].resetTimeIntervalMinutes)
             .to.emit(spendingLimitHooks, "SetSpendingLimit")
-            .withArgs(wallet.address, erc20TokenAddress, erc20TokenAllowanceAmount, erc20TokenResetBaseTimeMinutes, erc20TokenResetTimeIntervalMinutes)
+            .withArgs(wallet.address, erc20TokenAddress, configs[1].allowanceAmount, configs[1].resetBaseTimeMinutes, configs[1].resetTimeIntervalMinutes)
             .to.emit(spendingLimitHooks, "InitWalletConfig")
             .withArgs(wallet.address)
             .to.emit(wallet, "EnabledHooks")
             .withArgs(spendingLimitHooks.address);
 
         let spendingLimitInfos = await spendingLimitHooks.batchGetSpendingLimitInfo(wallet.address, [nativeTokenAddress, erc20TokenAddress]);
-        expect(spendingLimitInfos[0].allowanceAmount).to.equal(nativeTokenAllowanceAmount);
+        expect(spendingLimitInfos[0].allowanceAmount).to.equal(configs[0].allowanceAmount);
         expect(spendingLimitInfos[0].spentAmount).to.equal(0);
-        expect(spendingLimitInfos[0].lastResetTimeMinutes).to.equal(nativeTokenResetBaseTimeMinutes);
-        expect(spendingLimitInfos[0].resetTimeIntervalMinutes).to.equal(nativeTokenResetTimeIntervalMinutes);
-        expect(spendingLimitInfos[1].allowanceAmount).to.equal(erc20TokenAllowanceAmount);
+        expect(spendingLimitInfos[0].lastResetTimeMinutes).to.equal(configs[0].resetBaseTimeMinutes);
+        expect(spendingLimitInfos[0].resetTimeIntervalMinutes).to.equal(configs[0].resetTimeIntervalMinutes);
+        expect(spendingLimitInfos[1].allowanceAmount).to.equal(configs[1].allowanceAmount);
         expect(spendingLimitInfos[1].spentAmount).to.equal(0);
-        expect(spendingLimitInfos[1].lastResetTimeMinutes).to.equal(erc20TokenResetBaseTimeMinutes);
-        expect(spendingLimitInfos[1].resetTimeIntervalMinutes).to.equal(erc20TokenResetTimeIntervalMinutes);
+        expect(spendingLimitInfos[1].lastResetTimeMinutes).to.equal(configs[1].resetBaseTimeMinutes);
+        expect(spendingLimitInfos[1].resetTimeIntervalMinutes).to.equal(configs[1].resetTimeIntervalMinutes);
     });
 
     it("check cover batchSetSpendingLimit ", async () => {
@@ -112,20 +108,20 @@ describe("SpendingLimitHooks", () => {
             selector: "enableHooks",
         });
 
-        // let errorERC20TokenConfig = {
-        //     tokenAddress: owner.address,
-        //     allowanceAmount: 1,
-        //     resetBaseTimeMinutes: 1,
-        //     resetTimeIntervalMinutes: 1,
-        // };
-        // let data = spendingLimitHooks.interface.encodeFunctionData("setSpendingLimit", [errorERC20TokenConfig]);
-        // await expect(
-        //     execute({
-        //         executor: wallet,
-        //         to: spendingLimitHooks.address,
-        //         data: data,
-        //     })
-        // ).to.be.revertedWith("SpendingLimitHooks: illegal token address");
+        let errorERC20TokenConfig = {
+            tokenAddress: owner.address,
+            allowanceAmount: 1,
+            resetBaseTimeMinutes: 1,
+            resetTimeIntervalMinutes: 1,
+        };
+        let data = spendingLimitHooks.interface.encodeFunctionData("setSpendingLimit", [errorERC20TokenConfig]);
+        await expect(
+            execute({
+                executor: wallet,
+                to: spendingLimitHooks.address,
+                data: data,
+            })
+        ).to.be.revertedWithoutReason();
 
         let nativeTokenConfig = {
             tokenAddress: nativeTokenAddress,
@@ -230,7 +226,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: native token overspending");
+        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [owner.address, parseEther("200"), "0x", 0]);
         await execute({
@@ -252,7 +248,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: ERC20 token overspending");
+        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,
@@ -265,7 +261,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: ERC20 token overspending");
+        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,
@@ -278,7 +274,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: ERC20 token overspending");
+        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,
@@ -351,7 +347,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: ERC20 token overspending");
+        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,

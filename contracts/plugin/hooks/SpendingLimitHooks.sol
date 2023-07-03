@@ -9,17 +9,17 @@ import "./BaseHooks.sol";
  */
 contract SpendingLimitHooks is BaseHooks {
     struct SpendingLimitSetConfig {
-        address tokenAddress;
-        uint256 allowanceAmount;
-        uint32 resetBaseTimeMinutes;
-        uint16 resetTimeIntervalMinutes;
+        address tokenAddress; // The address of the token that needs spending limit
+        uint256 allowanceAmount; // The maximum amount of the token allowed to be spent within resetTimeIntervalMinutes
+        uint32 resetBaseTimeMinutes; // Base time reference value for calculation (timestamp to minutes)
+        uint16 resetTimeIntervalMinutes; // Reset time interval (minutes)
     }
 
     struct SpendingLimitInfo {
-        uint256 allowanceAmount;
-        uint256 spentAmount;
-        uint32 lastResetTimeMinutes;
-        uint16 resetTimeIntervalMinutes;
+        uint256 allowanceAmount; // The maximum amount of the token allowed to be spent within resetTimeIntervalMinutes
+        uint256 spentAmount; // The amount of the token has been spent within resetTimeIntervalMinutes
+        uint32 lastResetTimeMinutes; // Last reset time (timestamp to minutes)
+        uint16 resetTimeIntervalMinutes; // Reset time interval (minutes)
     }
 
     event SetSpendingLimit(address indexed _wallet, address indexed _token, uint256 _allowanceAmount, uint32 _resetBaseTimeMinutes, uint16 _resetTimeIntervalMinutes);
@@ -41,9 +41,9 @@ contract SpendingLimitHooks is BaseHooks {
      * @dev Internal function to handle wallet initialization.
      * @param _data The initialization data.
      */
-    function _init(bytes calldata _data) internal override {
+    function _init(bytes memory _data) internal override {
         if (_data.length > 0) {
-            SpendingLimitSetConfig[] memory initialSetConfigs = parseSpendingLimitSetConfigData(_data);
+            SpendingLimitSetConfig[] memory initialSetConfigs = _parseSpendingLimitSetConfigData(_data);
             batchSetSpendingLimit(initialSetConfigs);
         }
     }
@@ -60,6 +60,17 @@ contract SpendingLimitHooks is BaseHooks {
      */
     function _updateSpendingLimitInfo(address _token, SpendingLimitInfo memory _spendingLimitInfo) internal {
         _tokenSpendingLimitInfo[msg.sender][_token] = _spendingLimitInfo;
+    }
+
+    /**
+     * @dev Internal function to check spent amount and update the spending limit information.
+     * @param _token The address of the token.
+     * @param _spendingLimitInfo The updated spending limit information to be stored.
+     */
+    function _checkAmountAndUpdate(address _token, SpendingLimitInfo memory _spendingLimitInfo) internal {
+        // Ensure that the spent amount does not exceed the allowance amount
+        require(_spendingLimitInfo.spentAmount <= _spendingLimitInfo.allowanceAmount, "SpendingLimitHooks: token overspending");
+        _updateSpendingLimitInfo(_token, _spendingLimitInfo);
     }
 
     /**
@@ -98,9 +109,7 @@ contract SpendingLimitHooks is BaseHooks {
             // Update the spent amount with the transaction value
             spendingLimitInfo.spentAmount += _value;
 
-            // Ensure that the spent amount does not exceed the allowance amount
-            require(spendingLimitInfo.spentAmount <= spendingLimitInfo.allowanceAmount, "SpendingLimitHooks: native token overspending");
-            _updateSpendingLimitInfo(address(0), spendingLimitInfo);
+            _checkAmountAndUpdate(address(0), spendingLimitInfo);
         }
     }
 
@@ -120,15 +129,13 @@ contract SpendingLimitHooks is BaseHooks {
                 (address target, uint256 value) = abi.decode(_data[4:], (address, uint256));
                 if (target != msg.sender) {
                     spendingLimitInfo.spentAmount += value;
-                    require(spendingLimitInfo.spentAmount <= spendingLimitInfo.allowanceAmount, "SpendingLimitHooks: ERC20 token overspending");
-                    _updateSpendingLimitInfo(_token, spendingLimitInfo);
+                    _checkAmountAndUpdate(_token, spendingLimitInfo);
                 }
             } else if (methodSelector == TRANSFER_FROM) {
                 (address target, , uint256 value) = abi.decode(_data[4:], (address, address, uint256));
                 if (target == msg.sender) {
                     spendingLimitInfo.spentAmount += value;
-                    require(spendingLimitInfo.spentAmount <= spendingLimitInfo.allowanceAmount, "SpendingLimitHooks: ERC20 token overspending");
-                    _updateSpendingLimitInfo(_token, spendingLimitInfo);
+                    _checkAmountAndUpdate(_token, spendingLimitInfo);
                 }
             } else if (methodSelector == APPROVE) {
                 (address target, uint256 value) = abi.decode(_data[4:], (address, uint256));
@@ -136,8 +143,7 @@ contract SpendingLimitHooks is BaseHooks {
                     uint256 preAllowanceAmount = ERC20(_token).allowance(_wallet, target);
                     if (value > preAllowanceAmount) {
                         spendingLimitInfo.spentAmount = spendingLimitInfo.spentAmount + value - preAllowanceAmount;
-                        require(spendingLimitInfo.spentAmount <= spendingLimitInfo.allowanceAmount, "SpendingLimitHooks: ERC20 token overspending");
-                        _updateSpendingLimitInfo(_token, spendingLimitInfo);
+                        _checkAmountAndUpdate(_token, spendingLimitInfo);
                     }
                 }
             }
@@ -149,18 +155,9 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _data The data containing SpendingLimitSetConfig configurations.
      * @return An array of SpendingLimitSetConfig objects.
      */
-    function parseSpendingLimitSetConfigData(bytes calldata _data) public pure returns (SpendingLimitSetConfig[] memory) {
-        uint8 SINGLE_DATA_LENGTH = 32 * 4;
-        require(_data.length % SINGLE_DATA_LENGTH == 0, "SpendingLimitHooks: data length does not match");
-        uint256 dataLength = _data.length / SINGLE_DATA_LENGTH;
-        SpendingLimitSetConfig[] memory spendingLimitSetConfigs = new SpendingLimitSetConfig[](dataLength);
-        for (uint i = 0; i < dataLength; i++) {
-            (address tokenAddress, uint256 allowanceAmount, uint32 resetBaseTimeMinutes, uint16 resetTimeIntervalMinutes) = abi.decode(
-                _data[i * SINGLE_DATA_LENGTH:i * SINGLE_DATA_LENGTH + SINGLE_DATA_LENGTH],
-                (address, uint256, uint32, uint16)
-            );
-            spendingLimitSetConfigs[i] = SpendingLimitSetConfig(tokenAddress, allowanceAmount, resetBaseTimeMinutes, resetTimeIntervalMinutes);
-        }
+    function _parseSpendingLimitSetConfigData(bytes memory _data) internal pure returns (SpendingLimitSetConfig[] memory) {
+        SpendingLimitSetConfig[] memory spendingLimitSetConfigs = abi.decode(_data, (SpendingLimitSetConfig[]));
+        require(spendingLimitSetConfigs.length> 0, "SpendingLimitHooks: parse error");
         return spendingLimitSetConfigs;
     }
 
@@ -263,7 +260,7 @@ contract SpendingLimitHooks is BaseHooks {
     }
 
     /**
-     * @dev Executes before the transaction is performed.
+     * @dev Perform before transaction actions.
      * @param _to The address to which the transaction is sent.
      * @param _value The value of the transaction.
      * @param _data Additional data of the transaction.
@@ -274,13 +271,13 @@ contract SpendingLimitHooks is BaseHooks {
     }
 
     /**
-     * @dev Executes after the transaction is performed.
+     * @dev Perform after transaction actions.
      * @param _to The address to which the transaction is sent.
      * @param _value The value of the transaction.
      * @param _data Additional data of the transaction.
      * @param _operation The type of the transaction operation.
      */
-    function afterTransaction(address _to, uint256 _value, bytes memory _data, Enum.Operation _operation) external view override onlyEnabledHooks {
+    function afterTransaction(address _to, uint256 _value, bytes calldata _data, Enum.Operation _operation) external view override onlyEnabledHooks {
         (_to, _value, _data, _operation);
         revert("SpendingLimitHooks: afterTransaction hook is not allowed");
     }

@@ -221,7 +221,7 @@ it('should not set invalid threshold or guardians', async () => {
     executor: wallet,
     to: multisigValidator.address,
     data,
-  })).to.be.revertedWith("SM: bad guardian wallet")
+  })).to.be.revertedWith("Bad guardian wallet")
 
   newThreshold = 0
   // revoke signer1

@@ -6,9 +6,6 @@ import "./BaseValidator.sol";
 import "../../library/AddressLinkedList.sol";
 import "../../library/SignatureHandler.sol";
 
-
-import "hardhat/console.sol";
-
 /**
  * @title MultiSigValidator.
  * A multi-ECDSA validator contract.
@@ -32,7 +29,7 @@ contract MultiSigValidator is BaseValidator {
         uint128 count;
         // recovery threshold
         uint128 threshold;
-        mapping(bytes32 => uint256) approvedHashes;
+        mapping(bytes32 => bool) approvedHashes;
     }
 
     mapping (address => GuardianEntry) internal _entries;
@@ -101,7 +98,7 @@ contract MultiSigValidator is BaseValidator {
         uint256 newThreshold
     ) external onlyEnabledValidator() {
         uint256 currentGuardiansCount = _guardiansCount(msg.sender);
-        require(currentGuardiansCount - 1 >= newThreshold, "SM: invalid threshold");
+        require(currentGuardiansCount - 1 >= newThreshold, "Invalid threshold");
         _revokeGuardian(msg.sender, prevGuardian, guardian);
         _changeThreshold(msg.sender, newThreshold);
     }
@@ -114,19 +111,23 @@ contract MultiSigValidator is BaseValidator {
         _changeThreshold(msg.sender, newThreshold);
     }
 
+    /**
+     * @notice Clear previous guardians and set new guardians and threshold.
+     * @param newThreshold The new threshold that will be set after execution of revokation.
+     * @param newGuardians The array of new guardians, must be ordered for duplication check.
+     */
     function resetGuardians(
         uint256 newThreshold,
-        address[] calldata newGuardians // must be ordered to check duplication
+        address[] calldata newGuardians
     ) external onlyEnabledValidator() {
-        // require(newThreshold > 0, "SM: bad threshold");
         uint newGuardiansLength = newGuardians.length;
-        require(newGuardiansLength >= newThreshold, "SM: bad guardian wallet");
+        require(newGuardiansLength >= newThreshold, "Bad guardian wallet");
 
         address lastGuardian = address(0);
         for (uint i = 0; i < newGuardiansLength; i++) {
             require(
                 newGuardians[i] > lastGuardian,
-                "SM: duplicate signers/invalid ordering"
+                "Duplicate signers/invalid ordering"
             );
             lastGuardian = newGuardians[i];
         }
@@ -144,7 +145,7 @@ contract MultiSigValidator is BaseValidator {
      */
     function approveHash(bytes32 hash) external onlyEnabledValidator {
         require(!_isHashApproved(msg.sender, hash), "Hash already approved");
-        _entries[msg.sender].approvedHashes[hash] = 1;
+        _entries[msg.sender].approvedHashes[hash] = true;
         emit ApproveHash(hash);
     }
 
@@ -154,7 +155,7 @@ contract MultiSigValidator is BaseValidator {
      */
     function revokeHash(bytes32 hash) external onlyEnabledValidator {
         require(_isHashApproved(msg.sender, hash), "Hash is not approved");
-        _entries[msg.sender].approvedHashes[hash] = 0;
+        _entries[msg.sender].approvedHashes[hash] = false;
         emit RevokeHash(hash);
     }
 
@@ -186,6 +187,10 @@ contract MultiSigValidator is BaseValidator {
         emit RevokeGuardian(wallet, guardian, entry.count);
     }
 
+    /**
+     * @notice Clear guardians and threshold of a wallet.
+     * @param wallet The target wallet.
+     */
     function _clearGuardians(address wallet) internal {
         address[] memory guardians = getGuardians(wallet);
         uint guardiansLength = guardians.length;
@@ -276,7 +281,7 @@ contract MultiSigValidator is BaseValidator {
     ) external view returns(bool) {
         // If signature is empty, the hash must be previously approved 
         if (signature.length == 0) {
-            require(_entries[wallet].approvedHashes[hash] == 1, "Hash not approved");
+            require(_entries[wallet].approvedHashes[hash], "Hash not approved");
         // If check if enough valid guardians's signature collected
         } else {
             bytes32 ethSignedMessageHash = hash.toEthSignedMessageHash();
@@ -329,7 +334,7 @@ contract MultiSigValidator is BaseValidator {
      */
     function getGuardians(address wallet) public view returns (address[] memory) {
         GuardianEntry storage entry = _entries[wallet];
-        if (entry.count == 0){
+        if (entry.count == 0) {
             return new address[](0);
         }
         address[] memory array = new address[](entry.count);
@@ -385,7 +390,7 @@ contract MultiSigValidator is BaseValidator {
                 assembly {
                     contractSignatureLen := mload(add(add(signatures, s), 0x20))
                 }
-                require(uint256(s) + 32 + contractSignatureLen <= signatures.length, "contract signature wrong offset");
+                require(uint256(s) + 32 + contractSignatureLen <= signatures.length, "Contract signature wrong offset");
 
                 // Check signature
                 bytes memory contractSignature;
@@ -394,13 +399,9 @@ contract MultiSigValidator is BaseValidator {
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                (bool success, bytes memory result) = currentGuardian.staticcall(
-                    abi.encodeWithSelector(IERC1271.isValidSignature.selector, dataHash, contractSignature)
-                );
                 require(
-                    success && result.length == 32
-                        && abi.decode(result, (bytes32)) == bytes32(IERC1271.isValidSignature.selector),
-                    "contract signature invalid"
+                    SignatureChecker.isValidERC1271SignatureNow(currentGuardian, dataHash, contractSignature),
+                    "Contract signature invalid"
                 );
             } else {
                 // eip712 recovery
@@ -445,6 +446,6 @@ contract MultiSigValidator is BaseValidator {
      * @return bool True if the hash is approves.
      */
     function _isHashApproved(address wallet, bytes32 hash) internal view returns(bool) {
-        return _entries[wallet].approvedHashes[hash] == 1;
+        return _entries[wallet].approvedHashes[hash];
     }
 }

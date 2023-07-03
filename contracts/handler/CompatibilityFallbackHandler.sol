@@ -25,24 +25,16 @@ contract CompatibilityFallbackHandler is TokenCallbackHandler, IERC1271 {
         view
         returns (bytes4 magicValue)
     {
-        (uint256 sudoValidatorSize, ) = ValidatorManager(msg.sender).validatorSize();
-        address[] memory sudoValidators = ValidatorManager(msg.sender).getValidatorsPaginated(
-            address(1),
-            sudoValidatorSize,
-            ValidatorManager.ValidatorType.Sudo
+        address validator = address(bytes20(_signature[0:20]));
+        require(
+            ValidatorManager(msg.sender).getValidatorType(validator) == ValidatorManager.ValidatorType.Sudo,
+            "Only sudo validator"
         );
-        for (uint256 i = 0; i < sudoValidatorSize; ++i) {
-            try IValidator(sudoValidators[i]).isValidSignature(
-                _hash,
-                _signature,
-                msg.sender
-            ) returns (bool isValid) {
-                if (!isValid) {
-                    magicValue = 0xffffffff;
-                } else {
-                    return EIP1271_MAGIC_VALUE;
-                }
-            } catch  { magicValue = 0xffffffff; }
-        }
+        bool isValid = IValidator(validator).isValidSignature(
+            _hash,
+            _signature[20:],
+            msg.sender
+        );
+        return isValid ? EIP1271_MAGIC_VALUE : bytes4(0xffffffff);
     }
 }

@@ -19,11 +19,8 @@ abstract contract BaseValidator is IValidator {
     /**
      * @dev Modifier to check if the validator is enabled for the caller wallet.
      */
-    modifier onlyEnabledValidator {
-        require(
-            VersaWallet(payable(msg.sender)).isValidatorEnabled(address(this)),
-            "Validator is not enabled"
-        );
+    modifier onlyEnabledValidator() {
+        require(VersaWallet(payable(msg.sender)).isValidatorEnabled(address(this)), "Validator is not enabled");
         _;
     }
 
@@ -31,11 +28,8 @@ abstract contract BaseValidator is IValidator {
      * @dev Initializes the wallet configuration.
      * @param data The initialization data.
      */
-    function initWalletConfig(bytes memory data)
-        external
-        onlyEnabledValidator
-    {
-        if(!_walletInited[msg.sender]) {
+    function initWalletConfig(bytes memory data) external onlyEnabledValidator {
+        if (!_walletInited[msg.sender]) {
             _walletInited[msg.sender] = true;
             _init(data);
             emit WalletInited(msg.sender);
@@ -71,7 +65,7 @@ abstract contract BaseValidator is IValidator {
      * @param wallet The wallet address to check.
      * @return A boolean indicating if the wallet is initialized.
      */
-    function isWalletInited(address wallet) external view returns(bool) {
+    function isWalletInited(address wallet) external view returns (bool) {
         return _walletInited[wallet];
     }
 
@@ -97,12 +91,11 @@ abstract contract BaseValidator is IValidator {
         uint256 maxPriorityFeePerGas,
         uint256 actualMaxFeePerGas,
         uint256 actualMaxPriorityFeePerGas
-    ) pure internal returns(bool) {
+    ) internal pure returns (bool) {
         if (sigType != 0x00 && sigType != 0x01) {
             return false;
         }
-        if (sigType == 0x01
-            && (actualMaxFeePerGas >= maxFeePerGas || actualMaxPriorityFeePerGas >= maxPriorityFeePerGas)) {
+        if (sigType == 0x01 && (actualMaxFeePerGas >= maxFeePerGas || actualMaxPriorityFeePerGas >= maxPriorityFeePerGas)) {
             return false;
         }
         return true;
@@ -116,6 +109,6 @@ abstract contract BaseValidator is IValidator {
      * @return The packed validation data.
      */
     function _packValidationData(uint256 sigFailed, uint256 validUntil, uint256 validAfter) internal pure returns (uint256) {
-        return sigFailed | validUntil << 160 | validAfter << (160 + 48);
+        return sigFailed | (validUntil << 160) | (validAfter << (160 + 48));
     }
 }

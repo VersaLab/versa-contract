@@ -9,21 +9,11 @@ contract MockModule is IModule {
 
     function clearWalletConfig() external override {}
 
-    function supportsInterface(bytes4 interfaceId)
-        external
-        pure
-        override
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IModule).interfaceId;
     }
 
     function executeToWallet(address wallet, address to, uint256 value) external {
-        ModuleManager(wallet).execTransactionFromModuleReturnData(
-            to,
-            value,
-            '0x',
-            Enum.Operation.Call
-        );
+        ModuleManager(wallet).execTransactionFromModuleReturnData(to, value, "0x", Enum.Operation.Call);
     }
 }

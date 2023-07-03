@@ -157,7 +157,7 @@ contract SpendingLimitHooks is BaseHooks {
      */
     function _parseSpendingLimitSetConfigData(bytes memory _data) internal pure returns (SpendingLimitSetConfig[] memory) {
         SpendingLimitSetConfig[] memory spendingLimitSetConfigs = abi.decode(_data, (SpendingLimitSetConfig[]));
-        require(spendingLimitSetConfigs.length> 0, "SpendingLimitHooks: parse error");
+        require(spendingLimitSetConfigs.length > 0, "SpendingLimitHooks: parse error");
         return spendingLimitSetConfigs;
     }
 

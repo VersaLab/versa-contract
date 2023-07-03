@@ -12,10 +12,7 @@ contract VersaAccountFactory is SafeProxyFactory {
     address public immutable versaSingleton;
     address public immutable defaultFallbackHandler;
 
-    constructor(
-        address _versaSingleton,
-        address _fallbackHandler
-    ) {
+    constructor(address _versaSingleton, address _fallbackHandler) {
         versaSingleton = _versaSingleton;
         defaultFallbackHandler = _fallbackHandler;
     }
@@ -30,25 +27,12 @@ contract VersaAccountFactory is SafeProxyFactory {
         bytes[] memory moduleInitData,
         uint256 salt
     ) public returns (address) {
-        address addr = getAddress(
-            validators, validatorInitData, validatorType,
-            hooks, hooksInitData,
-            modules, moduleInitData,
-            salt
-        );
+        address addr = getAddress(validators, validatorInitData, validatorType, hooks, hooksInitData, modules, moduleInitData, salt);
         uint codeSize = addr.code.length;
         if (codeSize > 0) {
             return addr;
         }
-        return address(createProxyWithNonce(
-            versaSingleton, getInitializer(
-                validators, validatorInitData, validatorType,
-                hooks, hooksInitData,
-                modules, moduleInitData
-            ),
-            salt
-            )
-        );
+        return address(createProxyWithNonce(versaSingleton, getInitializer(validators, validatorInitData, validatorType, hooks, hooksInitData, modules, moduleInitData), salt));
     }
 
     function getInitializer(
@@ -60,15 +44,7 @@ contract VersaAccountFactory is SafeProxyFactory {
         address[] memory modules,
         bytes[] memory moduleInitData
     ) internal view returns (bytes memory) {
-        return abi.encodeCall(
-            VersaWallet.initialize,
-            (
-            defaultFallbackHandler,
-            validators, validatorInitData, validatorType,
-            hooks, hooksInitData,
-            modules, moduleInitData
-            )
-        );
+        return abi.encodeCall(VersaWallet.initialize, (defaultFallbackHandler, validators, validatorInitData, validatorType, hooks, hooksInitData, modules, moduleInitData));
     }
 
     /**
@@ -85,11 +61,7 @@ contract VersaAccountFactory is SafeProxyFactory {
         bytes[] memory moduleInitData,
         uint256 salt
     ) public view returns (address) {
-        bytes memory initializer = getInitializer(
-            validators, validatorInitData, validatorType,
-            hooks, hooksInitData,
-            modules, moduleInitData
-        );
+        bytes memory initializer = getInitializer(validators, validatorInitData, validatorType, hooks, hooksInitData, modules, moduleInitData);
         //copied from deployProxyWithNonce
         bytes32 salt2 = keccak256(abi.encodePacked(keccak256(initializer), salt));
         bytes memory deploymentData = abi.encodePacked(proxyCreationCode(), uint256(uint160(versaSingleton)));

@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import "../../base/EntryPointManager.sol";
 
 contract MockEntryPointManager is EntryPointManager {
-    constructor(address _entryPoint) EntryPointManager(_entryPoint){}
+    constructor(address _entryPoint) EntryPointManager(_entryPoint) {}
 
-    function checkFromEntryPoint() onlyFromEntryPoint public view {}
+    function checkFromEntryPoint() public view onlyFromEntryPoint {}
 }

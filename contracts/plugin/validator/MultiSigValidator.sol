@@ -32,19 +32,15 @@ contract MultiSigValidator is BaseValidator {
         mapping(bytes32 => bool) approvedHashes;
     }
 
-    mapping (address => GuardianEntry) internal _entries;
+    mapping(address => GuardianEntry) internal _entries;
 
     /**
      * @dev Internal function to handle wallet initialization.
      * @param data The initialization data.
      */
     function _init(bytes memory data) internal override {
-        (address[] memory guardians, uint256 newThreshold) =
-            abi.decode(data, (address[], uint256));
-        require(
-            guardians.length > 0 && newThreshold <= guardians.length,
-            "Invalid initdata"
-        );
+        (address[] memory guardians, uint256 newThreshold) = abi.decode(data, (address[], uint256));
+        require(guardians.length > 0 && newThreshold <= guardians.length, "Invalid initdata");
         for (uint256 i = 0; i < guardians.length; i++) {
             _addGuardian(msg.sender, guardians[i]);
         }
@@ -62,10 +58,7 @@ contract MultiSigValidator is BaseValidator {
      * @param guardian The guardian to add.
      * @param newThreshold The new threshold that will be set after addition.
      */
-    function addGuardian(
-        address guardian,
-        uint256 newThreshold
-    ) external onlyEnabledValidator() {
+    function addGuardian(address guardian, uint256 newThreshold) external onlyEnabledValidator {
         _addGuardian(msg.sender, guardian);
         _changeThreshold(msg.sender, newThreshold);
     }
@@ -75,10 +68,7 @@ contract MultiSigValidator is BaseValidator {
      * @param guardians The guardian list to add.
      * @param newThreshold The new threshold that will be set after addition.
      */
-    function addGuardians(
-        address[] calldata guardians,
-        uint256 newThreshold
-    ) external onlyEnabledValidator {
+    function addGuardians(address[] calldata guardians, uint256 newThreshold) external onlyEnabledValidator {
         uint guardiansLength = guardians.length;
         for (uint i = 0; i < guardiansLength; i++) {
             _addGuardian(msg.sender, guardians[i]);
@@ -92,11 +82,7 @@ contract MultiSigValidator is BaseValidator {
      * @param guardian The guardian to revoke.
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
-    function revokeGuardian(
-        address prevGuardian,
-        address guardian,
-        uint256 newThreshold
-    ) external onlyEnabledValidator() {
+    function revokeGuardian(address prevGuardian, address guardian, uint256 newThreshold) external onlyEnabledValidator {
         uint256 currentGuardiansCount = _guardiansCount(msg.sender);
         require(currentGuardiansCount - 1 >= newThreshold, "Invalid threshold");
         _revokeGuardian(msg.sender, prevGuardian, guardian);
@@ -107,7 +93,7 @@ contract MultiSigValidator is BaseValidator {
      * @notice Lets the owner change the guardian threshold required.
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
-    function changeThreshold(uint256 newThreshold) external onlyEnabledValidator() {
+    function changeThreshold(uint256 newThreshold) external onlyEnabledValidator {
         _changeThreshold(msg.sender, newThreshold);
     }
 
@@ -116,23 +102,17 @@ contract MultiSigValidator is BaseValidator {
      * @param newThreshold The new threshold that will be set after execution of revokation.
      * @param newGuardians The array of new guardians, must be ordered for duplication check.
      */
-    function resetGuardians(
-        uint256 newThreshold,
-        address[] calldata newGuardians
-    ) external onlyEnabledValidator() {
+    function resetGuardians(uint256 newThreshold, address[] calldata newGuardians) external onlyEnabledValidator {
         uint newGuardiansLength = newGuardians.length;
         require(newGuardiansLength >= newThreshold, "Bad guardian wallet");
 
         address lastGuardian = address(0);
         for (uint i = 0; i < newGuardiansLength; i++) {
-            require(
-                newGuardians[i] > lastGuardian,
-                "Duplicate signers/invalid ordering"
-            );
+            require(newGuardians[i] > lastGuardian, "Duplicate signers/invalid ordering");
             lastGuardian = newGuardians[i];
         }
         _clearGuardians(msg.sender);
-        for(uint i = 0; i < newGuardiansLength; i++) {
+        for (uint i = 0; i < newGuardiansLength; i++) {
             _addGuardian(msg.sender, newGuardians[i]);
         }
         _changeThreshold(msg.sender, newThreshold);
@@ -199,7 +179,7 @@ contract MultiSigValidator is BaseValidator {
         }
 
         address prevGuardian = AddressLinkedList.SENTINEL_ADDRESS;
-        for(uint i = 0; i < guardiansLength; i++) {
+        for (uint i = 0; i < guardiansLength; i++) {
             _revokeGuardian(wallet, prevGuardian, guardians[i]);
         }
         _entries[wallet].threshold = 0;
@@ -228,40 +208,21 @@ contract MultiSigValidator is BaseValidator {
      * @param userOp The userOp to validate.
      * @param userOpHash The hash of the userOp.
      */
-    function validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
-        external
-        view
-        returns (uint256 validationData) 
-    {
+    function validateSignature(UserOperation calldata userOp, bytes32 userOpHash) external view returns (uint256 validationData) {
         uint256 currentThreshold = _entries[userOp.sender].threshold;
         // Check that the provided signature data is not too short
         // 20 bytes validator address + 1 byte sig type + required signatures(no less than threshold * 65)
-        if (
-            currentThreshold == 0 ||
-            userOp.signature.length < 20 + 1 + currentThreshold * 65
-        ) {
+        if (currentThreshold == 0 || userOp.signature.length < 20 + 1 + currentThreshold * 65) {
             return SIG_VALIDATION_FAILED;
         }
-        SignatureHandler.SplitedSignature memory splitedSig =
-            SignatureHandler.splitUserOpSignature(userOp, userOpHash);
-        if (!_checkTransactionTypeAndFee(
-            splitedSig.signatureType,
-            splitedSig.maxFeePerGas,
-            splitedSig.maxPriorityFeePerGas,
-            userOp.maxFeePerGas,
-            userOp.maxPriorityFeePerGas
-        )) {
+        SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(userOp, userOpHash);
+        if (!_checkTransactionTypeAndFee(splitedSig.signatureType, splitedSig.maxFeePerGas, splitedSig.maxPriorityFeePerGas, userOp.maxFeePerGas, userOp.maxPriorityFeePerGas)) {
             return SIG_VALIDATION_FAILED;
         }
 
         bytes32 ethSignedMessageHash = userOpHash.toEthSignedMessageHash();
         // Check if signatures are valid, return `SIG_VALIDATION_FAILED` if error occurs
-        try this.checkNSignatures(
-            userOp.sender,
-            ethSignedMessageHash,
-            splitedSig.signature,
-            currentThreshold
-        ) { 
+        try this.checkNSignatures(userOp.sender, ethSignedMessageHash, splitedSig.signature, currentThreshold) {
             return _packValidationData(0, splitedSig.validUntil, splitedSig.validAfter);
         } catch {
             return SIG_VALIDATION_FAILED;
@@ -274,15 +235,11 @@ contract MultiSigValidator is BaseValidator {
      * @param signature Signature byte array associated with _data.
      * @return True if signature valid.
      */
-    function isValidSignature(
-        bytes32 hash,
-        bytes calldata signature,
-        address wallet
-    ) external view returns(bool) {
-        // If signature is empty, the hash must be previously approved 
+    function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
+        // If signature is empty, the hash must be previously approved
         if (signature.length == 0) {
             require(_entries[wallet].approvedHashes[hash], "Hash not approved");
-        // If check if enough valid guardians's signature collected
+            // If check if enough valid guardians's signature collected
         } else {
             bytes32 ethSignedMessageHash = hash.toEthSignedMessageHash();
             checkNSignatures(wallet, ethSignedMessageHash, signature, _entries[wallet].threshold);
@@ -323,7 +280,7 @@ contract MultiSigValidator is BaseValidator {
      * @param wallet The target wallet.
      * @return bool True if the hash is approves.
      */
-    function isHashApproved(address wallet, bytes32 hash) public view returns(bool) {
+    function isHashApproved(address wallet, bytes32 hash) public view returns (bool) {
         return _isHashApproved(wallet, hash);
     }
 
@@ -338,10 +295,7 @@ contract MultiSigValidator is BaseValidator {
             return new address[](0);
         }
         address[] memory array = new address[](entry.count);
-        array = _entries[wallet].guardians.list(
-            AddressLinkedList.SENTINEL_ADDRESS,
-            entry.count
-        );
+        array = _entries[wallet].guardians.list(AddressLinkedList.SENTINEL_ADDRESS, entry.count);
         return array;
     }
 
@@ -353,12 +307,7 @@ contract MultiSigValidator is BaseValidator {
      *                   Can be packed ECDSA signature ({bytes32 r}{bytes32 s}{uint8 v}), contract signature (EIP-1271) or approved hash.
      * @param requiredSignatures Amount of required valid signatures.
      */
-    function checkNSignatures(
-        address wallet,
-        bytes32 dataHash,
-        bytes memory signatures,
-        uint256 requiredSignatures
-    ) public view {
+    function checkNSignatures(address wallet, bytes32 dataHash, bytes memory signatures, uint256 requiredSignatures) public view {
         // Check that the provided signature data is not too short
         require(signatures.length >= requiredSignatures * 65, "Signatures data too short");
         // There cannot be an owner with address 0.
@@ -399,10 +348,7 @@ contract MultiSigValidator is BaseValidator {
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(
-                    SignatureChecker.isValidERC1271SignatureNow(currentGuardian, dataHash, contractSignature),
-                    "Contract signature invalid"
-                );
+                require(SignatureChecker.isValidERC1271SignatureNow(currentGuardian, dataHash, contractSignature), "Contract signature invalid");
             } else {
                 // eip712 recovery
                 currentGuardian = ECDSA.recover(dataHash, v, r, s);
@@ -445,7 +391,7 @@ contract MultiSigValidator is BaseValidator {
      * @param wallet The target wallet.
      * @return bool True if the hash is approves.
      */
-    function _isHashApproved(address wallet, bytes32 hash) internal view returns(bool) {
+    function _isHashApproved(address wallet, bytes32 hash) internal view returns (bool) {
         return _entries[wallet].approvedHashes[hash];
     }
 }

@@ -5,12 +5,7 @@ import "../../base/ModuleManager.sol";
 import "../../interface/IModule.sol";
 
 contract MockModuleManager is ModuleManager {
-    function execute(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) external {
+    function execute(address to, uint256 value, bytes memory data, Enum.Operation operation) external {
         executeAndRevert(to, value, data, operation);
     }
 }

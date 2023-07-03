@@ -40,11 +40,7 @@ abstract contract HooksManager is SelfAuthorized {
      * be unused if the `hooks` contract doesn't have a afterTxHook.
      * @param hooks The address of the `hooks` contract to be disabled.
      */
-    function disableHooks(
-        address prevBeforeTxHooks,
-        address prevAfterTxHooks,
-        address hooks
-    ) public authorized {
+    function disableHooks(address prevBeforeTxHooks, address prevAfterTxHooks, address hooks) public authorized {
         _disableHooks(prevBeforeTxHooks, prevAfterTxHooks, hooks);
     }
 
@@ -59,10 +55,7 @@ abstract contract HooksManager is SelfAuthorized {
 
         if (isBeforeHookExist || isAfterHookExist) {
             uint256 hasHooks = IHooks(hooks).hasHooks();
-            if (
-                (uint128(hasHooks) == 1 && !isAfterHookExist)
-                || ((hasHooks >> 128) == 1 && !isBeforeHookExist)
-            ) {
+            if ((uint128(hasHooks) == 1 && !isAfterHookExist) || ((hasHooks >> 128) == 1 && !isBeforeHookExist)) {
                 return false;
             }
             return true;
@@ -89,7 +82,7 @@ abstract contract HooksManager is SelfAuthorized {
         return afterTxHooks.list(start, pageSize);
     }
 
-    function hooksSize() external view returns(uint256 beforeTxHooksSize, uint256 afterTxHooksSize) {
+    function hooksSize() external view returns (uint256 beforeTxHooksSize, uint256 afterTxHooksSize) {
         beforeTxHooksSize = beforeTxHooks.size();
         afterTxHooksSize = afterTxHooks.size();
     }
@@ -101,10 +94,7 @@ abstract contract HooksManager is SelfAuthorized {
      */
     function _enableHooks(address hooks, bytes memory initData) internal {
         // Add hooks to linked list
-        require(
-            IHooks(hooks).supportsInterface(type(IHooks).interfaceId),
-            "Not a valid hooks contract"
-        );
+        require(IHooks(hooks).supportsInterface(type(IHooks).interfaceId), "Not a valid hooks contract");
         uint256 hasHooks = IHooks(hooks).hasHooks();
         if (hasHooks >> 128 == 1) {
             beforeTxHooks.add(hooks);
@@ -147,12 +137,7 @@ abstract contract HooksManager is SelfAuthorized {
      * @param data The data of the transaction.
      * @param operation The type of operation being performed.
      */
-    function _beforeTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) internal {
+    function _beforeTransaction(address to, uint256 value, bytes memory data, Enum.Operation operation) internal {
         address addr = beforeTxHooks[AddressLinkedList.SENTINEL_ADDRESS];
         while (uint160(addr) > AddressLinkedList.SENTINEL_UINT) {
             {
@@ -170,12 +155,7 @@ abstract contract HooksManager is SelfAuthorized {
      * @param data The data of the transaction.
      * @param operation The type of operation being performed.
      */
-    function _afterTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) internal {
+    function _afterTransaction(address to, uint256 value, bytes memory data, Enum.Operation operation) internal {
         address addr = afterTxHooks[AddressLinkedList.SENTINEL_ADDRESS];
         while (uint160(addr) > AddressLinkedList.SENTINEL_UINT) {
             {

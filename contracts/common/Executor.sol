@@ -18,13 +18,7 @@ abstract contract Executor {
      * @param operation Operation type.
      * @return success boolean flag indicating if the call succeeded.
      */
-    function execute(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation,
-        uint256 txGas
-    ) internal returns (bool success) {
+    function execute(address to, uint256 value, bytes memory data, Enum.Operation operation, uint256 txGas) internal returns (bool success) {
         if (operation == Enum.Operation.DelegateCall) {
             // solhint-disable-next-line no-inline-assembly
             assembly {
@@ -45,19 +39,8 @@ abstract contract Executor {
      * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
      * which the frontend/client uses to capture the reason for the failure.
      */
-    function executeAndRevert(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) internal {
-        bool success = execute(
-            to,
-            value,
-            data,
-            operation,
-            type(uint256).max
-        );
+    function executeAndRevert(address to, uint256 value, bytes memory data, Enum.Operation operation) internal {
+        bool success = execute(to, value, data, operation, type(uint256).max);
 
         bytes memory returnData = getReturnData(type(uint256).max);
         // Revert with the actual reason string

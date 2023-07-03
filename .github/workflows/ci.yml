@@ -1,32 +1,53 @@
 name: Continuous Integration
 
 on:
-  push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main, dev]
+    push:
+        branches: [main, dev]
+    pull_request:
+        branches: [main, dev]
 
 jobs:
-  unit-tests:
-    name: Hardhat Unit Tests
-    runs-on: ubuntu-latest
+    code-lint:
+        name: Code Lint
+        runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
+        steps:
+            - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-          cache: 'yarn'
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+                  cache: "yarn"
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
 
-      # This is required separately from yarn test because it generates the typechain definitions
-      - name: Compile
-        run: yarn compile
+            - name: Style Check
+              run: yarn style-check
 
-      - name: Run unit tests
-        run: yarn test
+            - name: Solhint
+              run: yarn solhint
+
+    unit-tests:
+        name: Hardhat Unit Tests
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+              with:
+                  submodules: recursive
+
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+                  cache: "yarn"
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            # This is required separately from yarn test because it generates the typechain definitions
+            - name: Compile
+              run: yarn compile
+
+            - name: Test
+              run: yarn test

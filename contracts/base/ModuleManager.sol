@@ -56,12 +56,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param operation Operation type of the module transaction.
      * @return success Boolean flag indicating if the call succeeded.
      */
-    function execTransactionFromModule(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) public virtual returns (bool success) {
+    function execTransactionFromModule(address to, uint256 value, bytes memory data, Enum.Operation operation) public virtual returns (bool success) {
         require(_isModuleEnabled(msg.sender), "Only enabled module");
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, type(uint256).max);
@@ -78,12 +73,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @return success Boolean flag indicating if the call succeeded.
      * @return returnData Data returned by the call.
      */
-    function execTransactionFromModuleReturnData(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) public returns (bool success, bytes memory returnData) {
+    function execTransactionFromModuleReturnData(address to, uint256 value, bytes memory data, Enum.Operation operation) public returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation);
         returnData = getReturnData(type(uint256).max);
     }
@@ -106,7 +96,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
         return modules.list(start, pageSize);
     }
 
-    function moduleSize() external view returns(uint256) {
+    function moduleSize() external view returns (uint256) {
         return modules.size();
     }
 
@@ -116,10 +106,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param initData Initialization data for the module.
      */
     function _enableModule(address module, bytes memory initData) internal {
-        require(
-            IModule(module).supportsInterface(type(IModule).interfaceId),
-            "Not a module"
-        );
+        require(IModule(module).supportsInterface(type(IModule).interfaceId), "Not a module");
         modules.add(module);
         IModule(module).initWalletConfig(initData);
         emit EnabledModule(module);

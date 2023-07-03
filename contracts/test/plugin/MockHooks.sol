@@ -11,34 +11,19 @@ contract MockHooks is IHooks {
 
     function clearWalletConfig() external override {}
 
-    function beforeTransaction(
-        address,
-        uint256,
-        bytes calldata,
-        Enum.Operation
-    ) external override {
+    function beforeTransaction(address, uint256, bytes calldata, Enum.Operation) external override {
         beforeTransactionCalled = true;
     }
 
-    function afterTransaction(
-        address,
-        uint256,
-        bytes calldata,
-        Enum.Operation
-    ) external override {
+    function afterTransaction(address, uint256, bytes calldata, Enum.Operation) external override {
         afterTransactionCalled = true;
     }
 
     function hasHooks() external pure override returns (uint256) {
-        return 1 << 128 | 1;
+        return (1 << 128) | 1;
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        external
-        pure
-        override
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IHooks).interfaceId;
     }
 }

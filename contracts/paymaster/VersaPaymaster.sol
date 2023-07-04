@@ -9,7 +9,11 @@ import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
 import "@account-abstraction/contracts/core/BasePaymaster.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
-contract VersaPaymaster is BasePaymaster {
+/**
+ * @title VersaVerifyingPaymaster
+ * @dev A verifying paymaster for sponsoring using ERC20 tokens.
+ */
+contract VersaVerifyingPaymaster is BasePaymaster {
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
     using SafeERC20 for IERC20Metadata;

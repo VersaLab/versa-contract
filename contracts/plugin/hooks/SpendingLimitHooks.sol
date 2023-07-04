@@ -50,7 +50,7 @@ contract SpendingLimitHooks is BaseHooks {
     function _init(bytes memory _data) internal override {
         if (_data.length > 0) {
             SpendingLimitSetConfig[] memory initialSetConfigs = _parseSpendingLimitSetConfigData(_data);
-            batchSetSpendingLimit(initialSetConfigs);
+            _batchSetSpendingLimit(initialSetConfigs);
         }
     }
 
@@ -123,7 +123,6 @@ contract SpendingLimitHooks is BaseHooks {
         if (spendingLimitInfo.allowanceAmount > 0) {
             // Update the spent amount with the transaction value
             spendingLimitInfo.spentAmount += _value;
-
             _checkAmountAndUpdate(address(0), spendingLimitInfo);
         }
     }
@@ -182,7 +181,7 @@ contract SpendingLimitHooks is BaseHooks {
      * @dev Sets the spending limit for the caller based on the provided SpendingLimitSetConfig.
      * @param _config The SpendingLimitSetConfig to set the spending limit.
      */
-    function setSpendingLimit(SpendingLimitSetConfig memory _config) public onlyEnabledHooks {
+    function _setSpendingLimit(SpendingLimitSetConfig memory _config) internal {
         if (_config.tokenAddress != address(0)) {
             try ERC20(_config.tokenAddress).totalSupply() returns (uint256 totalSupply) {
                 require(totalSupply != 0, "SpendingLimitHooks: illegal token address");
@@ -219,18 +218,35 @@ contract SpendingLimitHooks is BaseHooks {
      * @dev Sets spending limits for multiple tokens based on the provided SpendingLimitSetConfig array.
      * @param _configs An array of SpendingLimitSetConfig objects.
      */
-    function batchSetSpendingLimit(SpendingLimitSetConfig[] memory _configs) public onlyEnabledHooks {
+    function _batchSetSpendingLimit(SpendingLimitSetConfig[] memory _configs) internal {
         uint dataLength = _configs.length;
+        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
         for (uint i = 0; i < dataLength; i++) {
-            setSpendingLimit(_configs[i]);
+            _setSpendingLimit(_configs[i]);
         }
+    }
+
+    /**
+     * @dev Sets the spending limit for the caller based on the provided SpendingLimitSetConfig.
+     * @param _config The SpendingLimitSetConfig to set the spending limit.
+     */
+    function setSpendingLimit(SpendingLimitSetConfig memory _config) external onlyEnabledHooks {
+        _setSpendingLimit(_config);
+    }
+
+    /**
+     * @dev Sets spending limits for multiple tokens based on the provided SpendingLimitSetConfig array.
+     * @param _configs An array of SpendingLimitSetConfig objects.
+     */
+    function batchSetSpendingLimit(SpendingLimitSetConfig[] memory _configs) external onlyEnabledHooks {
+        _batchSetSpendingLimit(_configs);
     }
 
     /**
      * @dev Resets the spending limit for the caller and the specified token.
      * @param _token The token address for which to reset the spending limit.
      */
-    function resetSpendingLimit(address _token) external onlyEnabledHooks {
+    function _resetSpendingLimit(address _token) internal {
         SpendingLimitInfo memory spendingLimitInfo = getSpendingLimitInfo(msg.sender, _token);
         spendingLimitInfo.spentAmount = 0;
         _updateSpendingLimitInfo(_token, spendingLimitInfo);
@@ -238,12 +254,56 @@ contract SpendingLimitHooks is BaseHooks {
     }
 
     /**
+     * @dev Resets the spending limit for the caller and the specified token.
+     * @param _token The token address for which to reset the spending limit.
+     */
+    function resetSpendingLimit(address _token) external onlyEnabledHooks {
+        _resetSpendingLimit(_token);
+    }
+
+    /**
+     * @dev Batch reset spending limit for specified tokens.
+     * @param _tokens An array containing the addresses of tokens for which spending limit is to be reset.
+     *                Each element in the array represents the address of a token for which the limit will be reset.
+     * @notice Only enabled hooks can call this function.
+     */
+    function batchResetSpendingLimit(address[] memory _tokens) external onlyEnabledHooks {
+        uint dataLength = _tokens.length;
+        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
+        for (uint i = 0; i < dataLength; i++) {
+            _resetSpendingLimit(_tokens[i]);
+        }
+    }
+
+    /**
+     * @dev Deletes the spending limit for the caller and the specified token.
+     * @param _token The token address for which to delete the spending limit.
+     */
+    function _deleteSpendingLimit(address _token) internal {
+        delete _tokenSpendingLimitInfo[msg.sender][_token];
+        emit DeleteSpendingLimit(msg.sender, _token);
+    }
+
+    /**
      * @dev Deletes the spending limit for the caller and the specified token.
      * @param _token The token address for which to delete the spending limit.
      */
     function deleteSpendingLimit(address _token) external onlyEnabledHooks {
-        delete _tokenSpendingLimitInfo[msg.sender][_token];
-        emit DeleteSpendingLimit(msg.sender, _token);
+        _deleteSpendingLimit(_token);
+    }
+
+    /**
+     * @dev Batch delete spending limit for specified tokens.
+     * @param _tokens An array containing the addresses of tokens for which spending limit is to be deleted.
+     *                Each element in the array represents the address of a token for which the limit will be deleted.
+     * @notice Only enabled hooks can call this function.
+     */
+    function batchDeleteSpendingLimit(address[] memory _tokens) external onlyEnabledHooks {
+        uint dataLength = _tokens.length;
+        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
+        for (uint i = 0; i < dataLength; i++) {
+            _deleteSpendingLimit(_tokens[i]);
+        }
     }
 
     /**
@@ -279,6 +339,7 @@ contract SpendingLimitHooks is BaseHooks {
         address[] memory _tokens
     ) public view returns (SpendingLimitInfo[] memory) {
         uint dataLength = _tokens.length;
+        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
         SpendingLimitInfo[] memory batchSpendingLimitInfo = new SpendingLimitInfo[](dataLength);
         for (uint i = 0; i < dataLength; i++) {
             batchSpendingLimitInfo[i] = getSpendingLimitInfo(_wallet, _tokens[i]);

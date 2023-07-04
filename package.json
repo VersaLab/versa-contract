@@ -58,6 +58,7 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
+    "@account-abstraction/contracts": "^0.6.0",
     "@ethersproject/experimental": "^5.7.0",
     "@openzeppelin/contracts": "^4.9.2",
     "@openzeppelin/contracts-upgradeable": "^4.9.2"

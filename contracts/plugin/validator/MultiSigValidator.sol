@@ -12,27 +12,30 @@ import "../../library/SignatureHandler.sol";
  */
 contract MultiSigValidator is BaseValidator {
     using ECDSA for bytes32;
-    using AddressLinkedList for mapping(address => address);
 
     event ResetGuardians(address wallet, uint256 threshold, address[] guardians);
-    event AddGuardian(address wallet, address guardian, uint256 threshold);
-    event RevokeGuardian(address wallet, address guardian, uint256 threshold);
+    event AddGuardian(address wallet, address guardian);
+    event RevokeGuardian(address wallet, address guardian);
     event ChangeThreshold(address wallet, uint256 threshold);
 
     event ApproveHash(bytes32 hash);
     event RevokeHash(bytes32 hash);
 
-    struct GuardianEntry {
-        // the list of guardians
-        mapping(address => address) guardians;
-        // guardians count
-        uint128 count;
-        // recovery threshold
+    struct WalletInfo {
+        // guardians count of a wallet
+        uint128 guardianCount;
+        // verification threshold
         uint128 threshold;
-        mapping(bytes32 => bool) approvedHashes;
     }
 
-    mapping(address => GuardianEntry) internal _entries;
+    /// @dev Record guardians of a wallet
+    mapping(address guardian => mapping(address wallet => bool)) internal _guardians;
+
+    /// @dev Record signer's count and verification threshold of a wallet
+    mapping(address => WalletInfo) internal _walletInfo;
+
+    /// @dev Record approved signed message hashes of a wallet
+    mapping(bytes32 messageHash => mapping(address wallet => bool)) internal _approvedHashes;
 
     /**
      * @dev Internal function to handle wallet initialization.
@@ -78,18 +81,15 @@ contract MultiSigValidator is BaseValidator {
 
     /**
      * @notice Lets the owner revoke a guardian from its wallet.
-     * @param prevGuardian The previous guardian linking to the guardian in the linked list.
      * @param guardian The guardian to revoke.
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
     function revokeGuardian(
-        address prevGuardian,
         address guardian,
         uint256 newThreshold
     ) external onlyEnabledValidator {
-        uint256 currentGuardiansCount = _guardiansCount(msg.sender);
-        require(currentGuardiansCount - 1 >= newThreshold, "Invalid threshold");
-        _revokeGuardian(msg.sender, prevGuardian, guardian);
+        require(_guardiansCount(msg.sender) >= 2, "Must have at least one guardian");
+        _revokeGuardian(msg.sender, guardian);
         _changeThreshold(msg.sender, newThreshold);
     }
 
@@ -106,17 +106,20 @@ contract MultiSigValidator is BaseValidator {
      * @param newThreshold The new threshold that will be set after execution of revokation.
      * @param newGuardians The array of new guardians, must be ordered for duplication check.
      */
-    function resetGuardians(uint256 newThreshold, address[] calldata newGuardians) external onlyEnabledValidator {
-        uint newGuardiansLength = newGuardians.length;
-        require(newGuardiansLength >= newThreshold, "Bad guardian wallet");
-
-        address lastGuardian = address(0);
-        for (uint i = 0; i < newGuardiansLength; i++) {
-            require(newGuardians[i] > lastGuardian, "Duplicate signers/invalid ordering");
-            lastGuardian = newGuardians[i];
+    function resetGuardians(
+        uint256 newThreshold,
+        address[] calldata oldGuardians,
+        address[] calldata newGuardians
+    ) external onlyEnabledValidator {
+        // Make sure the wallet has at least one guardian
+        require(
+            _guardiansCount(msg.sender) + newGuardians.length > oldGuardians.length,
+            "Must have at least one guardian"
+        );
+        for (uint256 i = 0; i < oldGuardians.length; i++) {
+            _revokeGuardian(msg.sender, oldGuardians[i]);
         }
-        _clearGuardians(msg.sender);
-        for (uint i = 0; i < newGuardiansLength; i++) {
+        for (uint256 i = 0; i < newGuardians.length; i++) {
             _addGuardian(msg.sender, newGuardians[i]);
         }
         _changeThreshold(msg.sender, newThreshold);
@@ -129,7 +132,7 @@ contract MultiSigValidator is BaseValidator {
      */
     function approveHash(bytes32 hash) external onlyEnabledValidator {
         require(!_isHashApproved(msg.sender, hash), "Hash already approved");
-        _entries[msg.sender].approvedHashes[hash] = true;
+        _approvedHashes[hash][msg.sender] = true;
         emit ApproveHash(hash);
     }
 
@@ -139,7 +142,7 @@ contract MultiSigValidator is BaseValidator {
      */
     function revokeHash(bytes32 hash) external onlyEnabledValidator {
         require(_isHashApproved(msg.sender, hash), "Hash is not approved");
-        _entries[msg.sender].approvedHashes[hash] = false;
+        _approvedHashes[hash][msg.sender] = false;
         emit RevokeHash(hash);
     }
 
@@ -149,44 +152,28 @@ contract MultiSigValidator is BaseValidator {
      * @param guardian The guardian to add.
      */
     function _addGuardian(address wallet, address guardian) internal {
-        require(guardian != wallet, "Invalid guardian");
-        GuardianEntry storage entry = _entries[wallet];
-        // Duplication and adding invalid address is prevented by AddressLinkedListLib
-        entry.guardians.add(guardian);
-        entry.count++;
-        emit AddGuardian(wallet, guardian, entry.threshold);
+        require(!_isGuardian(wallet, guardian), "Guardian is already added");
+        require(
+            guardian != wallet && guardian != address(0),
+            "Invalid guardian address"
+        );
+        WalletInfo storage info = _walletInfo[wallet];
+        info.guardianCount++;
+        _guardians[guardian][msg.sender] = true;
+        emit AddGuardian(wallet, guardian);
     }
 
     /**
      * @dev Lets an authorised module revoke a guardian from a wallet.
      * @param wallet The target wallet.
-     * @param prevGuardian Guardian that pointed to the guardian to be removed in the linked list
      * @param guardian The guardian to revoke.
      */
-    function _revokeGuardian(address wallet, address prevGuardian, address guardian) internal {
-        GuardianEntry storage entry = _entries[wallet];
-        // Other sanity checks is performed by AddressLinkedListLib
-        entry.guardians.remove(prevGuardian, guardian);
-        entry.count--;
-        emit RevokeGuardian(wallet, guardian, entry.count);
-    }
-
-    /**
-     * @notice Clear guardians and threshold of a wallet.
-     * @param wallet The target wallet.
-     */
-    function _clearGuardians(address wallet) internal {
-        address[] memory guardians = getGuardians(wallet);
-        uint guardiansLength = guardians.length;
-        if (guardiansLength == 0) {
-            return;
-        }
-
-        address prevGuardian = AddressLinkedList.SENTINEL_ADDRESS;
-        for (uint i = 0; i < guardiansLength; i++) {
-            _revokeGuardian(wallet, prevGuardian, guardians[i]);
-        }
-        _entries[wallet].threshold = 0;
+    function _revokeGuardian(address wallet, address guardian) internal {
+        require(_isGuardian(wallet, guardian), "Not a valid guardian");
+        WalletInfo storage info = _walletInfo[wallet];
+        _guardians[guardian][msg.sender] = false;
+        info.guardianCount--;
+        emit RevokeGuardian(wallet, guardian);
     }
 
     /**
@@ -195,15 +182,15 @@ contract MultiSigValidator is BaseValidator {
      * @param newThreshold New threshold.
      */
     function _changeThreshold(address wallet, uint256 newThreshold) internal {
-        GuardianEntry storage entry = _entries[wallet];
+        WalletInfo storage info = _walletInfo[wallet];
         // Validate that threshold is smaller than or equal to number of guardians.
-        if (entry.count == 0) {
+        if (info.guardianCount == 0) {
             require(newThreshold == 0, "Threshold must be 0");
         } else {
             require(newThreshold > 0, "Threshold cannot be 0");
         }
-        require(newThreshold <= entry.count, "Threshold must be lower or equal to guardians count");
-        entry.threshold = uint128(newThreshold);
+        require(newThreshold <= info.guardianCount, "Threshold must be lower or equal to guardians count");
+        info.threshold = uint128(newThreshold);
         emit ChangeThreshold(wallet, newThreshold);
     }
 
@@ -216,7 +203,7 @@ contract MultiSigValidator is BaseValidator {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view returns (uint256 validationData) {
-        uint256 currentThreshold = _entries[userOp.sender].threshold;
+        uint256 currentThreshold = _threshold(userOp.sender);
         // Check that the provided signature data is not too short
         // 20 bytes validator address + 1 byte sig type + required signatures(no less than threshold * 65)
         if (currentThreshold == 0 || userOp.signature.length < 20 + 1 + currentThreshold * 65) {
@@ -253,11 +240,11 @@ contract MultiSigValidator is BaseValidator {
     function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
         // If signature is empty, the hash must be previously approved
         if (signature.length == 0) {
-            require(_entries[wallet].approvedHashes[hash], "Hash not approved");
+            require(_isHashApproved(wallet, hash), "Hash not approved");
             // If check if enough valid guardians's signature collected
         } else {
             bytes32 ethSignedMessageHash = hash.toEthSignedMessageHash();
-            checkNSignatures(wallet, ethSignedMessageHash, signature, _entries[wallet].threshold);
+            checkNSignatures(wallet, ethSignedMessageHash, signature, _threshold(wallet));
         }
         return true;
     }
@@ -297,21 +284,6 @@ contract MultiSigValidator is BaseValidator {
      */
     function isHashApproved(address wallet, bytes32 hash) public view returns (bool) {
         return _isHashApproved(wallet, hash);
-    }
-
-    /**
-     * @dev Gets the list of guaridans for a wallet.
-     * @param wallet The target wallet.
-     * @return address[] list of guardians.
-     */
-    function getGuardians(address wallet) public view returns (address[] memory) {
-        GuardianEntry storage entry = _entries[wallet];
-        if (entry.count == 0) {
-            return new address[](0);
-        }
-        address[] memory array = new address[](entry.count);
-        array = _entries[wallet].guardians.list(AddressLinkedList.SENTINEL_ADDRESS, entry.count);
-        return array;
     }
 
     /**
@@ -388,7 +360,7 @@ contract MultiSigValidator is BaseValidator {
      * @return true if the account is a guardian for a wallet.
      */
     function _isGuardian(address wallet, address guardian) internal view returns (bool) {
-        return _entries[wallet].guardians.isExist(guardian);
+        return _guardians[guardian][wallet];
     }
 
     /**
@@ -397,7 +369,7 @@ contract MultiSigValidator is BaseValidator {
      * @return the number of guardians.
      */
     function _guardiansCount(address wallet) internal view returns (uint256) {
-        return _entries[wallet].count;
+        return _walletInfo[wallet].guardianCount;
     }
 
     /**
@@ -406,7 +378,7 @@ contract MultiSigValidator is BaseValidator {
      * @return uint256 Threshold count.
      */
     function _threshold(address wallet) internal view returns (uint256) {
-        return _entries[wallet].threshold;
+        return _walletInfo[wallet].threshold;
     }
 
     /**
@@ -415,6 +387,6 @@ contract MultiSigValidator is BaseValidator {
      * @return bool True if the hash is approves.
      */
     function _isHashApproved(address wallet, bytes32 hash) internal view returns (bool) {
-        return _entries[wallet].approvedHashes[hash];
+        return _approvedHashes[hash][wallet];
     }
 }

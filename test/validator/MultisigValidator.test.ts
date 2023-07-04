@@ -39,9 +39,9 @@ describe("MultiSigValidator", () => {
             .to.emit(multisigValidator, "WalletInited")
             .withArgs(wallet.address)
             .to.emit(multisigValidator, "AddGuardian")
-            .withArgs(wallet.address, signer1.address, 0)
+            .withArgs(wallet.address, signer1.address)
             .to.emit(multisigValidator, "AddGuardian")
-            .withArgs(wallet.address, signer2.address, 0)
+            .withArgs(wallet.address, signer2.address)
             .to.emit(multisigValidator, "ChangeThreshold")
             .withArgs(wallet.address, threshold);
 
@@ -49,9 +49,6 @@ describe("MultiSigValidator", () => {
         expect(await multisigValidator.isGuardian(wallet.address, signer2.address)).to.be.equal(true);
         expect(await multisigValidator.guardiansCount(wallet.address)).to.be.equal(2);
         expect(await multisigValidator.threshold(wallet.address)).to.be.equal(threshold);
-        let guardians = await multisigValidator.getGuardians(wallet.address);
-        expect(guardians[0]).to.be.equal(signer2.address);
-        expect(guardians[1]).to.be.equal(signer1.address);
     });
 
     it("should add guardian correctly", async () => {
@@ -112,11 +109,7 @@ describe("MultiSigValidator", () => {
         });
 
         // revoke signer1
-        let data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [
-            signer2.address,
-            signer1.address,
-            threshold,
-        ]);
+        let data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [signer1.address, threshold]);
         await execute({
             executor: wallet,
             to: multisigValidator.address,
@@ -145,7 +138,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.rejectedWith("address already exists");
+        ).to.be.rejectedWith("Guardian is already added");
 
         data = multisigValidator.interface.encodeFunctionData("addGuardian", [ethers.constants.AddressZero, threshold]);
         await expect(
@@ -154,7 +147,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.rejectedWith("invalid address");
+        ).to.be.rejectedWith("Invalid guardian address");
     });
 
     it("should change threshold correctly", async () => {
@@ -216,33 +209,18 @@ describe("MultiSigValidator", () => {
         ).to.be.revertedWith("Threshold cannot be 0");
 
         newThreshold = 1;
-        data = multisigValidator.interface.encodeFunctionData("resetGuardians", [newThreshold, []]);
+        data = multisigValidator.interface.encodeFunctionData("resetGuardians", [
+            newThreshold,
+            [signer1.address, signer2.address],
+            [],
+        ]);
         await expect(
             execute({
                 executor: wallet,
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.revertedWith("Bad guardian wallet");
-
-        newThreshold = 0;
-        // revoke signer1
-        data = multisigValidator.interface.encodeFunctionData("resetGuardians", [newThreshold, []]);
-        await execute({
-            executor: wallet,
-            to: multisigValidator.address,
-            data,
-        });
-
-        newThreshold = 1;
-        data = multisigValidator.interface.encodeFunctionData("changeThreshold", [newThreshold]);
-        await expect(
-            execute({
-                executor: wallet,
-                to: multisigValidator.address,
-                data,
-            })
-        ).to.be.revertedWith("Threshold must be 0");
+        ).to.be.revertedWith("Must have at least one guardian");
     });
 
     it("should approve and revoke hash", async () => {

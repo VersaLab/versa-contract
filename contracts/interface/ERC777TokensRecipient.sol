@@ -16,5 +16,12 @@ interface ERC777TokensRecipient {
      * @param data Additional data that was passed during the transfer or minting operation.
      * @param operatorData Additional data that was passed by the operator during the transfer or minting operation.
      */
-    function tokensReceived(address operator, address from, address to, uint256 amount, bytes calldata data, bytes calldata operatorData) external;
+    function tokensReceived(
+        address operator,
+        address from,
+        address to,
+        uint256 amount,
+        bytes calldata data,
+        bytes calldata operatorData
+    ) external;
 }

@@ -87,7 +87,18 @@ library UserOperationLib {
         bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
 
         return
-            abi.encode(sender, nonce, hashInitCode, hashCallData, callGasLimit, verificationGasLimit, preVerificationGas, maxFeePerGas, maxPriorityFeePerGas, hashPaymasterAndData);
+            abi.encode(
+                sender,
+                nonce,
+                hashInitCode,
+                hashCallData,
+                callGasLimit,
+                verificationGasLimit,
+                preVerificationGas,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+                hashPaymasterAndData
+            );
     }
 
     function hash(UserOperation calldata userOp) internal pure returns (bytes32) {

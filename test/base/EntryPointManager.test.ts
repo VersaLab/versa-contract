@@ -1,6 +1,11 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { MockEntryPoint, MockEntryPointManager, MockEntryPointManager__factory, MockEntryPoint__factory } from "../../typechain-types";
+import {
+    MockEntryPoint,
+    MockEntryPointManager,
+    MockEntryPointManager__factory,
+    MockEntryPoint__factory,
+} from "../../typechain-types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("EntryPointManager", () => {
@@ -36,7 +41,9 @@ describe("EntryPointManager", () => {
     it("should require requests from the entrypoint", async () => {
         let key = 0;
         // Call a function on the entry point manager from an account other than the entrypoint
-        await expect(entryPointManager.connect((await ethers.getSigners())[1]).checkFromEntryPoint()).to.be.revertedWith("account: not from EntryPoint");
+        await expect(
+            entryPointManager.connect((await ethers.getSigners())[1]).checkFromEntryPoint()
+        ).to.be.revertedWith("account: not from EntryPoint");
 
         // Call a function on the entry point manager from the entrypoint
         await expect(entryPointManager.getNonce(key)).to.not.be.reverted;

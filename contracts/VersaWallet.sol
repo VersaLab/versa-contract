@@ -17,7 +17,16 @@ import "./interface/IValidator.sol";
 /**
  * @title VersaWallet - A Smart contract wallet that supports EIP4337
  */
-contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorManager, HooksManager, ModuleManager, FallbackManager, IAccount {
+contract VersaWallet is
+    Singleton,
+    Initializable,
+    EntryPointManager,
+    ValidatorManager,
+    HooksManager,
+    ModuleManager,
+    FallbackManager,
+    IAccount
+{
     /**
      * @dev The execution type of a transaction.
      * - Sudo: Transaction executed with full permissions.
@@ -99,7 +108,11 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
      * @param missingAccountFunds The amount of missing account funds to be paid.
      * @return validationData The validation data returned by the validator.
      */
-    function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds) external override onlyFromEntryPoint returns (uint256 validationData) {
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external override onlyFromEntryPoint returns (uint256 validationData) {
         address validator = _getValidator(userOp.signature);
         _validateValidatorAndSelector(validator, bytes4(userOp.callData[0:4]));
         validationData = IValidator(validator).validateSignature(userOp, userOpHash);
@@ -113,7 +126,12 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
      * @param data The data of the transaction.
      * @param operation The operation type of the transaction.
      */
-    function sudoExecute(address to, uint256 value, bytes memory data, Enum.Operation operation) external onlyFromEntryPoint {
+    function sudoExecute(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) external onlyFromEntryPoint {
         _internalExecute(to, value, data, operation, ExecutionType.Sudo);
     }
 
@@ -124,7 +142,12 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
      * @param data The data of the transaction.
      * @param operation The operation type of the transaction.
      */
-    function normalExecute(address to, uint256 value, bytes memory data, Enum.Operation operation) external onlyFromEntryPoint {
+    function normalExecute(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) external onlyFromEntryPoint {
         _internalExecute(to, value, data, operation, ExecutionType.Normal);
     }
 
@@ -135,7 +158,12 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
      * @param data The data of the transactions.
      * @param operation The operation types of the transactions.
      */
-    function batchSudoExecute(address[] memory to, uint256[] memory value, bytes[] memory data, Enum.Operation[] memory operation) external onlyFromEntryPoint {
+    function batchSudoExecute(
+        address[] memory to,
+        uint256[] memory value,
+        bytes[] memory data,
+        Enum.Operation[] memory operation
+    ) external onlyFromEntryPoint {
         _checkBatchDataLength(to.length, value.length, data.length, operation.length);
         for (uint256 i = 0; i < to.length; ++i) {
             _internalExecute(to[i], value[i], data[i], operation[i], ExecutionType.Sudo);
@@ -149,7 +177,12 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
      * @param data The data of the transactions.
      * @param operation The operation types of the transactions.
      */
-    function batchNormalExecute(address[] memory to, uint256[] memory value, bytes[] memory data, Enum.Operation[] memory operation) external onlyFromEntryPoint {
+    function batchNormalExecute(
+        address[] memory to,
+        uint256[] memory value,
+        bytes[] memory data,
+        Enum.Operation[] memory operation
+    ) external onlyFromEntryPoint {
         _checkBatchDataLength(to.length, value.length, data.length, operation.length);
         for (uint256 i = 0; i < to.length; ++i) {
             _internalExecute(to[i], value[i], data[i], operation[i], ExecutionType.Normal);
@@ -164,7 +197,13 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
      * @param operation The operation type of the transaction.
      * @param execution The execution type of the transaction.
      */
-    function _internalExecute(address to, uint256 value, bytes memory data, Enum.Operation operation, ExecutionType execution) internal {
+    function _internalExecute(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation,
+        ExecutionType execution
+    ) internal {
         if (execution == ExecutionType.Sudo) {
             executeAndRevert(to, value, data, operation);
         } else {
@@ -224,7 +263,11 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
      */
     function _checkNormalExecute(address to, Enum.Operation _operation) internal view {
         require(
-            to != address(this) && !isValidatorEnabled(to) && !isHooksEnabled(to) && !isModuleEnabled(to) && _operation != Enum.Operation.DelegateCall,
+            to != address(this) &&
+                !isValidatorEnabled(to) &&
+                !isHooksEnabled(to) &&
+                !isModuleEnabled(to) &&
+                _operation != Enum.Operation.DelegateCall,
             "Versa: operation is not allowed"
         );
     }
@@ -232,7 +275,12 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
     /**
      * @dev Checks the lengths of the batch transaction data arrays.
      */
-    function _checkBatchDataLength(uint256 toLen, uint256 valueLen, uint256 dataLen, uint256 operationLen) internal pure {
+    function _checkBatchDataLength(
+        uint256 toLen,
+        uint256 valueLen,
+        uint256 dataLen,
+        uint256 operationLen
+    ) internal pure {
         require(toLen == valueLen && dataLen == operationLen && toLen == dataLen, "Versa: invalid batch data");
     }
 
@@ -249,7 +297,10 @@ contract VersaWallet is Singleton, Initializable, EntryPointManager, ValidatorMa
         uint256 moduleInitLen
     ) internal pure {
         require(
-            validatorsLen == validatorInitLen && validatorInitLen == validatorTypeLen && hooksLen == hooksInitDataLen && modulesLen == moduleInitLen,
+            validatorsLen == validatorInitLen &&
+                validatorInitLen == validatorTypeLen &&
+                hooksLen == hooksInitDataLen &&
+                modulesLen == moduleInitLen,
             "Data length doesn't match"
         );
     }

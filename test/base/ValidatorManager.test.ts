@@ -30,7 +30,11 @@ describe("ValidatorManager", () => {
     it("should enable a validator", async () => {
         // Enable the validator
         let expectedValidatorType = 2;
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_1.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_1.address,
+            type: expectedValidatorType,
+        });
 
         // Verify if the validator is enabled
         const validatorType = await validatorManager.getValidatorType(mockValidator_1.address);
@@ -40,7 +44,11 @@ describe("ValidatorManager", () => {
     it("should disable a validator", async () => {
         // Enable the validator
         let expectedValidatorType = 2;
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_1.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_1.address,
+            type: expectedValidatorType,
+        });
 
         // Disable the validator
         await disablePlugin(validatorManager, mockValidator_1.address);
@@ -54,12 +62,22 @@ describe("ValidatorManager", () => {
     it("should toggle a validator's type", async () => {
         // Enable the validator as a sudo validator
         let expectedValidatorType = 1;
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_1.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_1.address,
+            type: expectedValidatorType,
+        });
 
-        await expect(toggleValidator(validatorManager, mockValidator_1.address)).to.be.revertedWith("Cannot remove the last remaining sudoValidator");
+        await expect(toggleValidator(validatorManager, mockValidator_1.address)).to.be.revertedWith(
+            "Cannot remove the last remaining sudoValidator"
+        );
 
         // Enable the validator as a normal validator
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_2.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_2.address,
+            type: expectedValidatorType,
+        });
 
         // Toggle the validator's type to normal
         await toggleValidator(validatorManager, mockValidator_2.address);
@@ -74,7 +92,11 @@ describe("ValidatorManager", () => {
     it("should get the type of a validator", async () => {
         // Enable the validator as a sudo validator
         let expectedValidatorType = 1;
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_1.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_1.address,
+            type: expectedValidatorType,
+        });
 
         // Get the type of the validator
         const validatorType = await validatorManager.getValidatorType(mockValidator_1.address);
@@ -86,7 +108,11 @@ describe("ValidatorManager", () => {
     it("should check if a validator is enabled", async () => {
         // Enable the validator as a sudo validator
         let expectedValidatorType = 1;
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_1.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_1.address,
+            type: expectedValidatorType,
+        });
 
         // Check if the validator is enabled
         const isEnabled = await validatorManager.isValidatorEnabled(mockValidator_1.address);
@@ -98,7 +124,11 @@ describe("ValidatorManager", () => {
     it("should get a list of validators", async () => {
         // Enable the validator
         let expectedValidatorType = 1;
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_1.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_1.address,
+            type: expectedValidatorType,
+        });
 
         // Get a list of validators
         let validators = await validatorManager.getValidatorsPaginated(SENTINEL, 1, expectedValidatorType);
@@ -106,7 +136,11 @@ describe("ValidatorManager", () => {
         // Verify if the validator is in the list
         expect(validators[0]).to.equal(mockValidator_1.address);
 
-        await enablePlugin({ executor: validatorManager, plugin: mockValidator_2.address, type: expectedValidatorType });
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_2.address,
+            type: expectedValidatorType,
+        });
 
         validators = await validatorManager.getValidatorsPaginated(SENTINEL, 2, expectedValidatorType);
         expect(validators[0]).to.equal(mockValidator_2.address);

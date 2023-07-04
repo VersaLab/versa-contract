@@ -95,7 +95,10 @@ abstract contract BaseValidator is IValidator {
         if (sigType != 0x00 && sigType != 0x01) {
             return false;
         }
-        if (sigType == 0x01 && (actualMaxFeePerGas >= maxFeePerGas || actualMaxPriorityFeePerGas >= maxPriorityFeePerGas)) {
+        if (
+            sigType == 0x01 &&
+            (actualMaxFeePerGas >= maxFeePerGas || actualMaxPriorityFeePerGas >= maxPriorityFeePerGas)
+        ) {
             return false;
         }
         return true;
@@ -108,7 +111,11 @@ abstract contract BaseValidator is IValidator {
      * @param validAfter The valid after timestamp.
      * @return The packed validation data.
      */
-    function _packValidationData(uint256 sigFailed, uint256 validUntil, uint256 validAfter) internal pure returns (uint256) {
+    function _packValidationData(
+        uint256 sigFailed,
+        uint256 validUntil,
+        uint256 validAfter
+    ) internal pure returns (uint256) {
         return sigFailed | (validUntil << 160) | (validAfter << (160 + 48));
     }
 }

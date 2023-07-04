@@ -57,7 +57,10 @@ contract ECDSAValidator is BaseValidator {
      * @param _userOpHash The hash of the user operation.
      * @return validationData The validation data.
      */
-    function validateSignature(UserOperation calldata _userOp, bytes32 _userOpHash) external view returns (uint256 validationData) {
+    function validateSignature(
+        UserOperation calldata _userOp,
+        bytes32 _userOpHash
+    ) external view returns (uint256 validationData) {
         uint256 sigLength = _userOp.signature.length;
         // 20 bytes validator address + 1 byte sig type + 65 bytes signature
         // 20 bytes validator address + 1 byte sig type
@@ -65,11 +68,28 @@ contract ECDSAValidator is BaseValidator {
         if (sigLength != 86 && sigLength != 162) {
             return SIG_VALIDATION_FAILED;
         }
-        SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(_userOp, _userOpHash);
-        if (!_checkTransactionTypeAndFee(splitedSig.signatureType, splitedSig.maxFeePerGas, splitedSig.maxPriorityFeePerGas, _userOp.maxFeePerGas, _userOp.maxPriorityFeePerGas)) {
+        SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(
+            _userOp,
+            _userOpHash
+        );
+        if (
+            !_checkTransactionTypeAndFee(
+                splitedSig.signatureType,
+                splitedSig.maxFeePerGas,
+                splitedSig.maxPriorityFeePerGas,
+                _userOp.maxFeePerGas,
+                _userOp.maxPriorityFeePerGas
+            )
+        ) {
             return SIG_VALIDATION_FAILED;
         }
-        validationData = _validateSignature(_signers[_userOp.sender], splitedSig.signature, splitedSig.hash, splitedSig.validUntil, splitedSig.validAfter);
+        validationData = _validateSignature(
+            _signers[_userOp.sender],
+            splitedSig.signature,
+            splitedSig.hash,
+            splitedSig.validUntil,
+            splitedSig.validAfter
+        );
     }
 
     /**
@@ -106,7 +126,13 @@ contract ECDSAValidator is BaseValidator {
      * @param validAfter The valid after timestamp.
      * @return The validation data indicating the result of the signature validation.
      */
-    function _validateSignature(address signer, bytes memory signature, bytes32 hash, uint256 validUntil, uint256 validAfter) internal pure returns (uint256) {
+    function _validateSignature(
+        address signer,
+        bytes memory signature,
+        bytes32 hash,
+        uint256 validUntil,
+        uint256 validAfter
+    ) internal pure returns (uint256) {
         uint256 sigFailed;
         bytes32 messageHash = hash.toEthSignedMessageHash();
         if (signer != messageHash.recover(signature)) {

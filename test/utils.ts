@@ -19,7 +19,10 @@ export async function deployVersaWallet(options: { signer: SignerWithAddress; en
     // Deploy versa singleton
     let versaWalletSingleton = await new VersaWallet__factory(signer).deploy(entryPoint);
     // Deploy VersaAccountFactory
-    let versaFactory = await new VersaAccountFactory__factory(signer).deploy(versaWalletSingleton.address, fallbackHandler);
+    let versaFactory = await new VersaAccountFactory__factory(signer).deploy(
+        versaWalletSingleton.address,
+        fallbackHandler
+    );
 
     let sudoValidator = await new MockValidator__factory(signer).deploy();
 
@@ -40,13 +43,40 @@ export async function generateWalletInitCode(options: {
     modules?: string[];
     moduleInitData?: string[];
 }) {
-    const { versaFacotryAddr, salt, sudoValidator, sudoValidatorInitData, hooks = [], hooksInitData = [], modules = [], moduleInitData = [] } = options;
+    const {
+        versaFacotryAddr,
+        salt,
+        sudoValidator,
+        sudoValidatorInitData,
+        hooks = [],
+        hooksInitData = [],
+        modules = [],
+        moduleInitData = [],
+    } = options;
     const versaFactory = await ethers.getContractAt("VersaAccountFactory", versaFacotryAddr);
 
-    let tx = await versaFactory.populateTransaction.createAccount([sudoValidator], [sudoValidatorInitData], [1], hooks, hooksInitData, modules, moduleInitData, salt);
+    let tx = await versaFactory.populateTransaction.createAccount(
+        [sudoValidator],
+        [sudoValidatorInitData],
+        [1],
+        hooks,
+        hooksInitData,
+        modules,
+        moduleInitData,
+        salt
+    );
 
     let initCode = hexConcat([versaFacotryAddr, tx.data!]);
-    let walletAddress = await versaFactory.getAddress([sudoValidator], [sudoValidatorInitData], [1], hooks, hooksInitData, modules, moduleInitData, salt);
+    let walletAddress = await versaFactory.getAddress(
+        [sudoValidator],
+        [sudoValidatorInitData],
+        [1],
+        hooks,
+        hooksInitData,
+        modules,
+        moduleInitData,
+        salt
+    );
 
     return { initCode, walletAddress };
 }

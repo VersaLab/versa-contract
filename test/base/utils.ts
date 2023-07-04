@@ -31,7 +31,13 @@ export async function execute(options: {
     return tx;
 }
 
-export async function enablePlugin(options: { executor: MockHooksManager | any; plugin: string; initData?: string; type?: number; selector?: string }) {
+export async function enablePlugin(options: {
+    executor: MockHooksManager | any;
+    plugin: string;
+    initData?: string;
+    type?: number;
+    selector?: string;
+}) {
     const { executor, plugin, initData = "0x", type = 1, selector = "enableValidator" } = options;
 
     let data;

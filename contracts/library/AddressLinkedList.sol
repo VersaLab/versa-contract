@@ -77,7 +77,11 @@ library AddressLinkedList {
     /**
      * @dev This function is just an example, please copy this code directly when you need it, you should not call this function
      */
-    function list(mapping(address => address) storage self, address from, uint256 limit) internal view returns (address[] memory) {
+    function list(
+        mapping(address => address) storage self,
+        address from,
+        uint256 limit
+    ) internal view returns (address[] memory) {
         address[] memory result = new address[](limit);
         uint256 i = 0;
         address addr = self[from];

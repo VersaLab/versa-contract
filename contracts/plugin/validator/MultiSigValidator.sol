@@ -82,7 +82,11 @@ contract MultiSigValidator is BaseValidator {
      * @param guardian The guardian to revoke.
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
-    function revokeGuardian(address prevGuardian, address guardian, uint256 newThreshold) external onlyEnabledValidator {
+    function revokeGuardian(
+        address prevGuardian,
+        address guardian,
+        uint256 newThreshold
+    ) external onlyEnabledValidator {
         uint256 currentGuardiansCount = _guardiansCount(msg.sender);
         require(currentGuardiansCount - 1 >= newThreshold, "Invalid threshold");
         _revokeGuardian(msg.sender, prevGuardian, guardian);
@@ -208,7 +212,10 @@ contract MultiSigValidator is BaseValidator {
      * @param userOp The userOp to validate.
      * @param userOpHash The hash of the userOp.
      */
-    function validateSignature(UserOperation calldata userOp, bytes32 userOpHash) external view returns (uint256 validationData) {
+    function validateSignature(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external view returns (uint256 validationData) {
         uint256 currentThreshold = _entries[userOp.sender].threshold;
         // Check that the provided signature data is not too short
         // 20 bytes validator address + 1 byte sig type + required signatures(no less than threshold * 65)
@@ -216,7 +223,15 @@ contract MultiSigValidator is BaseValidator {
             return SIG_VALIDATION_FAILED;
         }
         SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(userOp, userOpHash);
-        if (!_checkTransactionTypeAndFee(splitedSig.signatureType, splitedSig.maxFeePerGas, splitedSig.maxPriorityFeePerGas, userOp.maxFeePerGas, userOp.maxPriorityFeePerGas)) {
+        if (
+            !_checkTransactionTypeAndFee(
+                splitedSig.signatureType,
+                splitedSig.maxFeePerGas,
+                splitedSig.maxPriorityFeePerGas,
+                userOp.maxFeePerGas,
+                userOp.maxPriorityFeePerGas
+            )
+        ) {
             return SIG_VALIDATION_FAILED;
         }
 
@@ -307,7 +322,12 @@ contract MultiSigValidator is BaseValidator {
      *                   Can be packed ECDSA signature ({bytes32 r}{bytes32 s}{uint8 v}), contract signature (EIP-1271) or approved hash.
      * @param requiredSignatures Amount of required valid signatures.
      */
-    function checkNSignatures(address wallet, bytes32 dataHash, bytes memory signatures, uint256 requiredSignatures) public view {
+    function checkNSignatures(
+        address wallet,
+        bytes32 dataHash,
+        bytes memory signatures,
+        uint256 requiredSignatures
+    ) public view {
         // Check that the provided signature data is not too short
         require(signatures.length >= requiredSignatures * 65, "Signatures data too short");
         // There cannot be an owner with address 0.
@@ -348,7 +368,10 @@ contract MultiSigValidator is BaseValidator {
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(SignatureChecker.isValidERC1271SignatureNow(currentGuardian, dataHash, contractSignature), "Contract signature invalid");
+                require(
+                    SignatureChecker.isValidERC1271SignatureNow(currentGuardian, dataHash, contractSignature),
+                    "Contract signature invalid"
+                );
             } else {
                 // eip712 recovery
                 currentGuardian = ECDSA.recover(dataHash, v, r, s);

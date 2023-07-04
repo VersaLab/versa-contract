@@ -86,7 +86,10 @@ describe("MultiSigValidator", () => {
             selector: "enableValidator",
         });
 
-        let data = multisigValidator.interface.encodeFunctionData("addGuardians", [[signer2.address, signer3.address], threshold]);
+        let data = multisigValidator.interface.encodeFunctionData("addGuardians", [
+            [signer2.address, signer3.address],
+            threshold,
+        ]);
         await execute({
             executor: wallet,
             to: multisigValidator.address,
@@ -109,7 +112,11 @@ describe("MultiSigValidator", () => {
         });
 
         // revoke signer1
-        let data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [signer2.address, signer1.address, threshold]);
+        let data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [
+            signer2.address,
+            signer1.address,
+            threshold,
+        ]);
         await execute({
             executor: wallet,
             to: multisigValidator.address,
@@ -428,10 +435,14 @@ describe("MultiSigValidator", () => {
         let sign3 = await signer3.signMessage(arrayify(messageHash));
         sign = signer3 < signer1 ? hexConcat([sign3, sign1]) : hexConcat([sign1, sign3]);
 
-        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith("Invalid guardian");
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
+            "Invalid guardian"
+        );
 
         sign = sign1;
-        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith("Signatures data too short");
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
+            "Signatures data too short"
+        );
     });
 
     it("should accept pre-approved hash", async () => {

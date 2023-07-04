@@ -15,12 +15,19 @@ contract MockValidator is IValidator {
         return interfaceId == type(IValidator).interfaceId;
     }
 
-    function validateSignature(UserOperation calldata _userOp, bytes32 _userOpHash) external view override returns (uint256 validationData) {
+    function validateSignature(
+        UserOperation calldata _userOp,
+        bytes32 _userOpHash
+    ) external view override returns (uint256 validationData) {
         // Mock implementation, always return 0 validation data
         return 0;
     }
 
-    function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view override returns (bool) {
+    function isValidSignature(
+        bytes32 hash,
+        bytes calldata signature,
+        address wallet
+    ) external view override returns (bool) {
         // Mock implementation, always return true validation data
         return true;
     }

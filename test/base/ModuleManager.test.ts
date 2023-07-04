@@ -96,6 +96,8 @@ describe("ModuleManager", () => {
 
     it("should not execute transaction from disabled plugin", async () => {
         // Execute transaction from plugin
-        await expect(moduleManager.execTransactionFromModule(moduleManager.address, parseEther("1"), "0x", 0)).to.be.revertedWith("Only enabled module");
+        await expect(
+            moduleManager.execTransactionFromModule(moduleManager.address, parseEther("1"), "0x", 0)
+        ).to.be.revertedWith("Only enabled module");
     });
 });

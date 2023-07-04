@@ -99,7 +99,11 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @param validatorType The type of validators to retrieve (Sudo or Normal).
      * @return array An array of validators.
      */
-    function getValidatorsPaginated(address start, uint256 pageSize, ValidatorType validatorType) external view returns (address[] memory array) {
+    function getValidatorsPaginated(
+        address start,
+        uint256 pageSize,
+        ValidatorType validatorType
+    ) external view returns (address[] memory array) {
         require(validatorType != ValidatorType.Disabled, "Only valid validators");
 
         if (validatorType == ValidatorType.Sudo) {
@@ -116,8 +120,15 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @param initData Initialization data for the validator contract.
      */
     function _enableValidator(address validator, ValidatorType validatorType, bytes memory initData) internal {
-        require(validatorType != ValidatorType.Disabled && IValidator(validator).supportsInterface(type(IValidator).interfaceId), "Only valid validator allowed");
-        require(!sudoValidators.isExist(validator) && !normalValidators.isExist(validator), "Validator has already been added");
+        require(
+            validatorType != ValidatorType.Disabled &&
+                IValidator(validator).supportsInterface(type(IValidator).interfaceId),
+            "Only valid validator allowed"
+        );
+        require(
+            !sudoValidators.isExist(validator) && !normalValidators.isExist(validator),
+            "Validator has already been added"
+        );
 
         if (validatorType == ValidatorType.Sudo) {
             sudoValidators.add(validator);

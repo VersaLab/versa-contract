@@ -5,7 +5,15 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ECDSAValidator, ECDSAValidator__factory, VersaWallet } from "../../typechain-types";
 import { deployVersaWallet, getUserOpHash } from "../utils";
 import { enablePlugin, execute } from "../base/utils";
-import { arrayify, hexConcat, hexlify, keccak256, recoverAddress, recoverPublicKey, verifyMessage } from "ethers/lib/utils";
+import {
+    arrayify,
+    hexConcat,
+    hexlify,
+    keccak256,
+    recoverAddress,
+    recoverPublicKey,
+    verifyMessage,
+} from "ethers/lib/utils";
 import * as helper from "@nomicfoundation/hardhat-network-helpers";
 import { numberToFixedHex } from "../base/utils";
 
@@ -144,7 +152,10 @@ describe("ECDSAValidator", () => {
         let validUntil = validAfter + 100;
         let maxFeePerGas = 100;
         let maxPriorityFeePerGas = 100;
-        let extraData = abiCoder.encode(["uint256", "uint256", "uint256", "uint256"], [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]);
+        let extraData = abiCoder.encode(
+            ["uint256", "uint256", "uint256", "uint256"],
+            [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
+        );
 
         let finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
         let sign = await signer1.signMessage(arrayify(finalHash));
@@ -164,7 +175,11 @@ describe("ECDSAValidator", () => {
         op.signature = sign;
 
         const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
-        const expectedValidationData = hexConcat([numberToFixedHex(validAfter, 6), numberToFixedHex(validUntil, 6), numberToFixedHex(0, 20)]);
+        const expectedValidationData = hexConcat([
+            numberToFixedHex(validAfter, 6),
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(0, 20),
+        ]);
         expect(validationData).to.equal(expectedValidationData);
     });
 
@@ -232,7 +247,10 @@ describe("ECDSAValidator", () => {
         let validUntil = validAfter + 100;
         let maxFeePerGas = 100;
         let maxPriorityFeePerGas = 100;
-        let extraData = abiCoder.encode(["uint256", "uint256", "uint256", "uint256"], [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]);
+        let extraData = abiCoder.encode(
+            ["uint256", "uint256", "uint256", "uint256"],
+            [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
+        );
 
         let finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
         let sign = await signer2.signMessage(arrayify(finalHash));
@@ -252,7 +270,11 @@ describe("ECDSAValidator", () => {
         op.signature = sign;
 
         const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
-        const expectedValidationData = hexConcat([numberToFixedHex(validAfter, 6), numberToFixedHex(validUntil, 6), numberToFixedHex(1, 20)]);
+        const expectedValidationData = hexConcat([
+            numberToFixedHex(validAfter, 6),
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(1, 20),
+        ]);
         expect(validationData).to.equal(expectedValidationData);
     });
 
@@ -285,7 +307,10 @@ describe("ECDSAValidator", () => {
         let validUntil = validAfter + 100;
         let maxFeePerGas = 100;
         let maxPriorityFeePerGas = 100;
-        let extraData = abiCoder.encode(["uint256", "uint256", "uint256", "uint256"], [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]);
+        let extraData = abiCoder.encode(
+            ["uint256", "uint256", "uint256", "uint256"],
+            [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
+        );
 
         let finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
         let sign = await signer1.signMessage(arrayify(finalHash));

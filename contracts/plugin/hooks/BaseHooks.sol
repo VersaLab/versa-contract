@@ -74,7 +74,12 @@ abstract contract BaseHooks is IHooks {
      * @param _data Additional data of the transaction.
      * @param _operation The type of the transaction operation.
      */
-    function beforeTransaction(address _to, uint256 _value, bytes memory _data, Enum.Operation _operation) external virtual onlyEnabledHooks {}
+    function beforeTransaction(
+        address _to,
+        uint256 _value,
+        bytes memory _data,
+        Enum.Operation _operation
+    ) external virtual onlyEnabledHooks {}
 
     /**
      * @dev Perform after transaction actions.
@@ -83,7 +88,12 @@ abstract contract BaseHooks is IHooks {
      * @param _data Additional data of the transaction.
      * @param _operation The type of the transaction operation.
      */
-    function afterTransaction(address _to, uint256 _value, bytes memory _data, Enum.Operation _operation) external virtual onlyEnabledHooks {}
+    function afterTransaction(
+        address _to,
+        uint256 _value,
+        bytes memory _data,
+        Enum.Operation _operation
+    ) external virtual onlyEnabledHooks {}
 
     /**
      * @dev Checks if the contract supports a specific interface.

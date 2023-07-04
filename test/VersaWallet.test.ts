@@ -41,14 +41,26 @@ describe("VersaWallet", () => {
         // Deploy versa singleton
         versaWalletSingleton = await new VersaWallet__factory(owner).deploy(entryPoint.address);
         // Deploy VersaAccountFactory
-        versaFactory = await new VersaAccountFactory__factory(owner).deploy(versaWalletSingleton.address, fallbackHandler.address);
+        versaFactory = await new VersaAccountFactory__factory(owner).deploy(
+            versaWalletSingleton.address,
+            fallbackHandler.address
+        );
 
         sudoValidator = await new MockValidator__factory(owner).deploy();
         normalValidator = await new MockValidator__factory(owner).deploy();
         hooks = await new MockHooks__factory(owner).deploy();
         module = await new MockModule__factory(owner).deploy();
 
-        await versaFactory.createAccount([sudoValidator.address, normalValidator.address], ["0x", "0x"], [1, 2], [hooks.address], ["0x"], [module.address], ["0x"], 0);
+        await versaFactory.createAccount(
+            [sudoValidator.address, normalValidator.address],
+            ["0x", "0x"],
+            [1, 2],
+            [hooks.address],
+            ["0x"],
+            [module.address],
+            ["0x"],
+            0
+        );
 
         let walletAddress = await versaFactory.getAddress(
             [sudoValidator.address, normalValidator.address],
@@ -74,7 +86,12 @@ describe("VersaWallet", () => {
 
     it("should valdiate userOp correctly", async () => {
         await helpers.setBalance(wallet.address, parseEther("1"));
-        let sudoExecuteData = wallet.interface.encodeFunctionData("sudoExecute", [owner.address, parseEther("0.1"), "0x", 0]);
+        let sudoExecuteData = wallet.interface.encodeFunctionData("sudoExecute", [
+            owner.address,
+            parseEther("0.1"),
+            "0x",
+            0,
+        ]);
         let op = {
             sender: wallet.address,
             nonce: 0,
@@ -96,7 +113,12 @@ describe("VersaWallet", () => {
     it("should execute", async () => {
         await helpers.setBalance(wallet.address, parseEther("10"));
         let ethValue = parseEther("1");
-        let sudoExecuteData = wallet.interface.encodeFunctionData("sudoExecute", [owner.address, parseEther("1"), "0x", 0]);
+        let sudoExecuteData = wallet.interface.encodeFunctionData("sudoExecute", [
+            owner.address,
+            parseEther("1"),
+            "0x",
+            0,
+        ]);
         let op = {
             sender: wallet.address,
             nonce: 0,
@@ -128,7 +150,12 @@ describe("VersaWallet", () => {
 
     it("should revert if validator and selector don't match", async () => {
         await helpers.setBalance(wallet.address, parseEther("1"));
-        let sudoExecuteData = wallet.interface.encodeFunctionData("sudoExecute", [owner.address, parseEther("0.1"), "0x", 0]);
+        let sudoExecuteData = wallet.interface.encodeFunctionData("sudoExecute", [
+            owner.address,
+            parseEther("0.1"),
+            "0x",
+            0,
+        ]);
         let op = {
             sender: wallet.address,
             nonce: 0,
@@ -143,25 +170,37 @@ describe("VersaWallet", () => {
             signature: normalValidator.address,
         };
         let opHash = await opHasher.getUserOpHash(op);
-        await expect(wallet.connect(entryPoint).validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith("Versa: selector doesn't match validator");
+        await expect(wallet.connect(entryPoint).validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith(
+            "Versa: selector doesn't match validator"
+        );
     });
 
     it("should revert if normal execution uses banned operation", async () => {
         await helpers.setBalance(wallet.address, parseEther("1"));
 
         // Perform a self call
-        await expect(wallet.connect(entryPoint).normalExecute(wallet.address, parseEther("0.1"), "0x", 0)).to.be.revertedWith("Versa: operation is not allowed");
+        await expect(
+            wallet.connect(entryPoint).normalExecute(wallet.address, parseEther("0.1"), "0x", 0)
+        ).to.be.revertedWith("Versa: operation is not allowed");
 
         // Use delegatecall
-        await expect(wallet.connect(entryPoint).normalExecute(ethers.constants.AddressZero, parseEther("0.1"), "0x", 1)).to.be.revertedWith("Versa: operation is not allowed");
+        await expect(
+            wallet.connect(entryPoint).normalExecute(ethers.constants.AddressZero, parseEther("0.1"), "0x", 1)
+        ).to.be.revertedWith("Versa: operation is not allowed");
 
         // Call to enabled plugin
-        await expect(wallet.connect(entryPoint).normalExecute(module.address, parseEther("0.1"), "0x", 1)).to.be.revertedWith("Versa: operation is not allowed");
+        await expect(
+            wallet.connect(entryPoint).normalExecute(module.address, parseEther("0.1"), "0x", 1)
+        ).to.be.revertedWith("Versa: operation is not allowed");
 
         // Call to enabled plugin
-        await expect(wallet.connect(entryPoint).normalExecute(sudoValidator.address, parseEther("0.1"), "0x", 1)).to.be.revertedWith("Versa: operation is not allowed");
+        await expect(
+            wallet.connect(entryPoint).normalExecute(sudoValidator.address, parseEther("0.1"), "0x", 1)
+        ).to.be.revertedWith("Versa: operation is not allowed");
 
         // Call to enabled plugin
-        await expect(wallet.connect(entryPoint).normalExecute(hooks.address, parseEther("0.1"), "0x", 1)).to.be.revertedWith("Versa: operation is not allowed");
+        await expect(
+            wallet.connect(entryPoint).normalExecute(hooks.address, parseEther("0.1"), "0x", 1)
+        ).to.be.revertedWith("Versa: operation is not allowed");
     });
 });

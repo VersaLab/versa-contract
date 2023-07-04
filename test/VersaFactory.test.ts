@@ -32,7 +32,10 @@ describe("VersaFactory", () => {
         versaWalletSingleton = await new VersaWallet__factory(owner).deploy(entryPoint);
 
         // Deploy VersaAccountFactory
-        versaFactory = await new VersaAccountFactory__factory(owner).deploy(versaWalletSingleton.address, fallbackHandler);
+        versaFactory = await new VersaAccountFactory__factory(owner).deploy(
+            versaWalletSingleton.address,
+            fallbackHandler
+        );
 
         validator = await new MockValidator__factory(owner).deploy();
         hooks = await new MockHooks__factory(owner).deploy();
@@ -40,9 +43,27 @@ describe("VersaFactory", () => {
     });
 
     it("should deploy and initialize versa wallet", async () => {
-        await versaFactory.createAccount([validator.address], ["0x"], [1], [hooks.address], ["0x"], [module.address], ["0x"], 0);
+        await versaFactory.createAccount(
+            [validator.address],
+            ["0x"],
+            [1],
+            [hooks.address],
+            ["0x"],
+            [module.address],
+            ["0x"],
+            0
+        );
 
-        let walletAddress = await versaFactory.getAddress([validator.address], ["0x"], [1], [hooks.address], ["0x"], [module.address], ["0x"], 0);
+        let walletAddress = await versaFactory.getAddress(
+            [validator.address],
+            ["0x"],
+            [1],
+            [hooks.address],
+            ["0x"],
+            [module.address],
+            ["0x"],
+            0
+        );
 
         let wallet = VersaWallet__factory.connect(walletAddress, owner);
         expect(await wallet.VERSA_VERSION()).to.be.equal("0.0.1");

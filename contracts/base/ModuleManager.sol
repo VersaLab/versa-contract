@@ -56,7 +56,12 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param operation Operation type of the module transaction.
      * @return success Boolean flag indicating if the call succeeded.
      */
-    function execTransactionFromModule(address to, uint256 value, bytes memory data, Enum.Operation operation) public virtual returns (bool success) {
+    function execTransactionFromModule(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public virtual returns (bool success) {
         require(_isModuleEnabled(msg.sender), "Only enabled module");
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, type(uint256).max);
@@ -73,7 +78,12 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @return success Boolean flag indicating if the call succeeded.
      * @return returnData Data returned by the call.
      */
-    function execTransactionFromModuleReturnData(address to, uint256 value, bytes memory data, Enum.Operation operation) public returns (bool success, bytes memory returnData) {
+    function execTransactionFromModuleReturnData(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation);
         returnData = getReturnData(type(uint256).max);
     }

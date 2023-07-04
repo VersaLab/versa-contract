@@ -15,7 +15,13 @@ contract TokenCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, ER
      * @notice Handles ERC1155 Token callback.
      * return Standardized onERC1155Received return value.
      */
-    function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure override returns (bytes4) {
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    ) external pure override returns (bytes4) {
         return 0xf23a6e61;
     }
 
@@ -23,7 +29,13 @@ contract TokenCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, ER
      * @notice Handles ERC1155 Token batch callback.
      * return Standardized onERC1155BatchReceived return value.
      */
-    function onERC1155BatchReceived(address, address, uint256[] calldata, uint256[] calldata, bytes calldata) external pure override returns (bytes4) {
+    function onERC1155BatchReceived(
+        address,
+        address,
+        uint256[] calldata,
+        uint256[] calldata,
+        bytes calldata
+    ) external pure override returns (bytes4) {
         return 0xbc197c81;
     }
 
@@ -49,6 +61,9 @@ contract TokenCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, ER
      * @return if the interface is supported.
      */
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return interfaceId == type(ERC1155TokenReceiver).interfaceId || interfaceId == type(ERC721TokenReceiver).interfaceId || interfaceId == type(IERC165).interfaceId;
+        return
+            interfaceId == type(ERC1155TokenReceiver).interfaceId ||
+            interfaceId == type(ERC721TokenReceiver).interfaceId ||
+            interfaceId == type(IERC165).interfaceId;
     }
 }

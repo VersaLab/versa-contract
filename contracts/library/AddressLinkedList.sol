@@ -54,11 +54,7 @@ library AddressLinkedList {
         self[SENTINEL_ADDRESS] = address(0);
     }
 
-    function isExist(mapping(address => address) storage self, address addr)
-        internal
-        view
-        returns (bool)
-    {
+    function isExist(mapping(address => address) storage self, address addr) internal view returns (bool) {
         return self[addr] != address(0) && uint160(addr) > SENTINEL_UINT;
     }
 
@@ -75,18 +71,17 @@ library AddressLinkedList {
     }
 
     function isEmpty(mapping(address => address) storage self) internal view returns (bool) {
-        return
-            self[SENTINEL_ADDRESS] == address(0) || self[SENTINEL_ADDRESS] == SENTINEL_ADDRESS;
+        return self[SENTINEL_ADDRESS] == address(0) || self[SENTINEL_ADDRESS] == SENTINEL_ADDRESS;
     }
 
     /**
      * @dev This function is just an example, please copy this code directly when you need it, you should not call this function
      */
-    function list(mapping(address => address) storage self, address from, uint256 limit)
-        internal
-        view
-        returns (address[] memory)
-    {
+    function list(
+        mapping(address => address) storage self,
+        address from,
+        uint256 limit
+    ) internal view returns (address[] memory) {
         address[] memory result = new address[](limit);
         uint256 i = 0;
         address addr = self[from];

@@ -57,7 +57,7 @@ library SignatureHandler {
     function splitUserOpSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) pure internal returns(SplitedSignature memory splitedSig) {
+    ) internal pure returns (SplitedSignature memory splitedSig) {
         splitedSig.signatureType = uint8(bytes1(userOp.signature[SIG_TYPE_OFFSET:SIG_TYPE_OFFSET + SIG_TYPE_LENGTH]));
         // For instant transactions, the signature start from the 22th bytes of the userOp.signature.
         if (splitedSig.signatureType == INSTANT_TRANSACTION) {
@@ -65,10 +65,16 @@ library SignatureHandler {
             splitedSig.hash = userOpHash;
         } else if (splitedSig.signatureType == SCHEDULE_TRANSACTION) {
             // For scheduled transactions, decode the individual fields from the signature.
-            splitedSig.validUntil = uint48(bytes6(userOp.signature[VALID_UNTIL_OFFSET:VALID_UNTIL_OFFSET + TIME_LENGTH]));
-            splitedSig.validAfter = uint48(bytes6(userOp.signature[VALID_AFTER_OFFSET:VALID_AFTER_OFFSET + TIME_LENGTH]));
+            splitedSig.validUntil = uint48(
+                bytes6(userOp.signature[VALID_UNTIL_OFFSET:VALID_UNTIL_OFFSET + TIME_LENGTH])
+            );
+            splitedSig.validAfter = uint48(
+                bytes6(userOp.signature[VALID_AFTER_OFFSET:VALID_AFTER_OFFSET + TIME_LENGTH])
+            );
             splitedSig.maxFeePerGas = uint256(bytes32(userOp.signature[MAX_FEE_OFFSET:MAX_FEE_OFFSET + FEE_LENGTH]));
-            splitedSig.maxPriorityFeePerGas = uint256(bytes32(userOp.signature[MAX_PRIORITY_FEE_OFFSET:MAX_PRIORITY_FEE_OFFSET+FEE_LENGTH]));
+            splitedSig.maxPriorityFeePerGas = uint256(
+                bytes32(userOp.signature[MAX_PRIORITY_FEE_OFFSET:MAX_PRIORITY_FEE_OFFSET + FEE_LENGTH])
+            );
             splitedSig.signature = userOp.signature[SCHEDULE_SIG_OFFSET:];
             // Calculate the hash of the scheduled transaction using the extra data fields.
             bytes memory extraData = abi.encode(
@@ -87,11 +93,10 @@ library SignatureHandler {
      * @param pos which signature to read. A prior bounds check of this parameter should be performed, to avoid out of bounds access
      * @param signatures concatenated rsv signatures
      */
-    function multiSignatureSplit(bytes memory signatures, uint256 pos)
-        internal
-        pure
-        returns (uint8 v, bytes32 r, bytes32 s)
-    {
+    function multiSignatureSplit(
+        bytes memory signatures,
+        uint256 pos
+    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
         // The signature format is a compact form of:
         // {bytes32 r} {bytes32 s} {uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.

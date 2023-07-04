@@ -106,7 +106,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
         return modules.list(start, pageSize);
     }
 
-    function moduleSize() external view returns(uint256) {
+    function moduleSize() external view returns (uint256) {
         return modules.size();
     }
 
@@ -116,10 +116,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param initData Initialization data for the module.
      */
     function _enableModule(address module, bytes memory initData) internal {
-        require(
-            IModule(module).supportsInterface(type(IModule).interfaceId),
-            "Not a module"
-        );
+        require(IModule(module).supportsInterface(type(IModule).interfaceId), "Not a module");
         modules.add(module);
         IModule(module).initWalletConfig(initData);
         emit EnabledModule(module);

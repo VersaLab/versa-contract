@@ -15,7 +15,13 @@ contract TokenCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, ER
      * @notice Handles ERC1155 Token callback.
      * return Standardized onERC1155Received return value.
      */
-    function onERC1155Received(address, address, uint256, uint256, bytes calldata) external pure override returns (bytes4) {
+    function onERC1155Received(
+        address,
+        address,
+        uint256,
+        uint256,
+        bytes calldata
+    ) external pure override returns (bytes4) {
         return 0xf23a6e61;
     }
 

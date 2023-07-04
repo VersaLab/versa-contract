@@ -36,11 +36,7 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @param validatorType The type of the validator (Sudo or Normal).
      * @param initData Initialization data for the validator contract.
      */
-    function enableValidator(
-        address validator,
-        ValidatorType validatorType,
-        bytes memory initData
-    ) public authorized {
+    function enableValidator(address validator, ValidatorType validatorType, bytes memory initData) public authorized {
         _enableValidator(validator, validatorType, initData);
     }
 
@@ -64,8 +60,7 @@ abstract contract ValidatorManager is SelfAuthorized {
         _toggleValidatorType(prevValidator, validator);
     }
 
-
-    function validatorSize() external view returns(uint256 sudoSize, uint256 normalSize) {
+    function validatorSize() external view returns (uint256 sudoSize, uint256 normalSize) {
         sudoSize = sudoValidators.size();
         normalSize = normalValidators.size();
     }
@@ -126,8 +121,8 @@ abstract contract ValidatorManager is SelfAuthorized {
      */
     function _enableValidator(address validator, ValidatorType validatorType, bytes memory initData) internal {
         require(
-            validatorType != ValidatorType.Disabled
-            && IValidator(validator).supportsInterface(type(IValidator).interfaceId),
+            validatorType != ValidatorType.Disabled &&
+                IValidator(validator).supportsInterface(type(IValidator).interfaceId),
             "Only valid validator allowed"
         );
         require(
@@ -189,9 +184,6 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @dev Throws an error if there are no remaining sudo validators.
      */
     function _checkRemovingSudoValidator() internal view {
-        require(
-            !sudoValidators.isEmpty(),
-            "Cannot remove the last remaining sudoValidator"
-        );
+        require(!sudoValidators.isEmpty(), "Cannot remove the last remaining sudoValidator");
     }
 }

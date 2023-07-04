@@ -45,19 +45,8 @@ abstract contract Executor {
      * EntryPoint wouldn't know to emit the UserOperationRevertReason event,
      * which the frontend/client uses to capture the reason for the failure.
      */
-    function executeAndRevert(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation
-    ) internal {
-        bool success = execute(
-            to,
-            value,
-            data,
-            operation,
-            type(uint256).max
-        );
+    function executeAndRevert(address to, uint256 value, bytes memory data, Enum.Operation operation) internal {
+        bool success = execute(to, value, data, operation, type(uint256).max);
 
         bytes memory returnData = getReturnData(type(uint256).max);
         // Revert with the actual reason string

@@ -6,13 +6,13 @@ import "../common/SelfAuthorized.sol";
 
 abstract contract EntryPointManager is SelfAuthorized {
     /**
-    * @dev The ERC-4337 entrypoint address, it's hardcoded in implementation
-    * contract for gas efficiency. Upgrading to a new version of entrypoint
-    * requires replacing the implementation contract
-    */
+     * @dev The ERC-4337 entrypoint address, it's hardcoded in implementation
+     * contract for gas efficiency. Upgrading to a new version of entrypoint
+     * requires replacing the implementation contract
+     */
     address private immutable _entryPoint;
 
-    modifier onlyFromEntryPoint {
+    modifier onlyFromEntryPoint() {
         _requireFromEntryPoint();
         _;
     }
@@ -22,9 +22,9 @@ abstract contract EntryPointManager is SelfAuthorized {
     }
 
     /**
-    * ensure the request comes from the known entrypoint.
-    */
-    function _requireFromEntryPoint() internal virtual view {
+     * ensure the request comes from the known entrypoint.
+     */
+    function _requireFromEntryPoint() internal view virtual {
         require(msg.sender == _entryPoint, "account: not from EntryPoint");
     }
 
@@ -38,7 +38,7 @@ abstract contract EntryPointManager is SelfAuthorized {
     /**
      * Get the entrypoint address
      */
-    function entryPoint() public view returns(address) {
+    function entryPoint() public view returns (address) {
         return _entryPoint;
     }
 }

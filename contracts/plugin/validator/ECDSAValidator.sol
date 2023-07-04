@@ -13,7 +13,7 @@ contract ECDSAValidator is BaseValidator {
 
     event SignerSet(address indexed wallet, address indexed oldSigner, address indexed newSigner);
 
-    mapping (address => address) private _signers;
+    mapping(address => address) private _signers;
 
     /**
      * @dev Sets a new signer for the calling wallet.
@@ -40,7 +40,7 @@ contract ECDSAValidator is BaseValidator {
      * @param data The initialization data containing the signer address.
      */
     function _init(bytes memory data) internal override {
-        (address signer) = abi.decode(data, (address));
+        address signer = abi.decode(data, (address));
         _setSigner(signer, msg.sender);
     }
 
@@ -68,15 +68,19 @@ contract ECDSAValidator is BaseValidator {
         if (sigLength != 86 && sigLength != 162) {
             return SIG_VALIDATION_FAILED;
         }
-        SignatureHandler.SplitedSignature memory splitedSig =
-            SignatureHandler.splitUserOpSignature(_userOp, _userOpHash);
-        if (!_checkTransactionTypeAndFee(
-            splitedSig.signatureType,
-            splitedSig.maxFeePerGas,
-            splitedSig.maxPriorityFeePerGas,
-            _userOp.maxFeePerGas,
-            _userOp.maxPriorityFeePerGas
-        )) {
+        SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(
+            _userOp,
+            _userOpHash
+        );
+        if (
+            !_checkTransactionTypeAndFee(
+                splitedSig.signatureType,
+                splitedSig.maxFeePerGas,
+                splitedSig.maxPriorityFeePerGas,
+                _userOp.maxFeePerGas,
+                _userOp.maxPriorityFeePerGas
+            )
+        ) {
             return SIG_VALIDATION_FAILED;
         }
         validationData = _validateSignature(
@@ -96,21 +100,11 @@ contract ECDSAValidator is BaseValidator {
      * @param wallet The address of the wallet.
      * @return A boolean indicating whether the signature is valid or not.
      */
-    function isValidSignature(
-        bytes32 hash,
-        bytes calldata signature,
-        address wallet
-    ) external view returns(bool) {
+    function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
         uint256 validUntil;
         uint256 validAfter;
         address signer = _signers[wallet];
-        uint256 validationData = _validateSignature(
-            signer,
-            signature,
-            hash,
-            validUntil,
-            validAfter
-        );
+        uint256 validationData = _validateSignature(signer, signature, hash, validUntil, validAfter);
         return validationData == 0 ? true : false;
     }
 
@@ -119,7 +113,7 @@ contract ECDSAValidator is BaseValidator {
      * @param wallet The address of the wallet.
      * @return The address of the signer.
      */
-    function getSigner(address wallet) external view returns(address) {
+    function getSigner(address wallet) external view returns (address) {
         return _signers[wallet];
     }
 
@@ -138,7 +132,7 @@ contract ECDSAValidator is BaseValidator {
         bytes32 hash,
         uint256 validUntil,
         uint256 validAfter
-    ) internal pure returns(uint256) {
+    ) internal pure returns (uint256) {
         uint256 sigFailed;
         bytes32 messageHash = hash.toEthSignedMessageHash();
         if (signer != messageHash.recover(signature)) {

@@ -22,7 +22,13 @@ contract SpendingLimitHooks is BaseHooks {
         uint16 resetTimeIntervalMinutes; // Reset time interval (minutes)
     }
 
-    event SetSpendingLimit(address indexed _wallet, address indexed _token, uint256 _allowanceAmount, uint32 _resetBaseTimeMinutes, uint16 _resetTimeIntervalMinutes);
+    event SetSpendingLimit(
+        address indexed _wallet,
+        address indexed _token,
+        uint256 _allowanceAmount,
+        uint32 _resetBaseTimeMinutes,
+        uint16 _resetTimeIntervalMinutes
+    );
     event ResetSpendingLimit(address indexed _wallet, address indexed _token);
     event DeleteSpendingLimit(address indexed _wallet, address indexed _token);
 
@@ -69,7 +75,10 @@ contract SpendingLimitHooks is BaseHooks {
      */
     function _checkAmountAndUpdate(address _token, SpendingLimitInfo memory _spendingLimitInfo) internal {
         // Ensure that the spent amount does not exceed the allowance amount
-        require(_spendingLimitInfo.spentAmount <= _spendingLimitInfo.allowanceAmount, "SpendingLimitHooks: token overspending");
+        require(
+            _spendingLimitInfo.spentAmount <= _spendingLimitInfo.allowanceAmount,
+            "SpendingLimitHooks: token overspending"
+        );
         _updateSpendingLimitInfo(_token, _spendingLimitInfo);
     }
 
@@ -81,7 +90,13 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _data The data associated with the transaction.
      * @param _operation The type of operation being performed.
      */
-    function _checkSpendingLimit(address _wallet, address _to, uint256 _value, bytes calldata _data, Enum.Operation _operation) internal {
+    function _checkSpendingLimit(
+        address _wallet,
+        address _to,
+        uint256 _value,
+        bytes calldata _data,
+        Enum.Operation _operation
+    ) internal {
         require(_operation != Enum.Operation.DelegateCall, "SpendingLimitHooks: not allow delegatecall");
 
         // Check spending limit for native token
@@ -155,9 +170,11 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _data The data containing SpendingLimitSetConfig configurations.
      * @return An array of SpendingLimitSetConfig objects.
      */
-    function _parseSpendingLimitSetConfigData(bytes memory _data) internal pure returns (SpendingLimitSetConfig[] memory) {
+    function _parseSpendingLimitSetConfigData(
+        bytes memory _data
+    ) internal pure returns (SpendingLimitSetConfig[] memory) {
         SpendingLimitSetConfig[] memory spendingLimitSetConfigs = abi.decode(_data, (SpendingLimitSetConfig[]));
-        require(spendingLimitSetConfigs.length> 0, "SpendingLimitHooks: parse error");
+        require(spendingLimitSetConfigs.length > 0, "SpendingLimitHooks: parse error");
         return spendingLimitSetConfigs;
     }
 
@@ -176,15 +193,26 @@ contract SpendingLimitHooks is BaseHooks {
         SpendingLimitInfo memory spendingLimitInfo = getSpendingLimitInfo(msg.sender, _config.tokenAddress);
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
         if (_config.resetBaseTimeMinutes > 0) {
-            require(_config.resetBaseTimeMinutes <= currentTimeMinutes, "SpendingLimitHooks: resetBaseTimeMinutes can not greater than currentTimeMinutes");
-            spendingLimitInfo.lastResetTimeMinutes = currentTimeMinutes - ((currentTimeMinutes - _config.resetBaseTimeMinutes) % _config.resetTimeIntervalMinutes);
+            require(
+                _config.resetBaseTimeMinutes <= currentTimeMinutes,
+                "SpendingLimitHooks: resetBaseTimeMinutes can not greater than currentTimeMinutes"
+            );
+            spendingLimitInfo.lastResetTimeMinutes =
+                currentTimeMinutes -
+                ((currentTimeMinutes - _config.resetBaseTimeMinutes) % _config.resetTimeIntervalMinutes);
         } else if (spendingLimitInfo.lastResetTimeMinutes == 0) {
             spendingLimitInfo.lastResetTimeMinutes = currentTimeMinutes;
         }
         spendingLimitInfo.resetTimeIntervalMinutes = _config.resetTimeIntervalMinutes;
         spendingLimitInfo.allowanceAmount = _config.allowanceAmount;
         _updateSpendingLimitInfo(_config.tokenAddress, spendingLimitInfo);
-        emit SetSpendingLimit(msg.sender, _config.tokenAddress, _config.allowanceAmount, _config.resetBaseTimeMinutes, _config.resetTimeIntervalMinutes);
+        emit SetSpendingLimit(
+            msg.sender,
+            _config.tokenAddress,
+            _config.allowanceAmount,
+            _config.resetBaseTimeMinutes,
+            _config.resetTimeIntervalMinutes
+        );
     }
 
     /**
@@ -227,11 +255,15 @@ contract SpendingLimitHooks is BaseHooks {
     function getSpendingLimitInfo(address _wallet, address _token) public view returns (SpendingLimitInfo memory) {
         SpendingLimitInfo memory spendingLimitInfo = _tokenSpendingLimitInfo[_wallet][_token];
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
-        if (spendingLimitInfo.resetTimeIntervalMinutes > 0 && spendingLimitInfo.lastResetTimeMinutes + spendingLimitInfo.resetTimeIntervalMinutes <= currentTimeMinutes) {
+        if (
+            spendingLimitInfo.resetTimeIntervalMinutes > 0 &&
+            spendingLimitInfo.lastResetTimeMinutes + spendingLimitInfo.resetTimeIntervalMinutes <= currentTimeMinutes
+        ) {
             spendingLimitInfo.spentAmount = 0;
             spendingLimitInfo.lastResetTimeMinutes =
                 currentTimeMinutes -
-                ((currentTimeMinutes - spendingLimitInfo.lastResetTimeMinutes) % spendingLimitInfo.resetTimeIntervalMinutes);
+                ((currentTimeMinutes - spendingLimitInfo.lastResetTimeMinutes) %
+                    spendingLimitInfo.resetTimeIntervalMinutes);
         }
         return spendingLimitInfo;
     }
@@ -242,7 +274,10 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _tokens An array of token addresses for which to retrieve the spending limit information.
      * @return SpendingLimitInfo[] An array of spending limit information for the specified wallet and tokens.
      */
-    function batchGetSpendingLimitInfo(address _wallet, address[] memory _tokens) public view returns (SpendingLimitInfo[] memory) {
+    function batchGetSpendingLimitInfo(
+        address _wallet,
+        address[] memory _tokens
+    ) public view returns (SpendingLimitInfo[] memory) {
         uint dataLength = _tokens.length;
         SpendingLimitInfo[] memory batchSpendingLimitInfo = new SpendingLimitInfo[](dataLength);
         for (uint i = 0; i < dataLength; i++) {
@@ -266,7 +301,12 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _data Additional data of the transaction.
      * @param _operation The type of the transaction operation.
      */
-    function beforeTransaction(address _to, uint256 _value, bytes calldata _data, Enum.Operation _operation) external override onlyEnabledHooks {
+    function beforeTransaction(
+        address _to,
+        uint256 _value,
+        bytes calldata _data,
+        Enum.Operation _operation
+    ) external override onlyEnabledHooks {
         _checkSpendingLimit(msg.sender, _to, _value, _data, _operation);
     }
 
@@ -277,7 +317,12 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _data Additional data of the transaction.
      * @param _operation The type of the transaction operation.
      */
-    function afterTransaction(address _to, uint256 _value, bytes calldata _data, Enum.Operation _operation) external view override onlyEnabledHooks {
+    function afterTransaction(
+        address _to,
+        uint256 _value,
+        bytes calldata _data,
+        Enum.Operation _operation
+    ) external view override onlyEnabledHooks {
         (_to, _value, _data, _operation);
         revert("SpendingLimitHooks: afterTransaction hook is not allowed");
     }
@@ -290,8 +335,17 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _data The additional data for the transaction.
      * @param _operation The operation type of the transaction.
      */
-    function simulateSpendingLimitTransaction(address _wallet, address _to, uint256 _value, bytes calldata _data, Enum.Operation _operation) external {
-        require(VersaWallet(payable(_wallet)).isHooksEnabled(address(this)), "SpendingLimitHooks: this hooks is not enabled");
+    function simulateSpendingLimitTransaction(
+        address _wallet,
+        address _to,
+        uint256 _value,
+        bytes calldata _data,
+        Enum.Operation _operation
+    ) external {
+        require(
+            VersaWallet(payable(_wallet)).isHooksEnabled(address(this)),
+            "SpendingLimitHooks: this hooks is not enabled"
+        );
         _checkSpendingLimit(_wallet, _to, _value, _data, _operation);
         revert SpendingLimitSimulate();
     }

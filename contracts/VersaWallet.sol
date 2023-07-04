@@ -74,9 +74,13 @@ contract VersaWallet is
         bytes[] memory moduleInitData
     ) external initializer {
         _checkInitializationDataLength(
-            validators.length, validatorInitData.length, validatorType.length,
-            hooks.length, hooksInitData.length,
-            modules.length, moduleInitData.length
+            validators.length,
+            validatorInitData.length,
+            validatorType.length,
+            hooks.length,
+            hooksInitData.length,
+            modules.length,
+            moduleInitData.length
         );
         internalSetFallbackHandler(fallbackHandler);
 
@@ -108,11 +112,7 @@ contract VersaWallet is
         UserOperation calldata userOp,
         bytes32 userOpHash,
         uint256 missingAccountFunds
-    ) external
-      override
-      onlyFromEntryPoint
-      returns(uint256 validationData)
-    {
+    ) external override onlyFromEntryPoint returns (uint256 validationData) {
         address validator = _getValidator(userOp.signature);
         _validateValidatorAndSelector(validator, bytes4(userOp.callData[0:4]));
         validationData = IValidator(validator).validateSignature(userOp, userOpHash);
@@ -225,7 +225,7 @@ contract VersaWallet is
     function _payPrefund(uint256 missingAccountFunds) internal {
         if (missingAccountFunds > 0) {
             // Note: May pay more than the minimum to deposit for future transactions
-            (bool success, ) = payable(entryPoint()).call{value: missingAccountFunds, gas: type(uint256).max}("");
+            (bool success, ) = payable(entryPoint()).call{ value: missingAccountFunds, gas: type(uint256).max }("");
             (success);
             // Ignore failure (it's EntryPoint's job to verify, not the account)
         }
@@ -236,7 +236,7 @@ contract VersaWallet is
      * @param signature The signature from which to extract the validator address.
      * @return The extracted validator address.
      */
-    function _getValidator(bytes calldata signature) internal pure returns(address) {
+    function _getValidator(bytes calldata signature) internal pure returns (address) {
         return address(bytes20(signature[0:20]));
     }
 
@@ -264,10 +264,10 @@ contract VersaWallet is
     function _checkNormalExecute(address to, Enum.Operation _operation) internal view {
         require(
             to != address(this) &&
-            !isValidatorEnabled(to) &&
-            !isHooksEnabled(to) &&
-            !isModuleEnabled(to) &&
-            _operation != Enum.Operation.DelegateCall,
+                !isValidatorEnabled(to) &&
+                !isHooksEnabled(to) &&
+                !isModuleEnabled(to) &&
+                _operation != Enum.Operation.DelegateCall,
             "Versa: operation is not allowed"
         );
     }
@@ -275,13 +275,18 @@ contract VersaWallet is
     /**
      * @dev Checks the lengths of the batch transaction data arrays.
      */
-    function _checkBatchDataLength(uint256 toLen, uint256 valueLen, uint256 dataLen, uint256 operationLen) internal pure {
+    function _checkBatchDataLength(
+        uint256 toLen,
+        uint256 valueLen,
+        uint256 dataLen,
+        uint256 operationLen
+    ) internal pure {
         require(toLen == valueLen && dataLen == operationLen && toLen == dataLen, "Versa: invalid batch data");
     }
 
-    /** 
+    /**
      * @dev Check the length of the initialization data arrays
-    */
+     */
     function _checkInitializationDataLength(
         uint256 validatorsLen,
         uint256 validatorInitLen,
@@ -292,9 +297,10 @@ contract VersaWallet is
         uint256 moduleInitLen
     ) internal pure {
         require(
-            validatorsLen == validatorInitLen && validatorInitLen == validatorTypeLen
-            && hooksLen == hooksInitDataLen
-            && modulesLen == moduleInitLen,
+            validatorsLen == validatorInitLen &&
+                validatorInitLen == validatorTypeLen &&
+                hooksLen == hooksInitDataLen &&
+                modulesLen == moduleInitLen,
             "Data length doesn't match"
         );
     }

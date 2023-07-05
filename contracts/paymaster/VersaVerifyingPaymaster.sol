@@ -123,7 +123,7 @@ contract VersaVerifyingPaymaster is BasePaymaster {
 
         PaymasterData memory paymasterData = parsePaymasterAndData(userOp.paymasterAndData);
         require(
-            paymasterData.signature.length == 64 || paymasterData.signature.length == 65,
+            paymasterData.signature.length == 65,
             "PM: invalid signature length in paymasterAndData"
         );
 

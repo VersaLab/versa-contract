@@ -57,7 +57,7 @@ contract MultiSigValidator is BaseValidator {
     function _clear() internal override {}
 
     /**
-     * @notice Lets the owner add a guardian for its wallet.
+     * @notice Let the sudo validator add a guardian for its wallet.
      * @param guardian The guardian to add.
      * @param newThreshold The new threshold that will be set after addition.
      */
@@ -67,7 +67,7 @@ contract MultiSigValidator is BaseValidator {
     }
 
     /**
-     * @notice Lets the owner add guardians for its wallet.
+     * @notice Let the sudo validator add guardians for its wallet.
      * @param guardians The guardian list to add.
      * @param newThreshold The new threshold that will be set after addition.
      */
@@ -80,7 +80,7 @@ contract MultiSigValidator is BaseValidator {
     }
 
     /**
-     * @notice Lets the owner revoke a guardian from its wallet.
+     * @notice Let the sudo validator revoke a guardian from its wallet.
      * @param guardian The guardian to revoke.
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
@@ -91,7 +91,7 @@ contract MultiSigValidator is BaseValidator {
     }
 
     /**
-     * @notice Lets the owner change the guardian threshold required.
+     * @notice Let the sudo validator change the guardian threshold required.
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
     function changeThreshold(uint256 newThreshold) external onlyEnabledValidator {
@@ -296,7 +296,7 @@ contract MultiSigValidator is BaseValidator {
     ) public view {
         // Check that the provided signature data is not too short
         require(signatures.length >= requiredSignatures * 65, "Signatures data too short");
-        // There cannot be an owner with address 0.
+        // There cannot be an guardian with address 0.
         address lastGuardian = address(0);
         address currentGuardian;
         uint8 v;

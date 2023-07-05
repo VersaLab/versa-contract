@@ -1,9 +1,9 @@
 {
-	"versaAccountFactory": "0x49825F0f9C8bcea67F2DCcF12D834D8C34ad5A68",
-	"versaSingleton": "0x7D0Db084774Ad8087d0F04F00Bd2Cd5d8C6fB07C",
-	"recoveryModule": "0xe365DBeC2e0b08fE50C54f848f3BA773788db9A0",
+	"versaAccountFactory": "0xc984D7eC5bE8A1c3063Ec697577F7F3e696b8363",
+	"versaSingleton": "0x42491dc533f7D32129bDAC4fb89a759C3eBb2711",
 	"spendingLimitModule": "0x253d683b1803AD5cAe8bF4f804026482e0F781cE",
 	"ellipticCurve": "0xFC3b3cA9aFdc107fC33062993af3659B44eCC261",
 	"ecdsaValidator": "0x3733bf6f906ffD6013DF046DaF7a5De6989CcEDd",
-	"CompatibilityFallbackHandler": "0x8935cd1722a90331594A01E0A7fA6a6659F23C61"
+	"CompatibilityFallbackHandler": "0x8935cd1722a90331594A01E0A7fA6a6659F23C61",
+	"multisigValidator": "0x61fAFed8F0557C71FbA6480E529272E3131F6275"
 }

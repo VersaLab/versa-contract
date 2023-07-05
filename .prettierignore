@@ -2,3 +2,8 @@
 *.js
 *.md
 *.yaml
+@aa-template/
+@safe-contracts/
+typechain-types/
+.github
+.prettierrc

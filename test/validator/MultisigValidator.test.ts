@@ -324,6 +324,94 @@ describe("MultiSigValidator", () => {
         expect(validationData).to.equal(1);
     });
 
+    it("should validate schedualed transaction signature correctly", async () => {
+        let sudoValidator = multisigValidator;
+        let threshold = 2;
+        let initData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], threshold]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: sudoValidator.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        let op = {
+            sender: wallet.address,
+            nonce: 2,
+            initCode: "0x",
+            callData: "0x",
+            callGasLimit: 2150000,
+            verificationGasLimit: 2150000,
+            preVerificationGas: 2150000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: "0x",
+            signature: "0x",
+        };
+        let entryPoint = ethers.constants.AddressZero;
+        let chainId = 1;
+        const userOpHash = getUserOpHash(op, entryPoint, chainId);
+
+        // let now = Math.floor((new Date().getTime() / 1000));
+        let validAfter = 0;
+        let validUntil = 0;
+        let maxFeePerGas = op.maxFeePerGas;
+        let maxPriorityFeePerGas = op.maxPriorityFeePerGas;
+        let extraData = abiCoder.encode(
+            ["uint256", "uint256", "uint256", "uint256"],
+            [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
+        );
+
+        let finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
+        console.log("final hash", finalHash);
+
+        let userOpSigs = "0x";
+
+        let signers = [signer1, signer2];
+
+        signers.sort((a, b) => {
+            let addressA = a.address.toLocaleLowerCase();
+            let addressB = b.address.toLocaleLowerCase();
+            if (addressA < addressB) {
+                return -1;
+            } else if (addressA == addressB) {
+                return 0;
+            } else {
+                return 1;
+            }
+        });
+
+        const promises = signers.map(async (signer) => {
+            console.log("signer address", signer.address);
+            const signature = await signer.signMessage(arrayify(finalHash));
+            userOpSigs = hexConcat([userOpSigs, signature]);
+        });
+        await Promise.all(promises);
+        console.log("userOpSigs", userOpSigs);
+
+        // The first 20 bytes of signature is validator's address
+        // The 21th byte is the sig type
+        let sign = hexConcat([
+            ethers.constants.AddressZero,
+            "0x01",
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(validAfter, 6),
+            numberToFixedHex(maxFeePerGas, 32),
+            numberToFixedHex(maxPriorityFeePerGas, 32),
+            userOpSigs,
+        ]);
+
+        op.signature = sign;
+
+        const validationData = await multisigValidator.validateSignature(op, userOpHash);
+        const expectedValidationData = hexConcat([
+            numberToFixedHex(validAfter, 6),
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(0, 20),
+        ]);
+        expect(validationData).to.equal(expectedValidationData);
+    });
+
     it("should validate userOp signature correctly", async () => {
         let sudoValidator = multisigValidator;
         let threshold = 2;

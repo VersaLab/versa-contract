@@ -52,3 +52,10 @@ export async function deployMultisigValidator() {
     console.log("MultisigValidator deployed to: ", multisigValidator.address);
     return multisigValidator;
 }
+
+export async function deploySpendingLimitHooks() {
+    const SpendingLimitHooks = await ethers.getContractFactory("SpendingLimitHooks");
+    const spendingLimitHooks = await SpendingLimitHooks.deploy();
+    console.log("Spending limit hooks deployed to: ", spendingLimitHooks.address);
+    return spendingLimitHooks;
+}

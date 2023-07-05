@@ -1,137 +1,270 @@
-import { hexConcat, arrayify, hexZeroPad, parseEther } from "ethers/lib/utils";
+import { hexConcat, arrayify, parseEther, parseUnits } from "ethers/lib/utils";
 import mumbaiAddresses from "../deploy/addresses/mumbai.json";
 import * as config from "../deploy/helper/constants";
 import { generateWalletInitCode } from "../test/utils";
-import { ethers } from "ethers";
-const axios = require("axios");
-const hre = require("hardhat");
+
 import { hexlify } from "ethers/lib/utils";
+import { ethers } from "hardhat";
+import { estimateGasAndSendUserOpAndGetReceipt, generateUserOp, sleep } from "./utils/bundler";
+import { salt, bundlerURL, mumbaiUSDT, mumbaiPaymasterAddress, paymasterURL } from "./utils/config";
+import { AddressOne } from "../@safe-contracts/src";
+import { BigNumber } from "ethers";
 
-// const bundlerURL = "https://api.stackup.sh/v1/node/337595857e17a3af5187c753cb06373bf62025bd97682cb1fecd2788b0066e31"
-const bundlerURL = "https://api.pimlico.io/v1/mumbai/rpc?apikey=0496d685-7894-41eb-aff2-3d13ccfaf302";
+const ecdsaValidator = mumbaiAddresses.ecdsaValidator;
+const multisigValidator = mumbaiAddresses.multisigValidator;
+const entryPointAddress = config.mumbaiConfig.entryPoint;
+const spendingLimitAddress = mumbaiAddresses.spendingLimitHooks;
 
-const salt = 0;
+const targetERC20 = mumbaiUSDT;
+const paymasterAddress = mumbaiPaymasterAddress;
 
-const fakeSignature =
-    "0xb8b6bfb28d8682629e7d09ca53adb91c77b686eb1fb3e6f5b4ec8bed475e1e0e147a59c05acfe20d93ea20ce2f54ebcd8ca9a2d975e11433a639190d61b93de31c";
+/** This test covers:
+ * 1. Base functions:
+ *      - create a new wallet
+ *      - test native tokens sending
+ *      - test native token and ERC721 receiving(CompabilityFallbackHandler)
+ *      - normal/sudo execute, signle/batch execute
+ *      - scheduled transaction
+ *      - Transaction using paymaster
+ *
+ * 2. Validator related:
+ *      - change ecdsa signer
+ *      - change validator type
+ *      - enable a new validator
+ *      - add Guardians for multisig validator
+ *      - disable a validator
+ *
+ * 3. hooks/module related:
+ *      - enable hooks/module
+ *      - set spending limit
+ *      - test execute transaction from module
+ *      - disable hooks/module
+ */
 
-test_userOp()
+integration_test()
     .then(() => process.exit(0))
     .catch((error) => {
         console.error(error);
         process.exit(1);
     });
 
-async function test_userOp() {
-    const signer = (await hre.ethers.getSigners())[0];
-    let abiCoder = new hre.ethers.utils.AbiCoder();
-    const addr = await signer.getAddress();
-    console.log("signer address: ", addr);
+async function integration_test() {
+    let [signer1, signer2, signer3, signer4] = await ethers.getSigners();
+    let abiCoder = new ethers.utils.AbiCoder();
+    const addr = await signer1.getAddress();
 
-    const entrypoint = await hre.ethers.getContractAt("IEntryPoint", config.mumbaiConfig.entryPoint);
-    const versaAccountFactory = await hre.ethers.getContractAt(
-        "VersaAccountFactory",
-        mumbaiAddresses.versaAccountFactory
-    );
+    const versaAccountFactory = await ethers.getContractAt("VersaAccountFactory", mumbaiAddresses.versaAccountFactory);
     const validatorInitdata = abiCoder.encode(["address"], [addr]);
     let { initCode, walletAddress } = await generateWalletInitCode({
         versaFacotryAddr: versaAccountFactory.address,
         salt,
-        sudoValidator: mumbaiAddresses.ecdsaValidator,
+        sudoValidator: ecdsaValidator,
         sudoValidatorInitData: validatorInitdata,
     });
+    const wallet = await ethers.getContractAt("VersaWallet", walletAddress);
 
-    // Paymaster data
-    let paymasterAddr = "0x40165094452F2DBA8B602D023CA30DB931Ba9A80";
-    let token = "0x8478643D27DbE81d199f74f654E4b0e41d867de3";
-    // let paymasterAndData = hexConcat([paymasterAddr, token])
-    let paymasterAndData = "0x";
+    // console.log("============deploy new wallet=================")
+    let calldata = wallet.interface.encodeFunctionData("normalExecute", [
+        signer1.address,
+        parseEther("0.00001"),
+        "0x",
+        0,
+    ]);
 
-    const wallet = await hre.ethers.getContractAt("VersaWallet", walletAddress);
-    console.log("wallet address", wallet.address);
+    let userOp = await generateUserOp({ signer: signer1, walletAddress: walletAddress, callData: calldata, initCode });
 
-    let code = await signer.provider.getCode(walletAddress);
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: ecdsaValidator,
+        signers: [signer1],
+    });
 
-    let nonce = 0;
-    if (code != undefined && code != "0x") {
-        initCode = "0x";
-        // get nonce
-        nonce = await wallet.getNonce(0);
-        console.log("nonce", nonce);
+    console.log("============fallback functions and enable validator=============");
+    const testNFTAbi = [
+        // Some details about the token
+        "function mint()",
+    ];
+
+    const testNFTAddress = "0xFacdAD1360842a671f8d108FfBf3333eb151a65B";
+    let batchData = [];
+
+    let testNFT = await ethers.getContractAt(testNFTAbi, testNFTAddress);
+    let mintData = testNFT.interface.encodeFunctionData("mint");
+
+    // test NativeTokenSending
+    batchData.push([signer1.address, parseEther("0.0001"), "0x", 0]);
+
+    // test NativeTokenReceive
+    batchData.push([walletAddress, parseEther("0.0001"), "0x", 0]);
+
+    // test ERC721 Receiving
+    batchData.push([testNFTAddress, 0, mintData, 0]);
+
+    // set new ecdsa signer
+    let ECDSA = await ethers.getContractAt("ECDSAValidator", ecdsaValidator);
+    let setSignerData = ECDSA.interface.encodeFunctionData("setSigner", [signer2.address]);
+    batchData.push([ecdsaValidator, 0, setSignerData, 0]);
+
+    // add multi-sig validator
+    let enableMultisigInitData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], 2]);
+    let enableMultisigValidator = wallet.interface.encodeFunctionData("enableValidator", [
+        multisigValidator,
+        1,
+        enableMultisigInitData,
+    ]);
+    batchData.push([walletAddress, 0, enableMultisigValidator, 0]);
+
+    // toggle ecdsa validator to normal
+    let toggleEcdsa = wallet.interface.encodeFunctionData("toggleValidatorType", [multisigValidator, ecdsaValidator]);
+    batchData.push([walletAddress, 0, toggleEcdsa, 0]);
+
+    let to = [];
+    let value = [];
+    let data = [];
+    let operation = [];
+    for (let i = 0; i < batchData.length; i++) {
+        to.push(batchData[i][0]);
+        value.push(batchData[i][1]);
+        data.push(batchData[i][2]);
+        operation.push(batchData[i][3]);
+    }
+    calldata = wallet.interface.encodeFunctionData("batchSudoExecute", [to, value, data, operation]);
+
+    userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: ecdsaValidator,
+        signers: [signer1],
+    });
+
+    // Status checks
+    let newSigner = await ECDSA.getSigner(walletAddress);
+    if (newSigner !== signer2.address) {
+        throw new Error("Set ecdsa validator signer failed");
     }
 
-    const gasPrice = await hre.ethers.provider.getGasPrice();
-    console.log("maxFeePerGas : ", gasPrice);
-    const userOp = {
-        sender: walletAddress,
-        nonce: hexlify(nonce),
-        initCode,
-        callData: wallet.interface.encodeFunctionData("sudoExecute", [addr, parseEther("1"), "0x", 0]),
-        callGasLimit: 2150000,
-        verificationGasLimit: 1500000,
-        preVerificationGas: 1500000,
-        maxFeePerGas: gasPrice.toHexString(),
-        maxPriorityFeePerGas: 1000000000,
-        paymasterAndData,
-        signature: "0x",
-    };
-    if ((await hre.ethers.provider.getBalance(walletAddress)).lt(parseEther("0.02"))) {
-        console.log("insufficient balance, sending gas...");
-        let tx = await signer.sendTransaction({
-            to: walletAddress,
-            value: parseEther("0.02"),
-        });
+    let validatorType = await wallet.getValidatorType(ecdsaValidator);
+    let validatorType2 = await wallet.getValidatorType(multisigValidator);
+
+    if (validatorType !== 2 || validatorType2 !== 1) {
+        throw new Error("Set validator type failed");
+    }
+
+    console.log("===============disable validator=============");
+    // Validate through multisig validator and disable ecdsa validator
+    let disableData = wallet.interface.encodeFunctionData("disableValidator", [AddressOne, ecdsaValidator]);
+    calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, disableData, 0]);
+
+    userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
+    // test scheduled transaction here
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: multisigValidator,
+        signers: [signer1, signer2],
+    });
+
+    validatorType = await wallet.getValidatorType(ecdsaValidator);
+    validatorType2 = await wallet.getValidatorType(multisigValidator);
+
+    if (validatorType !== 0) {
+        throw new Error("Disable validator failed");
+    }
+
+    console.log("===============scheduled transaction=============");
+    calldata = wallet.interface.encodeFunctionData("normalExecute", [signer1.address, parseEther("0.00001"), "0x", 0]);
+    userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: multisigValidator,
+        signers: [signer1, signer2],
+        scheduled: true,
+    });
+
+    console.log("=============== paymaster transaction =============");
+    const ERC20 = await ethers.getContractAt("IERC20", targetERC20);
+    if ((await ERC20.balanceOf(walletAddress)).lt(parseUnits("1", 6))) {
+        console.log("insufficient erc20 token balance, transferring...");
+        let tx = await ERC20.connect(signer1).transfer(walletAddress, parseUnits("2", 6));
         await tx.wait();
     }
 
-    const bundler = new hre.ethers.providers.JsonRpcProvider(bundlerURL);
-    userOp.signature = hexConcat([mumbaiAddresses.ecdsaValidator, "0x00", fakeSignature]);
-    const gas = await bundler.send("eth_estimateUserOperationGas", [userOp, entrypoint.address]);
-    console.log("gas: ", gas);
-    userOp.callGasLimit = gas.callGasLimit;
-    userOp.verificationGasLimit = gas.verificationGas;
-    userOp.preVerificationGas = gas.preVerificationGas;
+    let erc20ApproveData = ERC20.interface.encodeFunctionData("approve", [paymasterAddress, parseUnits("100", 6)]);
+    calldata = wallet.interface.encodeFunctionData("normalExecute", [targetERC20, 0, erc20ApproveData, 0]);
 
-    const userOpHash = await entrypoint.getUserOpHash(userOp);
-    const userOpHashHex = arrayify(userOpHash);
-    const userOpSig = await signer.signMessage(userOpHashHex);
-
-    console.log("userOpSig: ", userOpSig);
-    userOp.signature = hexConcat([mumbaiAddresses.ecdsaValidator, "0x00", userOpSig]);
-
-    let ret = await axios.post(bundlerURL, {
-        jsonrpc: "2.0",
-        id: 1,
-        method: "eth_sendUserOperation",
-        params: [userOp, entrypoint.address],
+    userOp = await generateUserOp({
+        signer: signer1,
+        walletAddress: walletAddress,
+        callData: calldata,
+    });
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: multisigValidator,
+        signers: [signer1, signer2],
+        payMasterURL: paymasterURL,
+        gasToken: targetERC20,
     });
 
-    console.log(ret.data);
-    if (ret.data.error != undefined) {
-        console.log("Error for sending userOp: ", ret.data.error);
-        return;
-    }
+    console.log("===============set spending limit===============");
+    let configs = [
+        {
+            tokenAddress: ethers.constants.AddressZero,
+            allowanceAmount: parseEther("100"),
+            resetBaseTimeMinutes: 30,
+            resetTimeIntervalMinutes: 30,
+        },
+    ];
+    let spendingLimitInitData = abiCoder.encode(
+        [
+            "tuple(address tokenAddress,uint256 allowanceAmount,uint32 resetBaseTimeMinutes,uint16 resetTimeIntervalMinutes)[]",
+        ],
+        [configs]
+    );
+    let enableData = wallet.interface.encodeFunctionData("enableHooks", [spendingLimitAddress, spendingLimitInitData]);
+    calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, enableData, 0]);
+    userOp = await generateUserOp({
+        signer: signer1,
+        walletAddress: walletAddress,
+        callData: calldata,
+    });
 
-    while (true) {
-        // get userop receipt
-        ret = await axios.post(bundlerURL, {
-            jsonrpc: "2.0",
-            id: 1,
-            method: "eth_getUserOperationReceipt",
-            params: [userOpHash],
-        });
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: multisigValidator,
+        signers: [signer1, signer2],
+    });
 
-        if (ret.data.result != undefined) {
-            console.log("UserOperationReceipt: ", ret.data);
-            break;
-        }
-        await sleep(3000);
-    }
-    if (!ret.data.result.success) {
-        throw new Error("User op failed");
-    }
-}
+    console.log("===============diable spending limit=============");
+    let disableHooksData = wallet.interface.encodeFunctionData("disableHooks", [
+        AddressOne,
+        AddressOne,
+        spendingLimitAddress,
+    ]);
 
-function sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
+    console.log("is hooks enabled", await wallet.isHooksEnabled(spendingLimitAddress));
+    calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, disableHooksData, 0]);
+    userOp = await generateUserOp({
+        signer: signer1,
+        walletAddress: walletAddress,
+        callData: calldata,
+    });
+
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: multisigValidator,
+        signers: [signer1, signer2],
+    });
 }

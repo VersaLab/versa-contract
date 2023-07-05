@@ -122,10 +122,7 @@ contract VersaVerifyingPaymaster is BasePaymaster {
         (maxCost);
 
         PaymasterData memory paymasterData = parsePaymasterAndData(userOp.paymasterAndData);
-        require(
-            paymasterData.signature.length == 65,
-            "PM: invalid signature length in paymasterAndData"
-        );
+        require(paymasterData.signature.length == 65, "PM: invalid signature length in paymasterAndData");
 
         bytes32 _hash = getHash(userOp, paymasterData).toEthSignedMessageHash();
         if (_hash.recover(paymasterData.signature) != owner()) {

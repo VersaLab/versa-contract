@@ -96,8 +96,7 @@ abstract contract BaseValidator is IValidator {
             return false;
         }
         if (
-            sigType == 0x01 &&
-            (actualMaxFeePerGas >= maxFeePerGas || actualMaxPriorityFeePerGas >= maxPriorityFeePerGas)
+            sigType == 0x01 && (actualMaxFeePerGas > maxFeePerGas || actualMaxPriorityFeePerGas > maxPriorityFeePerGas)
         ) {
             return false;
         }

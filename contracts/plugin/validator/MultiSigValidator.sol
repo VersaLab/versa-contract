@@ -216,7 +216,7 @@ contract MultiSigValidator is BaseValidator {
             return SIG_VALIDATION_FAILED;
         }
 
-        bytes32 ethSignedMessageHash = userOpHash.toEthSignedMessageHash();
+        bytes32 ethSignedMessageHash = splitedSig.hash.toEthSignedMessageHash();
         // Check if signatures are valid, return `SIG_VALIDATION_FAILED` if error occurs
         try this.checkNSignatures(userOp.sender, ethSignedMessageHash, splitedSig.signature, currentThreshold) {
             return _packValidationData(0, splitedSig.validUntil, splitedSig.validAfter);

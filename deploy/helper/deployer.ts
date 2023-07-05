@@ -46,43 +46,9 @@ export async function deployCompatibilityFallbackHandler() {
     return compatibilityFallbackHandler;
 }
 
-// export async function deployEllipticCurve() {
-//   const EllipticCurve = await ethers.getContractFactory("EllipticCurve");
-//   const ellipticCurve = await EllipticCurve.deploy();
-//   await ellipticCurve.deployed();
-//   console.log("EllipticCurve deployed to:", ellipticCurve.address);
-//   return ellipticCurve;
-// }
-
-// export interface SpendingLimitData {
-//   SocialRecovery: string;
-//   MultiSendOnly: string;
-// }
-
-// export async function deploySpendingLimit(
-//   spendingLimitData: SpendingLimitData
-// ) {
-//   const SpendingLimitModule = await ethers.getContractFactory(
-//     "SpendingLimitModule"
-//   );
-//   const spendingLimitModule = await SpendingLimitModule.deploy(
-//     spendingLimitData.SocialRecovery,
-//     spendingLimitData.MultiSendOnly
-//   );
-//   await spendingLimitModule.deployed();
-//   console.log("SpendingLimitModule deployed to:", spendingLimitModule.address);
-//   return spendingLimitModule;
-// }
-
-// export async function deploySocialRecovery(gasReceiver: string) {
-//   const SocialRecoveryModule = await ethers.getContractFactory(
-//     "SocialRecoveryModule"
-//   );
-//   const socialRecoveryModule = await SocialRecoveryModule.deploy(gasReceiver);
-//   await socialRecoveryModule.deployed();
-//   console.log(
-//     "SocialRecoveryModule deployed to:",
-//     socialRecoveryModule.address
-//   );
-//   return socialRecoveryModule;
-// }
+export async function deployMultisigValidator() {
+    const MultisigValidator = await ethers.getContractFactory("MultiSigValidator");
+    const multisigValidator = await MultisigValidator.deploy();
+    console.log("MultisigValidator deployed to: ", multisigValidator.address);
+    return multisigValidator;
+}

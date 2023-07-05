@@ -52,8 +52,3 @@ export async function deployMultisigValidator() {
     console.log("MultisigValidator deployed to: ", multisigValidator.address);
     return multisigValidator;
 }
-
-
-
-
-

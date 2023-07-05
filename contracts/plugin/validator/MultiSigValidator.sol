@@ -84,10 +84,7 @@ contract MultiSigValidator is BaseValidator {
      * @param guardian The guardian to revoke.
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
-    function revokeGuardian(
-        address guardian,
-        uint256 newThreshold
-    ) external onlyEnabledValidator {
+    function revokeGuardian(address guardian, uint256 newThreshold) external onlyEnabledValidator {
         require(_guardiansCount(msg.sender) >= 2, "Must have at least one guardian");
         _revokeGuardian(msg.sender, guardian);
         _changeThreshold(msg.sender, newThreshold);
@@ -153,10 +150,7 @@ contract MultiSigValidator is BaseValidator {
      */
     function _addGuardian(address wallet, address guardian) internal {
         require(!_isGuardian(wallet, guardian), "Guardian is already added");
-        require(
-            guardian != wallet && guardian != address(0),
-            "Invalid guardian address"
-        );
+        require(guardian != wallet && guardian != address(0), "Invalid guardian address");
         WalletInfo storage info = _walletInfo[wallet];
         info.guardianCount++;
         _guardians[guardian][msg.sender] = true;

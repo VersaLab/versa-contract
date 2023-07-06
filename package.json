@@ -47,7 +47,7 @@
     "ethers": "^5.7.2",
     "hardhat": "^2.16.1",
     "hardhat-gas-reporter": "^1.0.9",
-    "husky": "^8.0.3",
+    "husky": "^4.3.8",
     "lint-staged": "^13.2.3",
     "prettier": "^2.8.8",
     "prettier-plugin-solidity": "^1.1.3",

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "./IModule.sol";
 import "../common/Enum.sol";
 

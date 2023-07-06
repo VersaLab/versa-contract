@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -118,8 +118,7 @@ contract VersaVerifyingPaymaster is BasePaymaster {
         bytes32 userOpHash,
         uint256 maxCost
     ) internal view override returns (bytes memory context, uint256 validationData) {
-        (userOpHash);
-        (maxCost);
+        (userOpHash, maxCost);
 
         PaymasterData memory paymasterData = parsePaymasterAndData(userOp.paymasterAndData);
         require(paymasterData.signature.length == 65, "PM: invalid signature length in paymasterAndData");

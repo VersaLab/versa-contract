@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 import "../../interface/IModule.sol";
 import "../../interface/IValidator.sol";
@@ -18,7 +18,8 @@ contract MockValidator is IValidator {
     function validateSignature(
         UserOperation calldata _userOp,
         bytes32 _userOpHash
-    ) external view override returns (uint256 validationData) {
+    ) external pure override returns (uint256 validationData) {
+        (_userOp, _userOpHash);
         // Mock implementation, always return 0 validation data
         return 0;
     }
@@ -27,7 +28,8 @@ contract MockValidator is IValidator {
         bytes32 hash,
         bytes calldata signature,
         address wallet
-    ) external view override returns (bool) {
+    ) external pure override returns (bool) {
+        (hash, signature, wallet);
         // Mock implementation, always return true validation data
         return true;
     }

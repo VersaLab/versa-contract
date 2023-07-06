@@ -1,5 +1,4 @@
-import hre from "hardhat";
-import { ethers } from "hardhat";
+import hre, { ethers } from "hardhat";
 
 async function verify(address: string, constructorArguments: any) {
     await hre
@@ -26,17 +25,10 @@ export async function deployVersaAccountFactory(data: VersaAccountFactoryData) {
 
 export async function deployVersaSingleton(entryPoint: string) {
     const VersaSingleton = await ethers.getContractFactory("VersaWallet");
-    const versaSingleton = await VersaSingleton.deploy(entryPoint, { gasLimit: 5000000 });
+    const versaSingleton = await VersaSingleton.deploy(entryPoint);
     await versaSingleton.deployed();
     console.log("VersaSingleton deployed to:", versaSingleton.address);
     return versaSingleton;
-}
-
-export async function deployECDSAValidator() {
-    const ECDSAValidator = await ethers.getContractFactory("ECDSAValidator");
-    const ecdsaValidator = await ECDSAValidator.deploy();
-    console.log("ECDSA validator deployed to: ", ecdsaValidator.address);
-    return ecdsaValidator;
 }
 
 export async function deployCompatibilityFallbackHandler() {
@@ -46,16 +38,23 @@ export async function deployCompatibilityFallbackHandler() {
     return compatibilityFallbackHandler;
 }
 
-export async function deployMultisigValidator() {
-    const MultisigValidator = await ethers.getContractFactory("MultiSigValidator");
-    const multisigValidator = await MultisigValidator.deploy();
-    console.log("MultisigValidator deployed to: ", multisigValidator.address);
-    return multisigValidator;
-}
-
 export async function deploySpendingLimitHooks() {
     const SpendingLimitHooks = await ethers.getContractFactory("SpendingLimitHooks");
     const spendingLimitHooks = await SpendingLimitHooks.deploy();
     console.log("Spending limit hooks deployed to: ", spendingLimitHooks.address);
     return spendingLimitHooks;
+}
+
+export async function deployECDSAValidator() {
+    const ECDSAValidator = await ethers.getContractFactory("ECDSAValidator");
+    const ecdsaValidator = await ECDSAValidator.deploy();
+    console.log("ECDSA validator deployed to: ", ecdsaValidator.address);
+    return ecdsaValidator;
+}
+
+export async function deployMultisigValidator() {
+    const MultisigValidator = await ethers.getContractFactory("MultiSigValidator");
+    const multisigValidator = await MultisigValidator.deploy();
+    console.log("MultisigValidator deployed to: ", multisigValidator.address);
+    return multisigValidator;
 }

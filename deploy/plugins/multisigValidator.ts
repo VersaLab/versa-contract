@@ -28,7 +28,7 @@ async function main() {
             break;
         }
         default: {
-            console.log("Unsupported network");
+            console.log("unsupported network");
         }
     }
 }

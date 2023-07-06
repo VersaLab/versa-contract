@@ -5,8 +5,8 @@ import scrollTestnetAddresses from "../addresses/scrollTestnet.json";
 import fs from "fs";
 
 async function deployWithAddresses(addresses: any) {
-    const CompatibilityFallbackHandler = await deployer.deployCompatibilityFallbackHandler();
-    addresses.CompatibilityFallbackHandler = CompatibilityFallbackHandler.address;
+    const compatibilityFallbackHandler = await deployer.deployCompatibilityFallbackHandler();
+    addresses.compatibilityFallbackHandler = compatibilityFallbackHandler.address;
     return addresses;
 }
 
@@ -28,7 +28,7 @@ async function main() {
             break;
         }
         default: {
-            console.log("Unsupported network");
+            console.log("unsupported network");
         }
     }
 }

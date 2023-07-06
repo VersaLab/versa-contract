@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
-import * as deployer from "./helper/deployer";
 import * as config from "./helper/constants";
+import * as deployer from "./helper/deployer";
 import mumbaiAddresses from "./addresses/mumbai.json";
 import scrollTestnetAddresses from "./addresses/scrollTestnet.json";
 import fs from "fs";
@@ -29,7 +29,7 @@ async function main() {
             break;
         }
         default: {
-            console.log("Unsupported network");
+            console.log("unsupported network");
         }
     }
 }

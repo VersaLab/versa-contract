@@ -1,15 +1,14 @@
 import { ethers } from "hardhat";
 import * as deployer from "./helper/deployer";
 import { VersaAccountFactoryData } from "./helper/deployer";
-import * as config from "./helper/constants";
 import mumbaiAddresses from "./addresses/mumbai.json";
 import scrollTestnetAddresses from "./addresses/scrollTestnet.json";
 import fs from "fs";
 
-async function deployWithAddresses(addresses: any, data: any) {
+async function deployWithAddresses(addresses: any) {
     const versaAccountFactoryData: VersaAccountFactoryData = {
         versaSingleton: addresses.versaSingleton,
-        defaultFallbackHandler: addresses.CompatibilityFallbackHandler,
+        defaultFallbackHandler: addresses.compatibilityFallbackHandler,
     };
     const versaAccountFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData);
     addresses.versaAccountFactory = versaAccountFactory.address;
@@ -22,19 +21,19 @@ async function main() {
 
     switch (network?.chainId) {
         case 80001: {
-            const result = await deployWithAddresses(mumbaiAddresses, config.mumbaiConfig);
+            const result = await deployWithAddresses(mumbaiAddresses);
             console.log("writing changed address to output file 'deploy/addresses/mumbai.json'");
             fs.writeFileSync("deploy/addresses/mumbai.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
         case 534353: {
-            const result = await deployWithAddresses(scrollTestnetAddresses, config.scrollTestnetConfig);
+            const result = await deployWithAddresses(scrollTestnetAddresses);
             console.log("writing changed address to output file 'deploy/addresses/scrollTestnet.json'");
             fs.writeFileSync("deploy/addresses/scrollTestnet.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
         default: {
-            console.log("Unsupported network");
+            console.log("unsupported network");
         }
     }
 }

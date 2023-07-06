@@ -5,5 +5,6 @@
 @aa-template/
 @safe-contracts/
 typechain-types/
+coverage/
 .github
 .prettierrc

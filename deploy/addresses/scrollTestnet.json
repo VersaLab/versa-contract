@@ -1,10 +1,10 @@
 {
-	"versaAccountFactory": "0x7CDD4262e03AF189c6B96127B82A230D8564ee68",
-	"versaSingleton": "0x60950aCa9Fb14f4f3F6212A263d860A98f724608",
-	"recoveryModule": "0xe365DBeC2e0b08fE50C54f848f3BA773788db9A0",
-	"spendingLimitModule": "0x253d683b1803AD5cAe8bF4f804026482e0F781cE",
-	"ellipticCurve": "0xFC3b3cA9aFdc107fC33062993af3659B44eCC261",
-	"ecdsaValidator":"",
-	"CompatibilityFallbackHandler":"",
-	"multisigValidator": ""
+	"paymaster": "0xf9dcDD7113Fa9dC7176501631E3Ef9fb483dE02b",
+	"versaAccountFactory": "0x41ABCAbbc18fA14b4B82b4ffD7467CdB76b4ff4a",
+	"versaSingleton": "0x878edaC226A90d3F9051Ef09cE1fD4A2638dA3C4",
+	"compatibilityFallbackHandler": "0x34Cd11043Cb216EBA656F261A657B87331F32b79",
+	"spendingLimitHooks": "0xfBe5e0C105F817B9967DFB8555462f6C80A8F2Fb",
+	"ecdsaValidator": "0xcA9ea06bC14cE3C325fe274d56a4B26851762E5E",
+	"multisigValidator": "0x4DfBc86Ca1c8264708a34f0a95CB2F70b8DFB6a0",
+	"ellipticCurve": "0x"
 }

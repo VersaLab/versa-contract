@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.12;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "./BaseValidator.sol";
@@ -13,10 +13,10 @@ import "../../library/SignatureHandler.sol";
 contract MultiSigValidator is BaseValidator {
     using ECDSA for bytes32;
 
-    event ResetGuardians(address wallet, uint256 threshold, address[] guardians);
-    event AddGuardian(address wallet, address guardian);
-    event RevokeGuardian(address wallet, address guardian);
-    event ChangeThreshold(address wallet, uint256 threshold);
+    event ResetGuardians(address indexed wallet, uint256 threshold, address[] indexed guardians);
+    event AddGuardian(address indexed wallet, address indexed guardian);
+    event RevokeGuardian(address indexed wallet, address indexed guardian);
+    event ChangeThreshold(address indexed wallet, uint256 threshold);
 
     event ApproveHash(bytes32 hash);
     event RevokeHash(bytes32 hash);

@@ -363,7 +363,6 @@ describe("MultiSigValidator", () => {
         );
 
         let finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
-        console.log("final hash", finalHash);
 
         let userOpSigs = "0x";
 
@@ -382,12 +381,10 @@ describe("MultiSigValidator", () => {
         });
 
         const promises = signers.map(async (signer) => {
-            console.log("signer address", signer.address);
             const signature = await signer.signMessage(arrayify(finalHash));
             userOpSigs = hexConcat([userOpSigs, signature]);
         });
         await Promise.all(promises);
-        console.log("userOpSigs", userOpSigs);
 
         // The first 20 bytes of signature is validator's address
         // The 21th byte is the sig type

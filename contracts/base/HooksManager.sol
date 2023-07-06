@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import "../common/SelfAuthorized.sol";
 import "../common/Enum.sol";
@@ -140,10 +140,7 @@ abstract contract HooksManager is SelfAuthorized {
     function _beforeTransaction(address to, uint256 value, bytes memory data, Enum.Operation operation) internal {
         address addr = beforeTxHooks[AddressLinkedList.SENTINEL_ADDRESS];
         while (uint160(addr) > AddressLinkedList.SENTINEL_UINT) {
-            {
-                address hooks = addr;
-                IHooks(hooks).beforeTransaction(to, value, data, operation);
-            }
+            IHooks(addr).beforeTransaction(to, value, data, operation);
             addr = beforeTxHooks[addr];
         }
     }
@@ -158,10 +155,7 @@ abstract contract HooksManager is SelfAuthorized {
     function _afterTransaction(address to, uint256 value, bytes memory data, Enum.Operation operation) internal {
         address addr = afterTxHooks[AddressLinkedList.SENTINEL_ADDRESS];
         while (uint160(addr) > AddressLinkedList.SENTINEL_UINT) {
-            {
-                address hooks = addr;
-                IHooks(hooks).afterTransaction(to, value, data, operation);
-            }
+            IHooks(addr).afterTransaction(to, value, data, operation);
             addr = afterTxHooks[addr];
         }
     }

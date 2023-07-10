@@ -1,17 +1,13 @@
 import { BigNumber } from "ethers";
-import { MockHooksManager, MockModuleManager, MockValidatorManager, VersaWallet } from "../../typechain-types";
 import { parseEther } from "ethers/lib/utils";
 import { Buffer } from "buffer";
+import { MockHooksManager, MockModuleManager, MockValidatorManager, VersaWallet } from "../../typechain-types";
 
 export function numberToFixedHex(value: number, length: number): string {
     return "0x" + value.toString(16).padStart(length * 2, "0");
 }
 
 export const SENTINEL = "0x0000000000000000000000000000000000000001";
-
-export interface clase {
-    traiA: string;
-}
 
 export async function execute(options: {
     executor: MockHooksManager | MockModuleManager | MockValidatorManager | VersaWallet;

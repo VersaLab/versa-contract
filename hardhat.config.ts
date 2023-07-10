@@ -19,6 +19,8 @@ const DEPLOYER_PRIVATE_KEY_3 =
 const DEPLOYER_PRIVATE_KEY_4 =
     process.env.DEPLOYER_PRIVATE_KEY_4 || "0000000000000000000000000000000000000000000000000000000000000004";
 
+const POLYGON_MUMBAI_SCAN_KEY = process.env.POLYGON_MUMBAI_SCAN_KEY;
+
 const config: HardhatUserConfig = {
     solidity: {
         compilers: [
@@ -34,7 +36,7 @@ const config: HardhatUserConfig = {
         ],
     },
     networks: {
-        mumbai: {
+        polygonMumbai: {
             url: `${POLYGON_MUMBAI_RPC}`,
             accounts: [
                 `${DEPLOYER_PRIVATE_KEY_1}`,
@@ -43,7 +45,7 @@ const config: HardhatUserConfig = {
                 `${DEPLOYER_PRIVATE_KEY_4}`,
             ],
         },
-        scroll_test: {
+        scrollTestnet: {
             url: `${SCROLL_TESTNET_RPC}`,
             accounts: [
                 `${DEPLOYER_PRIVATE_KEY_1}`,
@@ -51,6 +53,11 @@ const config: HardhatUserConfig = {
                 `${DEPLOYER_PRIVATE_KEY_3}`,
                 `${DEPLOYER_PRIVATE_KEY_4}`,
             ],
+        },
+    },
+    etherscan: {
+        apiKey: {
+            polygonMumbai: `${POLYGON_MUMBAI_SCAN_KEY}`,
         },
     },
 };

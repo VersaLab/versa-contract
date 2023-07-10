@@ -1,4 +1,5 @@
 {
+	"entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
 	"paymaster": "0xf9dcDD7113Fa9dC7176501631E3Ef9fb483dE02b",
 	"versaAccountFactory": "0x41ABCAbbc18fA14b4B82b4ffD7467CdB76b4ff4a",
 	"versaSingleton": "0x878edaC226A90d3F9051Ef09cE1fD4A2638dA3C4",

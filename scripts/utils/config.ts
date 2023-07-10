@@ -9,4 +9,4 @@ export const scrollTestnetPaymasterURL = "http://3.38.245.156:10004/paymaster";
 export const scrollTestnetPaymasterAddress = "0xf9dcDD7113Fa9dC7176501631E3Ef9fb483dE02b";
 export const scrollTestnetUSDTAddress = "0xf2719572e4E9369cDC061Ef602D0F20f8a42234d";
 export const scrollTestnetTestNFTAddress = "0xcCd69ded049721eB33438E4B6287C5346b1da0fa";
-export const salt = 1012;
+export const salt = 10000; // use different number each time

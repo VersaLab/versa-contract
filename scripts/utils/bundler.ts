@@ -99,7 +99,7 @@ export async function sendUserOp(bundlerURL: string, userOp: any, entryPoint: st
 
 export async function getUserOperationReceipt(bundlerURL: string, userOpHash: string) {
     let ret;
-    while (ret.data.result == undefined) {
+    while (true) {
         // get userop receipt
         ret = await axios.post(bundlerURL, {
             jsonrpc: "2.0",

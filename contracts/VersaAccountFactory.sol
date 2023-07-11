@@ -37,10 +37,7 @@ contract VersaAccountFactory is SafeProxyFactory {
             moduleInitData,
             salt
         );
-        uint codeSize = addr.code.length;
-        if (codeSize > 0) {
-            return addr;
-        }
+        require(addr.code.length == 0, "Versa factory: account already created");
         return
             address(
                 createProxyWithNonce(
@@ -107,7 +104,6 @@ contract VersaAccountFactory is SafeProxyFactory {
             modules,
             moduleInitData
         );
-        //copied from deployProxyWithNonce
         bytes32 salt2 = keccak256(abi.encodePacked(keccak256(initializer), salt));
         bytes memory deploymentData = abi.encodePacked(proxyCreationCode(), uint256(uint160(versaSingleton)));
         return Create2.computeAddress(bytes32(salt2), keccak256(deploymentData), address(this));

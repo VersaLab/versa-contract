@@ -2,6 +2,10 @@
   <h1 align="center">Versa Wallet Contracts</h1>
 </div>
 
+[![Lint](https://github.com/VersaLab/versa-contract/actions/workflows/lint.yml/badge.svg)](https://github.com/VersaLab/versa-contract/actions/workflows/lint.yml)
+[![Tests](https://github.com/VersaLab/versa-contract/actions/workflows/tests.yml/badge.svg)](https://github.com/VersaLab/versa-contract/actions/workflows/tests.yml)
+[![Coverage Status](https://coveralls.io/repos/github/VersaLab/versa-contract/badge.svg?branch=main)](https://coveralls.io/github/VersaLab/versa-contract?branch=main)
+
 ## Introduction
 
 With the emergence of ERC-4337, the crypto landscape is witnessing a dramatic shift, sparking off new possibilities in the domain of smart contract wallets. This breakthrough is redefining the very idea of what a wallet can be, bringing us one step closer to a truly seamless Web3 experience.

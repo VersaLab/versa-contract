@@ -1,0 +1,29 @@
+name: lint
+
+on:
+    push:
+        branches: [main, dev]
+    pull_request:
+        branches: [main, dev]
+
+jobs:
+    code-lint:
+        name: Code Lint
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v3
+
+            - uses: actions/setup-node@v3
+              with:
+                  node-version: 18
+                  cache: "yarn"
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Style Check
+              run: yarn style-check
+
+            - name: Solhint
+              run: yarn solhint

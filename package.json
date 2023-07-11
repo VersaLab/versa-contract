@@ -9,8 +9,7 @@
     "style-check": "npx prettier --check .",
     "solhint": "npx solhint -f table contracts/*.sol contracts/**/*.sol contracts/**/**/*.sol",
     "lint": "yarn style-check & yarn solhint",
-    "coverage": "hardhat coverage"
-
+    "coverage": "hardhat clean & hardhat coverage"
   },
   "husky": {
     "hooks": {

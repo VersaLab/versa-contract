@@ -13,13 +13,12 @@ import "../../library/SignatureHandler.sol";
 contract MultiSigValidator is BaseValidator {
     using ECDSA for bytes32;
 
-    event ResetGuardians(address indexed wallet, uint256 threshold, address[] indexed guardians);
     event AddGuardian(address indexed wallet, address indexed guardian);
     event RevokeGuardian(address indexed wallet, address indexed guardian);
-    event ChangeThreshold(address indexed wallet, uint256 threshold);
+    event ChangeThreshold(address indexed wallet, uint256 indexed threshold);
 
-    event ApproveHash(bytes32 hash);
-    event RevokeHash(bytes32 hash);
+    event ApproveHash(bytes32 indexed hash);
+    event RevokeHash(bytes32 indexed hash);
 
     struct WalletInfo {
         // guardians count of a wallet
@@ -29,13 +28,13 @@ contract MultiSigValidator is BaseValidator {
     }
 
     /// @dev Record guardians of a wallet
-    mapping(address guardian => mapping(address wallet => bool)) internal _guardians;
+    mapping(address => mapping(address => bool)) internal _guardians;
 
     /// @dev Record signer's count and verification threshold of a wallet
     mapping(address => WalletInfo) internal _walletInfo;
 
     /// @dev Record approved signed message hashes of a wallet
-    mapping(bytes32 messageHash => mapping(address wallet => bool)) internal _approvedHashes;
+    mapping(bytes32 => mapping(address => bool)) internal _approvedHashes;
 
     /**
      * @dev Internal function to handle wallet initialization.
@@ -120,7 +119,6 @@ contract MultiSigValidator is BaseValidator {
             _addGuardian(msg.sender, newGuardians[i]);
         }
         _changeThreshold(msg.sender, newThreshold);
-        emit ResetGuardians(msg.sender, newThreshold, newGuardians);
     }
 
     /**

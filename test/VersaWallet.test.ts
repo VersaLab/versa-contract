@@ -3,6 +3,7 @@ import { expect } from "chai";
 import {
     VersaAccountFactory,
     VersaWallet,
+    CompatibilityFallbackHandler,
     VersaAccountFactory__factory,
     VersaWallet__factory,
     MockValidator,
@@ -30,13 +31,14 @@ describe("VersaWallet", () => {
     let entryPoint: SignerWithAddress;
     let opHasher: MockEntryPoint;
     let wallet: VersaWallet;
+    let fallbackHandler: CompatibilityFallbackHandler;
 
     beforeEach(async () => {
         [entryPoint, owner] = await ethers.getSigners();
 
         opHasher = await new MockEntryPoint__factory(owner).deploy();
 
-        let fallbackHandler = await new CompatibilityFallbackHandler__factory(owner).deploy();
+        fallbackHandler = await new CompatibilityFallbackHandler__factory(owner).deploy();
 
         // Deploy versa singleton
         versaWalletSingleton = await new VersaWallet__factory(owner).deploy(entryPoint.address);
@@ -77,6 +79,90 @@ describe("VersaWallet", () => {
         expect(await wallet.VERSA_VERSION()).to.be.equal("0.0.1");
     });
 
+    it("should prevent mismatch initialization data", async () => {
+        await expect(
+            versaFactory.createAccount(
+                [sudoValidator.address, normalValidator.address],
+                ["0x"],
+                [1, 2],
+                [hooks.address],
+                ["0x"],
+                [module.address],
+                ["0x"],
+                0
+            )
+        ).to.be.reverted;
+
+        await expect(
+            versaFactory.createAccount(
+                [sudoValidator.address, normalValidator.address],
+                ["0x", "0x"],
+                [1],
+                [hooks.address],
+                ["0x"],
+                [module.address],
+                ["0x"],
+                0
+            )
+        ).to.be.reverted;
+
+        await expect(
+            versaFactory.createAccount(
+                [sudoValidator.address, normalValidator.address],
+                ["0x", "0x"],
+                [1, 2],
+                [hooks.address],
+                ["0x", "0x"],
+                [module.address],
+                ["0x"],
+                0
+            )
+        ).to.be.reverted;
+
+        await expect(
+            versaFactory.createAccount(
+                [sudoValidator.address, normalValidator.address],
+                ["0x", "0x"],
+                [1, 2],
+                [hooks.address],
+                ["0x"],
+                [module.address],
+                ["0x", "0x"],
+                0
+            )
+        ).to.be.reverted;
+    });
+
+    it("should set up at least one sudo validator", async () => {
+        await expect(
+            versaFactory.createAccount(
+                [sudoValidator.address],
+                ["0x"],
+                [2],
+                [hooks.address],
+                ["0x"],
+                [module.address],
+                ["0x"],
+                1
+            )
+        ).to.be.reverted;
+    });
+
+    it("should not initialize twice", async () => {
+        await expect(
+            wallet.initialize(
+                fallbackHandler.address,
+                [sudoValidator.address, normalValidator.address],
+                ["0x", "0x"],
+                [2, 2],
+                [hooks.address],
+                ["0x"],
+                [module.address],
+                ["0x"]
+            )
+        ).to.be.revertedWith("Initializable: contract is already initialized");
+    });
+
     it("should receive native token", async () => {
         const balanceBefore = await ethers.provider.getBalance(wallet.address);
         await owner.sendTransaction({ to: wallet.address, value: parseEther("0.1") });
@@ -106,8 +192,38 @@ describe("VersaWallet", () => {
             signature: sudoValidator.address,
         };
         let opHash = await opHasher.getUserOpHash(op);
+        await expect(wallet.callStatic.validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith(
+            "account: not from EntryPoint"
+        );
         await wallet.connect(entryPoint).validateUserOp(op, opHash, parseEther("0.1"));
         expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("0.9"));
+    });
+
+    it("should prevent invalid validator", async () => {
+        await helpers.setBalance(wallet.address, parseEther("1"));
+        let sudoExecuteData = wallet.interface.encodeFunctionData("sudoExecute", [
+            owner.address,
+            parseEther("0.1"),
+            "0x",
+            0,
+        ]);
+        let op = {
+            sender: wallet.address,
+            nonce: 0,
+            initCode: "0x",
+            callData: sudoExecuteData,
+            callGasLimit: 2150000,
+            verificationGasLimit: 2150000,
+            preVerificationGas: 2150000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: "0x",
+            signature: ethers.constants.AddressZero,
+        };
+        let opHash = await opHasher.getUserOpHash(op);
+        await expect(wallet.connect(entryPoint).validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith(
+            "Versa: invalid validator"
+        );
     });
 
     it("should execute", async () => {
@@ -118,6 +234,18 @@ describe("VersaWallet", () => {
             parseEther("1"),
             "0x",
             0,
+        ]);
+        let batchSudoExecuteData = wallet.interface.encodeFunctionData("batchSudoExecute", [
+            [owner.address],
+            [parseEther("1")],
+            ["0x"],
+            [0],
+        ]);
+        let batchNormalExecuteData = wallet.interface.encodeFunctionData("batchNormalExecute", [
+            [owner.address],
+            [parseEther("1")],
+            ["0x"],
+            [0],
         ]);
         let op = {
             sender: wallet.address,
@@ -133,19 +261,42 @@ describe("VersaWallet", () => {
             signature: sudoValidator.address,
         };
         let opHash = await opHasher.getUserOpHash(op);
-        await wallet.connect(entryPoint).validateUserOp(op, opHash, ethValue);
+        let res = await wallet.connect(entryPoint).callStatic.validateUserOp(op, opHash, ethValue);
+        expect(res).to.be.equal(0);
+
+        op.callData = batchSudoExecuteData;
+        opHash = await opHasher.getUserOpHash(op);
+        res = await wallet.connect(entryPoint).callStatic.validateUserOp(op, opHash, parseEther("100000000000"));
+        expect(res).to.be.equal(0);
+
+        op.callData = batchNormalExecuteData;
+        opHash = await opHasher.getUserOpHash(op);
+        res = await wallet.connect(entryPoint).callStatic.validateUserOp(op, opHash, parseEther("100000000000"));
+        expect(res).to.be.equal(0);
 
         await wallet.connect(entryPoint).sudoExecute(owner.address, ethValue, "0x", 0);
-        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("8"));
+        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("9"));
 
         await wallet.connect(entryPoint).normalExecute(owner.address, ethValue, "0x", 0);
-        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("7"));
+        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("8"));
 
         await wallet.connect(entryPoint).batchSudoExecute([owner.address], [ethValue], ["0x"], [0]);
-        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("6"));
+        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("7"));
 
-        await wallet.connect(entryPoint).batchNormalExecute([owner.address], [ethValue], ["0x"], [0]);
-        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("5"));
+        await wallet.connect(entryPoint).batchNormalExecute([owner.address], [0], ["0x"], [0]);
+        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("7"));
+    });
+
+    it("should have right batch data length", async function () {
+        await expect(
+            wallet.connect(entryPoint).batchSudoExecute([owner.address, ethers.constants.AddressZero], [0], ["0x"], [0])
+        ).to.be.revertedWith("Versa: invalid batch data");
+        await expect(
+            wallet.connect(entryPoint).batchSudoExecute([owner.address], [0], ["0x", "0x"], [0])
+        ).to.be.revertedWith("Versa: invalid batch data");
+        await expect(
+            wallet.connect(entryPoint).batchSudoExecute([owner.address], [0], ["0x"], [0, 0])
+        ).to.be.revertedWith("Versa: invalid batch data");
     });
 
     it("should revert if validator and selector don't match", async () => {

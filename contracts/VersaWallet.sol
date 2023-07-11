@@ -40,9 +40,9 @@ contract VersaWallet is
     string public constant VERSA_VERSION = "0.0.1";
 
     // `sudoExecute` function selector
-    bytes4 internal constant SUDO_EXECUTE = 0x7df9bf29;
+    bytes4 internal constant SUDO_EXECUTE = this.sudoExecute.selector;
     // `batchSudoExecute` function selector
-    bytes4 internal constant BATCH_SUDO_EXECUTE = 0x7e5f1c3f;
+    bytes4 internal constant BATCH_SUDO_EXECUTE = this.batchSudoExecute.selector;
 
     /**
      * @dev Disable initializers to prevent the implementation contract

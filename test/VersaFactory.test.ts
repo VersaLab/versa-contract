@@ -77,4 +77,30 @@ describe("VersaFactory", () => {
         expect(hooksSize.beforeTxHooksSize).to.be.equal(1);
         expect(hooksSize.afterTxHooksSize).to.be.equal(1);
     });
+
+    it("should not deploy wallet twice", async () => {
+        await versaFactory.createAccount(
+            [validator.address],
+            ["0x"],
+            [1],
+            [hooks.address],
+            ["0x"],
+            [module.address],
+            ["0x"],
+            0
+        );
+
+        await expect(
+            versaFactory.createAccount(
+                [validator.address],
+                ["0x"],
+                [1],
+                [hooks.address],
+                ["0x"],
+                [module.address],
+                ["0x"],
+                0
+            )
+        ).to.be.revertedWith("Versa factory: account already created");
+    });
 });

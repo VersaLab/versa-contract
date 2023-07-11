@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
-import { VersaWallet__factory, VersaAccountFactory__factory, MockValidator__factory } from "../typechain-types";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { hexConcat } from "ethers/lib/utils";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { VersaWallet__factory, VersaAccountFactory__factory, MockValidator__factory } from "../typechain-types";
 
 export async function deployVersaWallet(options: { signer: SignerWithAddress; entryPoint: string }) {
     const {

@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import * as deployer from "./helper/deployer";
 import { VersaAccountFactoryData } from "./helper/deployer";
-import mumbaiAddresses from "./addresses/mumbai.json";
+import mumbaiAddresses from "./addresses/polygonMumbai.json";
 import scrollTestnetAddresses from "./addresses/scrollTestnet.json";
 import fs from "fs";
 
@@ -22,8 +22,8 @@ async function main() {
     switch (network?.chainId) {
         case 80001: {
             const result = await deployWithAddresses(mumbaiAddresses);
-            console.log("writing changed address to output file 'deploy/addresses/mumbai.json'");
-            fs.writeFileSync("deploy/addresses/mumbai.json", JSON.stringify(result, null, "\t"), "utf8");
+            console.log("writing changed address to output file 'deploy/addresses/polygonMumbai.json'");
+            fs.writeFileSync("deploy/addresses/polygonMumbai.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
         case 534353: {

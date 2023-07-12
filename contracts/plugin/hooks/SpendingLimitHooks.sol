@@ -52,6 +52,7 @@ contract SpendingLimitHooks is BaseHooks {
         if (_data.length > 0) {
             SpendingLimitSetConfig[] memory initialSetConfigs = _parseSpendingLimitSetConfigData(_data);
             _batchSetSpendingLimit(initialSetConfigs);
+            _walletInited[msg.sender] = true;
         }
         _walletInited[msg.sender] = true;
     }

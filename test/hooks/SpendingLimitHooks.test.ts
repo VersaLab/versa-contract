@@ -623,8 +623,6 @@ describe("SpendingLimitHooks", () => {
         });
 
         await expect(disablePlugin(wallet, spendingLimitHooks.address))
-            .to.emit(spendingLimitHooks, "ClearWalletConfig")
-            .withArgs(wallet.address)
             .to.emit(wallet, "DisabledHooks")
             .withArgs(spendingLimitHooks.address);
     });

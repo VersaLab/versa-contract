@@ -36,6 +36,7 @@ contract SpendingLimitHooks is BaseHooks {
 
     // Wallet -> Token -> SpendingLimitInfo
     mapping(address => mapping(address => SpendingLimitInfo)) internal _tokenSpendingLimitInfo;
+    mapping(address => bool) internal _walletInited;
 
     // ERC20 Token Method Selector
     bytes4 internal constant TRANSFER = ERC20.transfer.selector;
@@ -52,12 +53,21 @@ contract SpendingLimitHooks is BaseHooks {
             SpendingLimitSetConfig[] memory initialSetConfigs = _parseSpendingLimitSetConfigData(_data);
             _batchSetSpendingLimit(initialSetConfigs);
         }
+        _walletInited[msg.sender] = true;
     }
 
     /**
      * @dev Internal function to handle wallet configuration clearing.
      */
     function _clear() internal override {}
+
+    /**
+     * @dev Checks if the specified wallet has been initialized.
+     * @return A boolean indicating if the wallet is initialized.
+     */
+    function _isWalletInited(address wallet) internal view override returns (bool) {
+        return _walletInited[wallet];
+    }
 
     /**
      * @dev Internal function to update the spending limit information for a specific token and wallet.

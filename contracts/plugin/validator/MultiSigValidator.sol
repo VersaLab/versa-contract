@@ -56,6 +56,15 @@ contract MultiSigValidator is BaseValidator {
     function _clear() internal override {}
 
     /**
+     * @dev Checks if the specified wallet has been initialized.
+     * @param wallet The wallet address to check.
+     * @return A boolean indicating if the wallet is initialized.
+     */
+    function _isWalletInited(address wallet) internal view override returns (bool) {
+        return _guardiansCount(wallet) != 0;
+    }
+
+    /**
      * @notice Let the sudo validator add a guardian for its wallet.
      * @param guardian The guardian to add.
      * @param newThreshold The new threshold that will be set after addition.

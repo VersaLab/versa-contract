@@ -12,8 +12,6 @@ abstract contract BaseHooks is IHooks {
     event InitWalletConfig(address indexed _wallet);
     event ClearWalletConfig(address indexed _wallet);
 
-    mapping(address => bool) private _walletInitStatus;
-
     uint256 internal constant BEFORE_TXHOOKS_FLAG = 1 << 128;
     uint256 internal constant AFTER_TXHOOKS_FLAG = 1;
 
@@ -30,8 +28,7 @@ abstract contract BaseHooks is IHooks {
      * @param _data The initialization data.
      */
     function initWalletConfig(bytes memory _data) external onlyEnabledHooks {
-        if (!_walletInitStatus[msg.sender]) {
-            _walletInitStatus[msg.sender] = true;
+        if (!_isWalletInited(msg.sender)) {
             _init(_data);
             emit InitWalletConfig(msg.sender);
         }
@@ -41,8 +38,7 @@ abstract contract BaseHooks is IHooks {
      * @dev Clears the wallet configuration. Triggered when disabled by a wallet
      */
     function clearWalletConfig() external onlyEnabledHooks {
-        if (_walletInitStatus[msg.sender]) {
-            _walletInitStatus[msg.sender] = false;
+        if (_isWalletInited(msg.sender)) {
             _clear();
             emit ClearWalletConfig(msg.sender);
         }
@@ -110,6 +106,13 @@ abstract contract BaseHooks is IHooks {
      * @return A boolean indicating if the wallet is initialized.
      */
     function isWalletInited(address _wallet) external view returns (bool) {
-        return _walletInitStatus[_wallet];
+        return _isWalletInited(_wallet);
     }
+
+    /**
+     * @dev Checks if the specified wallet has been initialized.
+     * @param wallet The wallet address to check.
+     * @return A boolean indicating if the wallet is initialized.
+     */
+    function _isWalletInited(address wallet) internal view virtual returns (bool) {}
 }

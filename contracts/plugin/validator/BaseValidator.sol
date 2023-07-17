@@ -14,8 +14,6 @@ abstract contract BaseValidator is IValidator {
 
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
-    mapping(address => bool) _walletInited;
-
     /**
      * @dev Modifier to check if the validator is enabled for the caller wallet.
      */
@@ -29,22 +27,30 @@ abstract contract BaseValidator is IValidator {
      * @param data The initialization data.
      */
     function initWalletConfig(bytes memory data) external onlyEnabledValidator {
-        if (!_walletInited[msg.sender]) {
-            _walletInited[msg.sender] = true;
+        if (!_isWalletInited(msg.sender)) {
             _init(data);
             emit WalletInited(msg.sender);
         }
     }
 
     /**
-     * @dev Clears the wallet configuration. Triggered when disabled by a wallet
+     * @dev Clears the wallet configuration. Triggered when disabled by a wallet.
+     *  It's optional to implement the clear logic.
      */
     function clearWalletConfig() external onlyEnabledValidator {
-        if (_walletInited[msg.sender]) {
-            _walletInited[msg.sender] = false;
+        if (_isWalletInited(msg.sender)) {
             _clear();
             emit WalletCleared(msg.sender);
         }
+    }
+
+    /**
+     * @dev Checks if the specified wallet has been initialized.
+     * @param wallet The wallet address to check.
+     * @return A boolean indicating if the wallet is initialized.
+     */
+    function isWalletInited(address wallet) external view returns (bool) {
+        return _isWalletInited(wallet);
     }
 
     /**
@@ -65,9 +71,7 @@ abstract contract BaseValidator is IValidator {
      * @param wallet The wallet address to check.
      * @return A boolean indicating if the wallet is initialized.
      */
-    function isWalletInited(address wallet) external view returns (bool) {
-        return _walletInited[wallet];
-    }
+    function _isWalletInited(address wallet) internal view virtual returns (bool) {}
 
     /**
      * @dev Inherits from ERC165.

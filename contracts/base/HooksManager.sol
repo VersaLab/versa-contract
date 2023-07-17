@@ -54,10 +54,6 @@ abstract contract HooksManager is SelfAuthorized {
         bool isAfterHookExist = afterTxHooks.isExist(hooks);
 
         if (isBeforeHookExist || isAfterHookExist) {
-            uint256 hasHooks = IHooks(hooks).hasHooks();
-            if ((uint128(hasHooks) == 1 && !isAfterHookExist) || ((hasHooks >> 128) == 1 && !isBeforeHookExist)) {
-                return false;
-            }
             return true;
         }
     }

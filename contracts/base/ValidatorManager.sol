@@ -108,7 +108,7 @@ abstract contract ValidatorManager is SelfAuthorized {
 
         if (validatorType == ValidatorType.Sudo) {
             return sudoValidators.list(start, pageSize);
-        } else if (validatorType == ValidatorType.Normal) {
+        } else {
             return normalValidators.list(start, pageSize);
         }
     }

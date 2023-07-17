@@ -27,3 +27,29 @@ contract MockHooks is IHooks {
         return interfaceId == type(IHooks).interfaceId;
     }
 }
+
+contract MockHooks2 is IHooks {
+    bool public afterTransactionCalled;
+
+    function initWalletConfig(bytes calldata) external override {}
+
+    function clearWalletConfig() external override {
+        revert("unsupported function");
+    }
+
+    function beforeTransaction(address, uint256, bytes calldata, Enum.Operation) external pure override {
+        revert("unsupported function");
+    }
+
+    function afterTransaction(address, uint256, bytes calldata, Enum.Operation) external override {
+        afterTransactionCalled = true;
+    }
+
+    function hasHooks() external pure override returns (uint256) {
+        return 1;
+    }
+
+    function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
+        return interfaceId == type(IHooks).interfaceId;
+    }
+}

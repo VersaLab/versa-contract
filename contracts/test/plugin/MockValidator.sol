@@ -40,7 +40,9 @@ contract MockValidator2 is IValidator {
 
     function initWalletConfig(bytes calldata) external override {}
 
-    function clearWalletConfig() external override {}
+    function clearWalletConfig() external override {
+        revert("Unsupported function");
+    }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IValidator).interfaceId;

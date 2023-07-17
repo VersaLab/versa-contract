@@ -7,7 +7,7 @@ import "../../base/ModuleManager.sol";
 contract MockModule is IModule {
     function initWalletConfig(bytes calldata) external override {}
 
-    function clearWalletConfig() external override {}
+    function clearWalletConfig() external virtual override {}
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {
         return interfaceId == type(IModule).interfaceId;
@@ -15,5 +15,11 @@ contract MockModule is IModule {
 
     function executeToWallet(address wallet, address to, uint256 value) external {
         ModuleManager(wallet).execTransactionFromModuleReturnData(to, value, "0x", Enum.Operation.Call);
+    }
+}
+
+contract MockModule2 is MockModule {
+    function clearWalletConfig() external override {
+        revert("Unsupported function");
     }
 }

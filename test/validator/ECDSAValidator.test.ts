@@ -24,14 +24,13 @@ describe("ECDSAValidator", () => {
     let signer2: SignerWithAddress;
     let abiCoder = new ethers.utils.AbiCoder();
     let wallet: VersaWallet;
-    let wallet_2: VersaWallet
+    let wallet_2: VersaWallet;
 
     beforeEach(async () => {
         [owner, signer1, signer2] = await ethers.getSigners();
         ecdsaValidator = await new ECDSAValidator__factory(owner).deploy();
         wallet = await deployVersaWallet({ signer: owner, entryPoint: owner.address });
         wallet_2 = await deployVersaWallet({ signer: owner, entryPoint: owner.address });
-
     });
 
     it("should initialize correctly", async () => {
@@ -54,45 +53,59 @@ describe("ECDSAValidator", () => {
         let signer = await ecdsaValidator.getSigner(wallet.address);
         expect(signer).to.be.equal(signer1.address);
 
-        expect(await ecdsaValidator.isWalletInited(wallet.address)).to.be.equal(true)
+        expect(await ecdsaValidator.isWalletInited(wallet.address)).to.be.equal(true);
 
-        await wallet.connect(owner).sudoExecute(
-            ecdsaValidator.address,
-            0,
-            ecdsaValidator.interface.encodeFunctionData("initWalletConfig", [owner.address]),
-            0
-        )
+        await wallet
+            .connect(owner)
+            .sudoExecute(
+                ecdsaValidator.address,
+                0,
+                ecdsaValidator.interface.encodeFunctionData("initWalletConfig", [owner.address]),
+                0
+            );
 
-        await expect(wallet_2.connect(owner).sudoExecute(
-            ecdsaValidator.address,
-            0,
-            ecdsaValidator.interface.encodeFunctionData("initWalletConfig", [owner.address]),
-            0
-        )).to.be.revertedWith("Validator is not enabled")
+        await expect(
+            wallet_2
+                .connect(owner)
+                .sudoExecute(
+                    ecdsaValidator.address,
+                    0,
+                    ecdsaValidator.interface.encodeFunctionData("initWalletConfig", [owner.address]),
+                    0
+                )
+        ).to.be.revertedWith("Validator is not enabled");
 
-        await expect(wallet_2.connect(owner).sudoExecute(
-            ecdsaValidator.address,
-            0,
-            ecdsaValidator.interface.encodeFunctionData("clearWalletConfig"),
-            0
-        )).to.be.revertedWith("Validator is not enabled")
+        await expect(
+            wallet_2
+                .connect(owner)
+                .sudoExecute(
+                    ecdsaValidator.address,
+                    0,
+                    ecdsaValidator.interface.encodeFunctionData("clearWalletConfig"),
+                    0
+                )
+        ).to.be.revertedWith("Validator is not enabled");
 
-        await wallet.connect(owner).sudoExecute(
-            ecdsaValidator.address,
-            0,
-            ecdsaValidator.interface.encodeFunctionData("clearWalletConfig"),
-            0
-        )
+        await wallet
+            .connect(owner)
+            .sudoExecute(
+                ecdsaValidator.address,
+                0,
+                ecdsaValidator.interface.encodeFunctionData("clearWalletConfig"),
+                0
+            );
 
         // can still able to call
-        await wallet.connect(owner).sudoExecute(
-            ecdsaValidator.address,
-            0,
-            ecdsaValidator.interface.encodeFunctionData("clearWalletConfig"),
-            0
-        )
+        await wallet
+            .connect(owner)
+            .sudoExecute(
+                ecdsaValidator.address,
+                0,
+                ecdsaValidator.interface.encodeFunctionData("clearWalletConfig"),
+                0
+            );
 
-        expect(await ecdsaValidator.isWalletInited(wallet.address)).to.be.equal(true)
+        expect(await ecdsaValidator.isWalletInited(wallet.address)).to.be.equal(true);
     });
 
     it("should set signer correctly", async () => {
@@ -117,12 +130,14 @@ describe("ECDSAValidator", () => {
 
     it("should not set invalid signer", async () => {
         let initData = abiCoder.encode(["address"], [ethers.constants.AddressZero]);
-        await expect(enablePlugin({
-            executor: wallet,
-            plugin: ecdsaValidator.address,
-            initData,
-            selector: "enableValidator",
-        })).to.be.revertedWith("Invalid signer address")
+        await expect(
+            enablePlugin({
+                executor: wallet,
+                plugin: ecdsaValidator.address,
+                initData,
+                selector: "enableValidator",
+            })
+        ).to.be.revertedWith("Invalid signer address");
     });
 
     it("should fail when validator is an EOA", async () => {
@@ -304,7 +319,7 @@ describe("ECDSAValidator", () => {
 
         const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(1);
-    })
+    });
 
     it("should fail validation for invalid instant tx signature", async () => {
         let initData = abiCoder.encode(["address"], [signer1.address]);
@@ -456,8 +471,8 @@ describe("ECDSAValidator", () => {
         let expectedValidationData = 1;
         expect(validationData).to.equal(expectedValidationData);
 
-        op.maxFeePerGas = 100
-        op.maxPriorityFeePerGas = 200
+        op.maxFeePerGas = 100;
+        op.maxPriorityFeePerGas = 200;
         userOpHash = getUserOpHash(op, entryPoint, chainId);
 
         finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));

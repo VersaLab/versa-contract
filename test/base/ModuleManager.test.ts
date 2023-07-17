@@ -4,28 +4,32 @@ import { ModuleManager, MockModule } from "../../typechain-types";
 import { enablePlugin, disablePlugin, SENTINEL } from "./utils";
 import { parseEther } from "ethers/lib/utils";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("ModuleManager", () => {
+    let owner: SignerWithAddress;
     let moduleManager: ModuleManager;
     let MODULE_1: string;
     let MODULE_2: string;
     let MODULE_3: string;
 
     beforeEach(async () => {
+        [owner] = await ethers.getSigners();
         const ModuleManager = await ethers.getContractFactory("MockModuleManager");
         moduleManager = await ModuleManager.deploy();
         await moduleManager.deployed();
 
         const ModuleFactory = await ethers.getContractFactory("MockModule");
+        const ModuleFactory_2 = await ethers.getContractFactory("MockModule2");
+
         MODULE_1 = (await ModuleFactory.deploy()).address;
-        MODULE_2 = (await ModuleFactory.deploy()).address;
+        MODULE_2 = (await ModuleFactory_2.deploy()).address;
         MODULE_3 = (await ModuleFactory.deploy()).address;
     });
 
     it("should enable and disable modules correctly", async () => {
         // Enable Module 1
         await enablePlugin({ executor: moduleManager, plugin: MODULE_1 });
-        // await moduleManager.enableModule(MODULE_1, '0x');
 
         expect(await moduleManager.isModuleEnabled(MODULE_1)).to.be.true;
         expect(await moduleManager.isModuleEnabled(MODULE_2)).to.be.false;
@@ -36,14 +40,24 @@ describe("ModuleManager", () => {
         // await moduleManager.enableModule(MODULE_2, '0x');
         expect(await moduleManager.isModuleEnabled(MODULE_2)).to.be.true;
 
+        await expect(moduleManager.connect(owner).enableModule(MODULE_1, "0x")).to.revertedWith("GS031");
+
+        await expect(enablePlugin({ executor: moduleManager, plugin: owner.address })).to.reverted;
+
         // Disable Module 2
         // await moduleManager.disableModule(MODULE_1, MODULE_2);
-        await disablePlugin(moduleManager, MODULE_2);
+        await expect(disablePlugin(moduleManager, MODULE_2))
+            .to.emit(moduleManager, "DisabledModuleWithError")
+            .withArgs(MODULE_2);
         expect(await moduleManager.isModuleEnabled(MODULE_2)).to.be.false;
 
         // Disable Module 1
-        await disablePlugin(moduleManager, MODULE_1);
+        await expect(disablePlugin(moduleManager, MODULE_1))
+            .to.emit(moduleManager, "DisabledModule")
+            .withArgs(MODULE_1);
         expect(await moduleManager.isModuleEnabled(MODULE_1)).to.be.false;
+
+        await expect(moduleManager.connect(owner).disableModule(SENTINEL, MODULE_1)).to.revertedWith("GS031");
     });
 
     it("should return the correct module array", async () => {

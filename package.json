@@ -62,6 +62,7 @@
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
     "@ethersproject/experimental": "^5.7.0",
+    "@layerzerolabs/solidity-examples": "^0.0.13",
     "@openzeppelin/contracts": "^4.9.2",
     "@openzeppelin/contracts-upgradeable": "^4.9.2"
   }

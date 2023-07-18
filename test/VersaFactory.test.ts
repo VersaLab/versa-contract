@@ -101,6 +101,6 @@ describe("VersaFactory", () => {
                 ["0x"],
                 0
             )
-        ).to.be.revertedWith("Versa factory: account already created");
+        ).to.be.revertedWith("VersaFactory: account already created");
     });
 });

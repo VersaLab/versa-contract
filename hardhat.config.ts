@@ -30,13 +30,19 @@ const config: HardhatUserConfig = {
                     optimizer: {
                         enabled: true,
                         runs: 200,
+                        details: {
+                            yulDetails: {
+                                optimizerSteps: "u",
+                            },
+                        },
                     },
+                    viaIR: true,
                 },
             },
         ],
     },
     networks: {
-        polygonMumbai: {
+        mumbai: {
             url: `${POLYGON_MUMBAI_RPC}`,
             accounts: [
                 `${DEPLOYER_PRIVATE_KEY_1}`,

@@ -1,7 +1,12 @@
 import { ethers } from "hardhat";
 import { hexConcat } from "ethers/lib/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { VersaWallet__factory, VersaAccountFactory__factory, MockValidator__factory } from "../typechain-types";
+import {
+    VersaWallet__factory,
+    VersaAccountFactory__factory,
+    MockValidator__factory,
+    CompatibilityFallbackHandler__factory,
+} from "../typechain-types";
 
 export async function deployVersaWallet(options: { signer: SignerWithAddress; entryPoint: string }) {
     const {
@@ -15,13 +20,13 @@ export async function deployVersaWallet(options: { signer: SignerWithAddress; en
         // moduleInitData = []
     } = options;
 
-    let fallbackHandler = ethers.constants.AddressZero;
+    let fallbackHandler = await new CompatibilityFallbackHandler__factory(signer).deploy();
     // Deploy versa singleton
     let versaWalletSingleton = await new VersaWallet__factory(signer).deploy(entryPoint);
     // Deploy VersaAccountFactory
     let versaFactory = await new VersaAccountFactory__factory(signer).deploy(
         versaWalletSingleton.address,
-        fallbackHandler
+        fallbackHandler.address
     );
 
     let sudoValidator = await new MockValidator__factory(signer).deploy();

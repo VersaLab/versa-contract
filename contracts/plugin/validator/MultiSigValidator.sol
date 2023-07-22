@@ -184,12 +184,8 @@ contract MultiSigValidator is BaseValidator {
      */
     function _changeThreshold(address wallet, uint256 newThreshold) internal {
         WalletInfo storage info = _walletInfo[wallet];
+        require(newThreshold > 0, "Threshold cannot be 0");
         // Validate that threshold is smaller than or equal to number of guardians.
-        if (info.guardianCount == 0) {
-            require(newThreshold == 0, "Threshold must be 0");
-        } else {
-            require(newThreshold > 0, "Threshold cannot be 0");
-        }
         require(newThreshold <= info.guardianCount, "Threshold must be lower or equal to guardians count");
         info.threshold = uint128(newThreshold);
         emit ChangeThreshold(wallet, newThreshold);

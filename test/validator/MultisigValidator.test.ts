@@ -2,7 +2,13 @@ import { ethers } from "hardhat";
 import { Signer } from "ethers";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { MultiSigValidator, MultiSigValidator__factory, VersaWallet } from "../../typechain-types";
+import {
+    ECDSAValidator,
+    ECDSAValidator__factory,
+    MultiSigValidator,
+    MultiSigValidator__factory,
+    VersaWallet,
+} from "../../typechain-types";
 import { deployVersaWallet, getUserOpHash } from "../utils";
 import { enablePlugin, execute } from "../base/utils";
 import { arrayify, hexConcat, hexlify, keccak256, toUtf8Bytes } from "ethers/lib/utils";
@@ -17,11 +23,15 @@ describe("MultiSigValidator", () => {
     let signer3: SignerWithAddress;
     let abiCoder = new ethers.utils.AbiCoder();
     let wallet: VersaWallet;
+    let wallet_2: VersaWallet;
+    let contractGuardian: ECDSAValidator;
 
     beforeEach(async () => {
         [owner, signer1, signer2, signer3] = await ethers.getSigners();
         multisigValidator = await new MultiSigValidator__factory(owner).deploy();
+        contractGuardian = await new ECDSAValidator__factory(owner).deploy();
         wallet = await deployVersaWallet({ signer: owner, entryPoint: owner.address });
+        wallet_2 = await deployVersaWallet({ signer: owner, entryPoint: owner.address });
     });
 
     it("should initialize correctly", async () => {
@@ -51,6 +61,29 @@ describe("MultiSigValidator", () => {
         expect(await multisigValidator.threshold(wallet.address)).to.be.equal(threshold);
     });
 
+    it("should reject invalid initdata", async () => {
+        let sudoValidator = multisigValidator;
+        let initData = abiCoder.encode(["address[]", "uint256"], [[], 1]);
+        await expect(
+            enablePlugin({
+                executor: wallet,
+                plugin: sudoValidator.address,
+                initData,
+                selector: "enableValidator",
+            })
+        ).to.be.revertedWith("Invalid initdata");
+
+        initData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], 3]);
+        await expect(
+            enablePlugin({
+                executor: wallet,
+                plugin: sudoValidator.address,
+                initData,
+                selector: "enableValidator",
+            })
+        ).to.be.revertedWith("Invalid initdata");
+    });
+
     it("should add guardian correctly", async () => {
         let sudoValidator = multisigValidator;
         let threshold = 1;
@@ -70,6 +103,14 @@ describe("MultiSigValidator", () => {
         });
         expect(await multisigValidator.isGuardian(wallet.address, signer2.address)).to.be.equal(true);
         expect(await multisigValidator.threshold(wallet.address)).to.be.equal(threshold);
+
+        await expect(
+            execute({
+                executor: wallet_2,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Validator is not enabled");
     });
 
     it("should add guardians correctly", async () => {
@@ -95,6 +136,14 @@ describe("MultiSigValidator", () => {
         expect(await multisigValidator.isGuardian(wallet.address, signer2.address)).to.be.equal(true);
         expect(await multisigValidator.isGuardian(wallet.address, signer3.address)).to.be.equal(true);
         expect(await multisigValidator.threshold(wallet.address)).to.be.equal(threshold);
+
+        await expect(
+            execute({
+                executor: wallet_2,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Validator is not enabled");
     });
 
     it("should revoke guardians correctly", async () => {
@@ -108,8 +157,17 @@ describe("MultiSigValidator", () => {
             selector: "enableValidator",
         });
 
+        let data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [signer3.address, threshold]);
+        await expect(
+            execute({
+                executor: wallet,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Not a valid guardian");
+
         // revoke signer1
-        let data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [signer1.address, threshold]);
+        data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [signer1.address, threshold]);
         await execute({
             executor: wallet,
             to: multisigValidator.address,
@@ -118,6 +176,23 @@ describe("MultiSigValidator", () => {
         expect(await multisigValidator.isGuardian(wallet.address, signer1.address)).to.be.equal(false);
         expect(await multisigValidator.isGuardian(wallet.address, signer2.address)).to.be.equal(true);
         expect(await multisigValidator.threshold(wallet.address)).to.be.equal(threshold);
+
+        data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [signer2.address, threshold]);
+        await expect(
+            execute({
+                executor: wallet,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Must have at least one guardian");
+
+        await expect(
+            execute({
+                executor: wallet_2,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Validator is not enabled");
     });
 
     it("should not add invalid guardian", async () => {
@@ -173,6 +248,48 @@ describe("MultiSigValidator", () => {
         )
             .to.emit(multisigValidator, "ChangeThreshold")
             .withArgs(wallet.address, newThreshold);
+
+        await expect(
+            execute({
+                executor: wallet_2,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Validator is not enabled");
+    });
+
+    it("should reset guardian correctly", async () => {
+        let sudoValidator = multisigValidator;
+        let threshold = 1;
+        let initData = abiCoder.encode(["address[]", "uint256"], [[signer1.address], threshold]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: sudoValidator.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        // revoke signer1
+        let data = multisigValidator.interface.encodeFunctionData("resetGuardians", [
+            1,
+            [signer1.address],
+            [signer2.address],
+        ]);
+        await execute({
+            executor: wallet,
+            to: multisigValidator.address,
+            data,
+        });
+        expect(await multisigValidator.isGuardian(wallet.address, signer1.address)).to.be.equal(false);
+        expect(await multisigValidator.isGuardian(wallet.address, signer2.address)).to.be.equal(true);
+
+        await expect(
+            execute({
+                executor: wallet_2,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Validator is not enabled");
     });
 
     it("should not set invalid threshold or guardians", async () => {
@@ -246,7 +363,22 @@ describe("MultiSigValidator", () => {
             .to.emit(multisigValidator, "ApproveHash")
             .withArgs(hash);
 
+        await expect(
+            execute({
+                executor: wallet,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Hash already approved");
+
         expect(await multisigValidator.isHashApproved(wallet.address, hash)).to.be.equal(true);
+        await expect(
+            execute({
+                executor: wallet_2,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Validator is not enabled");
 
         data = multisigValidator.interface.encodeFunctionData("revokeHash", [hash]);
         await expect(
@@ -260,6 +392,14 @@ describe("MultiSigValidator", () => {
             .withArgs(hash);
 
         expect(await multisigValidator.isHashApproved(wallet.address, hash)).to.be.equal(false);
+
+        await expect(
+            execute({
+                executor: wallet_2,
+                to: multisigValidator.address,
+                data,
+            })
+        ).to.revertedWith("Validator is not enabled");
     });
 
     it("should validate userOp signature correctly", async () => {
@@ -303,6 +443,7 @@ describe("MultiSigValidator", () => {
         let validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(0);
 
+        // un-ordered siganture
         combinedSignature = hexConcat([sign1, sign2]);
         sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
         op.signature = sign;
@@ -310,6 +451,7 @@ describe("MultiSigValidator", () => {
         validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(1);
 
+        // invalid guardian signature
         let sign3 = await signer3.signMessage(arrayify(userOpHash));
         combinedSignature = hexConcat([sign3, sign1]);
         sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
@@ -435,7 +577,7 @@ describe("MultiSigValidator", () => {
         };
         let entryPoint = ethers.constants.AddressZero;
         let chainId = 1;
-        const userOpHash = getUserOpHash(op, entryPoint, chainId);
+        let userOpHash = getUserOpHash(op, entryPoint, chainId);
 
         let sign1 = await signer1.signMessage(arrayify(userOpHash));
         let sign2 = await signer2.signMessage(arrayify(userOpHash));
@@ -450,6 +592,14 @@ describe("MultiSigValidator", () => {
         let validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(0);
 
+        // invalid sig type
+        sign = hexConcat([ethers.constants.AddressZero, "0x03", combinedSignature]);
+        op.signature = sign;
+
+        validationData = await multisigValidator.validateSignature(op, userOpHash);
+        expect(validationData).to.equal(1);
+
+        // signature must be ordered
         combinedSignature = hexConcat([sign1, sign2]);
         sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
         op.signature = sign;
@@ -466,6 +616,13 @@ describe("MultiSigValidator", () => {
         expect(validationData).to.equal(1);
 
         // Signatures data too short
+        sign = hexConcat([ethers.constants.AddressZero, "0x00", sign1]);
+        op.signature = sign;
+        validationData = await multisigValidator.validateSignature(op, userOpHash);
+        expect(validationData).to.equal(1);
+
+        // non-enabled wallet
+        op.sender = wallet_2.address;
         sign = hexConcat([ethers.constants.AddressZero, "0x00", sign1]);
         validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(1);
@@ -506,6 +663,149 @@ describe("MultiSigValidator", () => {
         await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
             "Signatures data too short"
         );
+
+        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith(
+            "Hash not approved"
+        );
+    });
+
+    it("should check contract signature", async () => {
+        let sudoValidator = multisigValidator;
+        let threshold = 1;
+        let initData = abiCoder.encode(["address[]", "uint256"], [[wallet_2.address], threshold]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: sudoValidator.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        initData = abiCoder.encode(["address"], [signer2.address]);
+        await enablePlugin({
+            executor: wallet_2,
+            plugin: contractGuardian.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        let op = {
+            sender: wallet.address,
+            nonce: 2,
+            initCode: "0x",
+            callData: "0x",
+            callGasLimit: 2150000,
+            verificationGasLimit: 2150000,
+            preVerificationGas: 2150000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: "0x",
+            signature: "0x",
+        };
+        let entryPoint = ethers.constants.AddressZero;
+        let chainId = 1;
+        let userOpHash = getUserOpHash(op, entryPoint, chainId);
+
+        let sign = await signer2.signMessage(arrayify(userOpHash));
+        let signature =
+            "0x" +
+            "000000000000000000000000" +
+            wallet_2.address.slice(2) +
+            "0000000000000000000000000000000000000000000000000000000000000041" +
+            "00" + // r, s, v
+            "0000000000000000000000000000000000000000000000000000000000000055"; // length: 20 bytes validator address + 65 bytes signature
+
+        console.log("========717=======");
+        console.log("raw siganture", sign);
+        console.log("offchain guardian: ", wallet_2.address);
+        signature = hexConcat([signature, contractGuardian.address, sign]);
+        await multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1);
+    });
+
+    it("should fail for invalid contract siganture", async () => {
+        let sudoValidator = multisigValidator;
+        let threshold = 1;
+        let initData = abiCoder.encode(["address[]", "uint256"], [[contractGuardian.address], threshold]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: sudoValidator.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        initData = abiCoder.encode(["address"], [signer2.address]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: contractGuardian.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        let op = {
+            sender: wallet.address,
+            nonce: 2,
+            initCode: "0x",
+            callData: "0x",
+            callGasLimit: 2150000,
+            verificationGasLimit: 2150000,
+            preVerificationGas: 2150000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: "0x",
+            signature: "0x",
+        };
+        let entryPoint = ethers.constants.AddressZero;
+        let chainId = 1;
+        let userOpHash = getUserOpHash(op, entryPoint, chainId);
+
+        let sign = await signer1.signMessage(arrayify(userOpHash));
+
+        let signature =
+            "0x" +
+            "000000000000000000000000" +
+            signer1.address.slice(2) +
+            "0000000000000000000000000000000000000000000000000000000000000020" +
+            "00" + // r, s, v
+            "0000000000000000000000000000000000000000000000000000000000000000"; // Some data to read
+
+        await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
+            "Inside static part"
+        );
+
+        signature =
+            "0x" +
+            "000000000000000000000000" +
+            signer1.address.slice(2) +
+            "0000000000000000000000000000000000000000000000000000000000000041" +
+            "00"; // r, s, v
+
+        await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
+            "Contract signatures out of bounds"
+        );
+
+        signature =
+            "0x" +
+            "000000000000000000000000" +
+            signer1.address.slice(2) +
+            "0000000000000000000000000000000000000000000000000000000000000041" +
+            "00" + // r, s, v
+            "0000000000000000000000000000000000000000000000000000000000000020"; // length
+
+        await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
+            "Contract signature wrong offset"
+        );
+
+        signature =
+            "0x" +
+            "000000000000000000000000" +
+            signer1.address.slice(2) +
+            "0000000000000000000000000000000000000000000000000000000000000041" +
+            "00" + // r, s, v
+            "0000000000000000000000000000000000000000000000000000000000000041"; // length
+
+        signature = hexConcat([signature, sign]);
+        await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
+            "Contract signature invalid"
+        );
     });
 
     it("should accept pre-approved hash", async () => {
@@ -519,16 +819,23 @@ describe("MultiSigValidator", () => {
             selector: "enableValidator",
         });
 
-        const message = "hello world?";
-        const messageHash = keccak256(toUtf8Bytes(message));
+        let message = "hello world?";
+        let messageHash = keccak256(toUtf8Bytes(message));
         let data = multisigValidator.interface.encodeFunctionData("approveHash", [messageHash]);
         await execute({
             executor: wallet,
             to: multisigValidator.address,
             data,
         });
+        expect(await multisigValidator.isHashApproved(wallet.address, messageHash)).to.be.equal(true);
 
         let res = await multisigValidator.isValidSignature(messageHash, "0x", wallet.address);
         expect(res).to.be.equal(true);
+
+        message = "hello world!";
+        messageHash = keccak256(toUtf8Bytes(message));
+        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith(
+            "Hash not approved"
+        );
     });
 });

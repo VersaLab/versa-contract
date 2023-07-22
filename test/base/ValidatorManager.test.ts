@@ -15,10 +15,12 @@ describe("ValidatorManager", () => {
 
         // Deploy MockValidator contract
         const mockValidatorFactory = await ethers.getContractFactory("MockValidator");
+        const mockValidatorFactory_2 = await ethers.getContractFactory("MockValidator2");
+
         mockValidator_1 = await mockValidatorFactory.deploy();
         await mockValidator_1.deployed();
 
-        mockValidator_2 = await mockValidatorFactory.deploy();
+        mockValidator_2 = await mockValidatorFactory_2.deploy();
         await mockValidator_2.deployed();
 
         // Deploy ValidatorManager contract
@@ -29,64 +31,158 @@ describe("ValidatorManager", () => {
 
     it("should enable a validator", async () => {
         // Enable the validator
-        let expectedValidatorType = 2;
+        let sudo = 1;
+        let normal = 2;
         await enablePlugin({
             executor: validatorManager,
             plugin: mockValidator_1.address,
-            type: expectedValidatorType,
+            type: sudo,
         });
+
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_2.address,
+            type: normal,
+        });
+
+        // should not enable enabled valdiator
+        await expect(
+            enablePlugin({
+                executor: validatorManager,
+                plugin: mockValidator_1.address,
+                type: sudo,
+            })
+        ).to.revertedWith("Validator has already been added");
+
+        // should not enable enabled valdiator
+        await expect(
+            enablePlugin({
+                executor: validatorManager,
+                plugin: mockValidator_1.address,
+                type: normal,
+            })
+        ).to.revertedWith("Validator has already been added");
+
+        await expect(validatorManager.enableValidator(mockValidator_1.address, 1, "0x")).to.be.revertedWith("GS031");
+
+        await expect(
+            enablePlugin({
+                executor: validatorManager,
+                plugin: owner.address,
+                type: sudo,
+            })
+        ).to.be.reverted;
+
+        await expect(
+            enablePlugin({
+                executor: validatorManager,
+                plugin: mockValidator_2.address,
+                type: 0,
+            })
+        ).to.be.revertedWith("Only valid validator allowed");
 
         // Verify if the validator is enabled
         const validatorType = await validatorManager.getValidatorType(mockValidator_1.address);
-        expect(validatorType).to.equal(expectedValidatorType);
+        expect(validatorType).to.equal(sudo);
     });
 
     it("should disable a validator", async () => {
         // Enable the validator
-        let expectedValidatorType = 2;
+        let sudo = 1;
+        let normal = 2;
         await enablePlugin({
             executor: validatorManager,
             plugin: mockValidator_1.address,
-            type: expectedValidatorType,
+            type: sudo,
         });
 
-        // Disable the validator
-        await disablePlugin(validatorManager, mockValidator_1.address);
-        expectedValidatorType = 0; // disabled
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_2.address,
+            type: normal,
+        });
+
+        // Disable the normal validator
+        await expect(disablePlugin(validatorManager, mockValidator_2.address))
+            .to.emit(validatorManager, "DisabledValidatorWithError")
+            .withArgs(mockValidator_2.address);
+
+        let expectValidatorType = 0; // disabled
+        let validatorType = await validatorManager.getValidatorType(mockValidator_2.address);
+        expect(validatorType).to.equal(expectValidatorType);
+
+        // enable the second sudo validator to remove the first
+        await enablePlugin({
+            executor: validatorManager,
+            plugin: mockValidator_2.address,
+            type: sudo,
+        });
+
+        await expect(disablePlugin(validatorManager, mockValidator_1.address))
+            .to.emit(validatorManager, "DisabledValidator")
+            .withArgs(mockValidator_1.address);
+
+        await expect(validatorManager.disableValidator(SENTINEL, mockValidator_1.address)).to.be.revertedWith("GS031");
+
+        await expect(
+            validatorManager.execute(
+                validatorManager.address,
+                0,
+                validatorManager.interface.encodeFunctionData("disableValidator", [SENTINEL, mockValidator_1.address]),
+                0
+            )
+        ).to.revertedWith("Validator doesn't exist");
 
         // Verify if the validator is disabled
-        const validatorType = await validatorManager.getValidatorType(mockValidator_1.address);
-        expect(validatorType).to.equal(expectedValidatorType);
+        validatorType = await validatorManager.getValidatorType(mockValidator_1.address);
+        expect(validatorType).to.equal(expectValidatorType);
     });
 
     it("should toggle a validator's type", async () => {
         // Enable the validator as a sudo validator
-        let expectedValidatorType = 1;
+        let sudo = 1;
+        let normal = 2;
         await enablePlugin({
             executor: validatorManager,
             plugin: mockValidator_1.address,
-            type: expectedValidatorType,
+            type: sudo,
         });
 
         await expect(toggleValidator(validatorManager, mockValidator_1.address)).to.be.revertedWith(
             "Cannot remove the last remaining sudoValidator"
         );
 
+        await expect(validatorManager.toggleValidatorType(SENTINEL, mockValidator_1.address)).to.be.revertedWith(
+            "GS031"
+        );
+
         // Enable the validator as a normal validator
         await enablePlugin({
             executor: validatorManager,
             plugin: mockValidator_2.address,
-            type: expectedValidatorType,
+            type: sudo,
         });
 
         // Toggle the validator's type to normal
         await toggleValidator(validatorManager, mockValidator_2.address);
 
-        expectedValidatorType = 2;
-
         // Verify if the validator's type is toggled to normal
-        const validatorType = await validatorManager.getValidatorType(mockValidator_2.address);
-        expect(validatorType).to.equal(expectedValidatorType);
+        let validatorType = await validatorManager.getValidatorType(mockValidator_2.address);
+        expect(validatorType).to.equal(normal);
+
+        // toggle validator to sudo
+        await toggleValidator(validatorManager, mockValidator_2.address);
+        validatorType = await validatorManager.getValidatorType(mockValidator_2.address);
+        expect(validatorType).to.equal(sudo);
+
+        await expect(
+            validatorManager.execute(
+                validatorManager.address,
+                0,
+                validatorManager.interface.encodeFunctionData("toggleValidatorType", [SENTINEL, owner.address]),
+                0
+            )
+        ).to.revertedWith("Validator doesn't exist");
     });
 
     it("should get the type of a validator", async () => {
@@ -123,15 +219,16 @@ describe("ValidatorManager", () => {
 
     it("should get a list of validators", async () => {
         // Enable the validator
-        let expectedValidatorType = 1;
+        let sudo = 1;
+        let normal = 2;
         await enablePlugin({
             executor: validatorManager,
             plugin: mockValidator_1.address,
-            type: expectedValidatorType,
+            type: sudo,
         });
 
         // Get a list of validators
-        let validators = await validatorManager.getValidatorsPaginated(SENTINEL, 1, expectedValidatorType);
+        let validators = await validatorManager.getValidatorsPaginated(SENTINEL, 1, sudo);
 
         // Verify if the validator is in the list
         expect(validators[0]).to.equal(mockValidator_1.address);
@@ -139,12 +236,17 @@ describe("ValidatorManager", () => {
         await enablePlugin({
             executor: validatorManager,
             plugin: mockValidator_2.address,
-            type: expectedValidatorType,
+            type: sudo,
         });
 
-        validators = await validatorManager.getValidatorsPaginated(SENTINEL, 2, expectedValidatorType);
+        await expect(validatorManager.getValidatorsPaginated(SENTINEL, 5, 0)).to.revertedWith("Only valid validators");
+
+        validators = await validatorManager.getValidatorsPaginated(SENTINEL, 2, sudo);
         expect(validators[0]).to.equal(mockValidator_2.address);
         expect(validators[1]).to.equal(mockValidator_1.address);
+
+        validators = await validatorManager.getValidatorsPaginated(SENTINEL, 1, normal);
+        expect(validators[0]).to.equal(ethers.constants.AddressZero);
 
         let expectedSudoSize = 2;
         let expectedNormalSize = 0;

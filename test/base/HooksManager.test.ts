@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import { MockHooksManager, MockHooks } from "../../typechain-types";
+import { MockHooksManager, MockHooks, MockHooks2 } from "../../typechain-types";
 import { SENTINEL, execute, enablePlugin, disablePlugin } from "./utils";
 import { MockHooksManagerInterface } from "../../typechain-types/contracts/test/MockHooksManager";
 import { parseEther } from "ethers/lib/utils";
@@ -10,6 +10,7 @@ import { parseEther } from "ethers/lib/utils";
 describe("HooksManager", () => {
     let hooksManager: MockHooksManager;
     let mockHooks: MockHooks;
+    let mockHooks_2: MockHooks2;
     let owner: SignerWithAddress;
     let addr1: SignerWithAddress;
     let addr2: SignerWithAddress;
@@ -24,6 +25,11 @@ describe("HooksManager", () => {
         mockHooks = await mockHooksFactory.deploy();
         await mockHooks.deployed();
 
+        const mockHooksFactory_2 = await ethers.getContractFactory("MockHooks2");
+
+        mockHooks_2 = await mockHooksFactory_2.deploy();
+        await mockHooks_2.deployed();
+
         // Deploy HooksManager contract
         const hooksManagerFactory = await ethers.getContractFactory("MockHooksManager");
         hooksManager = await hooksManagerFactory.deploy();
@@ -34,18 +40,34 @@ describe("HooksManager", () => {
 
     it("should enable hooks", async () => {
         // Enable hooks
+        expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.false;
         await enablePlugin({ executor: hooksManager, plugin: mockHooks.address });
         expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
+
+        expect(await hooksManager.isHooksEnabled(mockHooks_2.address)).to.be.false;
+        await enablePlugin({ executor: hooksManager, plugin: mockHooks_2.address });
+        expect(await hooksManager.isHooksEnabled(mockHooks_2.address)).to.be.true;
+
+        await expect(hooksManager.connect(owner).enableHooks(mockHooks.address, "0x")).to.be.revertedWith("GS031");
     });
 
     it("should disable hooks", async () => {
         // Enable hooks
         await enablePlugin({ executor: hooksManager, plugin: mockHooks.address });
         expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.true;
+        await enablePlugin({ executor: hooksManager, plugin: mockHooks_2.address });
+        expect(await hooksManager.isHooksEnabled(mockHooks_2.address)).to.be.true;
 
         // Disable hooks
-        await disablePlugin(hooksManager, mockHooks.address);
+        await expect(disablePlugin(hooksManager, mockHooks.address))
+            .to.emit(hooksManager, "DisabledHooks")
+            .withArgs(mockHooks.address);
         expect(await hooksManager.isHooksEnabled(mockHooks.address)).to.be.false;
+
+        await expect(disablePlugin(hooksManager, mockHooks_2.address))
+            .to.emit(hooksManager, "DisabledHooksWithError")
+            .withArgs(mockHooks_2.address);
+        expect(await hooksManager.isHooksEnabled(mockHooks_2.address)).to.be.false;
 
         // Check if hooks are removed from the list
         const prehooksList = await hooksManager.getPreHooksPaginated(SENTINEL, 1);
@@ -56,6 +78,10 @@ describe("HooksManager", () => {
         const hooksSize = await hooksManager.hooksSize();
         expect(hooksSize.beforeTxHooksSize).to.be.equal(0);
         expect(hooksSize.afterTxHooksSize).to.be.equal(0);
+
+        await expect(
+            hooksManager.connect(owner).disableHooks(SENTINEL, SENTINEL, mockHooks.address)
+        ).to.be.revertedWith("GS031");
     });
 
     it("should not enable invalid hooks contract", async () => {
@@ -102,28 +128,24 @@ describe("HooksManager", () => {
         expect(hooksSize.beforeTxHooksSize).to.be.equal(expectedHooksSize);
         expect(hooksSize.afterTxHooksSize).to.be.equal(expectedHooksSize);
 
-        // Deploy MockHooks contract
-        const mockHooksFactory = await ethers.getContractFactory("MockHooks");
-        let mockHooks2 = await mockHooksFactory.deploy();
-        await mockHooks2.deployed();
-
         // Enable the second hooks contract
-        await enablePlugin({ executor: hooksManager, plugin: mockHooks2.address });
-        expect(await hooksManager.isHooksEnabled(mockHooks2.address)).to.be.true;
+        await enablePlugin({ executor: hooksManager, plugin: mockHooks_2.address });
+        expect(await hooksManager.isHooksEnabled(mockHooks_2.address)).to.be.true;
 
         prehooksList = await hooksManager.getPreHooksPaginated(SENTINEL, 5);
         afterhooksList = await hooksManager.getPostHooksPaginated(SENTINEL, 5);
 
-        expect(prehooksList[0]).to.be.equal(mockHooks2.address);
-        expect(afterhooksList[0]).to.be.equal(mockHooks2.address);
+        expect(prehooksList[0]).to.be.equal(mockHooks.address);
+        expect(afterhooksList[0]).to.be.equal(mockHooks_2.address);
 
-        expect(prehooksList[1]).to.be.equal(mockHooks.address);
+        expect(prehooksList[1]).to.be.equal(ethers.constants.AddressZero);
         expect(afterhooksList[1]).to.be.equal(mockHooks.address);
 
         hooksSize = await hooksManager.hooksSize();
-        expectedHooksSize = 2;
+        let expectedBeforeHooksSize = 1;
+        let expectedAfterHooksSize = 2;
 
-        expect(hooksSize.beforeTxHooksSize).to.be.equal(expectedHooksSize);
-        expect(hooksSize.afterTxHooksSize).to.be.equal(expectedHooksSize);
+        expect(hooksSize.beforeTxHooksSize).to.be.equal(expectedBeforeHooksSize);
+        expect(hooksSize.afterTxHooksSize).to.be.equal(expectedAfterHooksSize);
     });
 });

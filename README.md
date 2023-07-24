@@ -4,7 +4,6 @@
 
 [![Lint](https://github.com/VersaLab/versa-contract/actions/workflows/lint.yml/badge.svg)](https://github.com/VersaLab/versa-contract/actions/workflows/lint.yml)
 [![Tests](https://github.com/VersaLab/versa-contract/actions/workflows/tests.yml/badge.svg)](https://github.com/VersaLab/versa-contract/actions/workflows/tests.yml)
-[![Coverage Status](https://coveralls.io/repos/github/VersaLab/versa-contract/badge.svg?branch=main)](https://coveralls.io/github/VersaLab/versa-contract?branch=main)
 
 ## Introduction
 

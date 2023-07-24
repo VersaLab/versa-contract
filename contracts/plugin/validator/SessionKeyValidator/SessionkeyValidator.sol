@@ -160,11 +160,10 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
         bytes32 userOpHash
     ) public returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
-        (
-            address to,
-            uint256 value,
-            bytes memory data,
-        ) = abi.decode(userOp.callData.slice(4, userOp.callData.length - 4), (address, uint256, bytes, uint8));
+        (address to, uint256 value, bytes memory data, ) = abi.decode(
+            userOp.callData.slice(4, userOp.callData.length - 4),
+            (address, uint256, bytes, uint8)
+        );
         // Decode extra data from signature
         (
             bytes32[] memory proof,
@@ -209,11 +208,10 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
         bytes32 userOpHash
     ) public returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
-        (
-            address[] memory to,
-            uint256[] memory value,
-            bytes[] memory data,
-        ) = abi.decode(userOp.callData.slice(4, userOp.callData.length - 4), (address[], uint256[], bytes[], uint8[]));
+        (address[] memory to, uint256[] memory value, bytes[] memory data, ) = abi.decode(
+            userOp.callData.slice(4, userOp.callData.length - 4),
+            (address[], uint256[], bytes[], uint8[])
+        );
         // Decode extra data from signature
         (
             bytes32[][] memory proof,
@@ -342,7 +340,13 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     ) internal {
         if (ownerSignature.length > 0) {
             bytes32 spendingLimitConfigHash = keccak256(abi.encode(configs));
-            _validateOffchainPermitSignature(wallet, operator, permission.hash(), spendingLimitConfigHash, ownerSignature);
+            _validateOffchainPermitSignature(
+                wallet,
+                operator,
+                permission.hash(),
+                spendingLimitConfigHash,
+                ownerSignature
+            );
             _incrementPermitNonce(wallet);
             _setOperatorPermission(wallet, operator, permission);
             _batchSetSpendingLimit(wallet, operator, configs);
@@ -407,11 +411,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     /**
      * @dev Check if the operator has enough gas and times to use and update usage.
      */
-    function _checkAndUpdateUsage(
-        address operator,
-        UserOperation memory userOp,
-        uint256 sessionsToUse
-    ) internal {
+    function _checkAndUpdateUsage(address operator, UserOperation memory userOp, uint256 sessionsToUse) internal {
         (uint256 gasLeft, uint256 timesLeft) = _getRemainingUsage(userOp.sender, operator);
         uint256 gasFee = _computeGasFee(userOp);
         require(gasLeft > gasFee && timesLeft > 0, "SessionKeyValidator: exceed usage");
@@ -424,7 +424,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
         _setRemaningUsage(userOp.sender, operator, gasLeft, timesLeft);
     }
 
-    /** 
+    /**
      * @dev Validate the signature of the offchain permit.
      */
     function _validateOffchainPermitSignature(
@@ -464,12 +464,16 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
         bytes memory callDataWithValue = rlpCalldata.rlpToABI();
         // Verify rlpCalldata is encoded from execution data
         require(
-            keccak256(data.slice(4, data.length - 4)) == keccak256(callDataWithValue.slice(32, callDataWithValue.length - 32)),
+            keccak256(data.slice(4, data.length - 4)) ==
+                keccak256(callDataWithValue.slice(32, callDataWithValue.length - 32)),
             "SessionKeyValidator: rlpCalldata is not equally encoded from execution data"
         );
         require(session.to == to, "SessionKeyValidator: invalid to");
         require(session.selector == bytes4(data), "SessionKeyValidator: invalid selector");
-        require(session.allowedArguments.isAllowedCalldata(rlpCalldata, value), "SessionKeyValidator: invalid arguments");
+        require(
+            session.allowedArguments.isAllowedCalldata(rlpCalldata, value),
+            "SessionKeyValidator: invalid arguments"
+        );
     }
 
     /**
@@ -481,7 +485,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     }
 
     /**
-     * @dev Internal function to increment offchain permit nonce 
+     * @dev Internal function to increment offchain permit nonce
      */
     function _incrementPermitNonce(address wallet) internal {
         _permissionNonce[wallet] += 1;
@@ -562,7 +566,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
                 )
             );
     }
-    
+
     /**
      * @dev Internal function to validate if a session is in the given merkle tree.
      */
@@ -597,7 +601,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     }
 
     /**
-     * @dev Internal function to get remaining permission usage for an operator. 
+     * @dev Internal function to get remaining permission usage for an operator.
      */
     function _getRemainingUsage(
         address wallet,

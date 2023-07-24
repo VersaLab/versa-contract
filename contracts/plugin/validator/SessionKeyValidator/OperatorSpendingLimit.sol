@@ -4,14 +4,18 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
-import "hardhat/console.sol";
-
+/**
+ * @title OperatorSpendingLimit
+ */
 abstract contract OperatorSpendingLimit {
     using BytesLib for bytes;
 
     struct SpendingLimitSetConfig {
+        // The address of the token to set the spending limit, address(0) for native token
         address token;
+        // Max allowance, 0 for unlimited
         uint256 allowance;
+        // Spent amount
         uint256 spent;
     }
 
@@ -28,15 +32,18 @@ abstract contract OperatorSpendingLimit {
         uint256 spent
     );
 
-    // ERC20 Token Method Selector
+    /// @dev ERC20 Token Method Selectors
     bytes4 internal constant TRANSFER = ERC20.transfer.selector;
     bytes4 internal constant TRANSFER_FROM = ERC20.transferFrom.selector;
     bytes4 internal constant APPROVE = ERC20.approve.selector;
     bytes4 internal constant INCREASE_ALLOWANCE = ERC20.increaseAllowance.selector;
 
-    // spendingLimit: keccack(abi.encode(operator, token)) => wallet => spendinglimit
+    /// @dev Operator's spendinglimit info, keccak256(operator, token) => wallet => spendinglimit
     mapping(bytes32 => mapping(address => SpendingLimitInfo)) _spendingLimit;
 
+    /**
+     * @dev check and update spendinglimit of an session key execution
+     */
     function _checkSpendingLimit(
         address wallet,
         address operator,
@@ -56,7 +63,6 @@ abstract contract OperatorSpendingLimit {
 
     /**
      * @dev Sets the spending limit for the caller based on the provided SpendingLimitSetConfig.
-     * @param config The SpendingLimitSetConfig to set the spending limit.
      */
     function setSpendingLimit(address operator, SpendingLimitSetConfig memory config) public virtual {
         _setSpendingLimit(msg.sender, operator, config);
@@ -64,13 +70,14 @@ abstract contract OperatorSpendingLimit {
 
     /**
      * @dev Sets spending limits for multiple tokens based on the provided SpendingLimitSetConfig array.
-     * @param configs An array of SpendingLimitSetConfig objects.
      */
     function batchSetSpendingLimit(address operator, SpendingLimitSetConfig[] memory configs) public virtual {
         _batchSetSpendingLimit(msg.sender, operator, configs);
     }
 
-    // getSpendingLimitInfo: operator => token => wallet => spendinglimit
+    /**
+     * @dev Returns the spending limit info for the operator.
+     */
     function getSpendingLimitInfo(
         address wallet,
         address operator,
@@ -81,8 +88,6 @@ abstract contract OperatorSpendingLimit {
 
     /**
      * @dev Internal function to check the spending limit for native token.
-     * @param wallet The address of the wallet.
-     * @param value The value of the transaction.
      */
     function _checkNativeTokenSpendingLimit(address wallet, address operator, uint256 value) internal {
         SpendingLimitInfo memory spendingLimitInfo = _getSpendingLimitInfo(wallet, operator, address(0));
@@ -128,8 +133,6 @@ abstract contract OperatorSpendingLimit {
 
     /**
      * @dev Internal function to check spent amount and update the spending limit information.
-     * @param token The address of the token.
-     * @param spendingLimitInfo The updated spending limit information to be stored.
      */
     function _checkAmountAndUpdate(
         address wallet,
@@ -142,7 +145,9 @@ abstract contract OperatorSpendingLimit {
         _updateSpendingLimitInfo(wallet, operator, token, spendingLimitInfo);
     }
 
-    // updateSpendingLimitInfo: operator => token => wallet => spendinglimit
+    /**
+     * @dev Internal function to update spendinglimit info of an operator.
+     */
     function _updateSpendingLimitInfo(
         address wallet,
         address operator,
@@ -152,6 +157,9 @@ abstract contract OperatorSpendingLimit {
         _spendingLimit[_getKey(operator, token)][wallet] = spendingLimitInfo;
     }
 
+    /**
+     * @dev Internal function to get spendinglimit info of an operator.
+     */
     function _getSpendingLimitInfo(
         address wallet,
         address operator,
@@ -161,8 +169,7 @@ abstract contract OperatorSpendingLimit {
     }
 
     /**
-     * @dev Sets the spending limit for the caller based on the provided SpendingLimitSetConfig.
-     * @param config The SpendingLimitSetConfig to set the spending limit.
+     * @dev Sets the spending limit for the operator based on the provided SpendingLimitSetConfig.
      */
     function _setSpendingLimit(address wallet, address operator, SpendingLimitSetConfig memory config) internal {
         SpendingLimitInfo memory spendingLimitInfo = SpendingLimitInfo({
@@ -175,7 +182,6 @@ abstract contract OperatorSpendingLimit {
 
     /**
      * @dev Sets spending limits for multiple tokens based on the provided SpendingLimitSetConfig array.
-     * @param configs An array of SpendingLimitSetConfig objects.
      */
     function _batchSetSpendingLimit(
         address wallet,

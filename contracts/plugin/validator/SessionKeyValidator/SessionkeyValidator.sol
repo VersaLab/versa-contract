@@ -127,7 +127,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     function validateSignature(
         UserOperation memory userOp,
         bytes32 userOpHash
-    ) external returns (uint256 validationData) {
+    ) external onlyEnabledValidator returns (uint256 validationData) {
         // Split on normal execute and batch normal execute
         if (bytes4(userOp.callData.slice(0, 4)) == VersaWallet.normalExecute.selector) {
             try this.validateSingleExecute(userOp, userOpHash) returns (uint256 data) {
@@ -158,7 +158,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     function validateSingleExecute(
         UserOperation memory userOp,
         bytes32 userOpHash
-    ) public returns (uint256 validationData) {
+    ) public authorized returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
         (address to, uint256 value, bytes memory data, ) = abi.decode(
             userOp.callData.slice(4, userOp.callData.length - 4),
@@ -206,7 +206,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     function validateBatchExecute(
         UserOperation memory userOp,
         bytes32 userOpHash
-    ) public returns (uint256 validationData) {
+    ) public authorized returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
         (address[] memory to, uint256[] memory value, bytes[] memory data, ) = abi.decode(
             userOp.callData.slice(4, userOp.callData.length - 4),

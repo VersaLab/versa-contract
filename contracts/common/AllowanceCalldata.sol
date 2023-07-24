@@ -23,13 +23,17 @@ library AllowanceCalldata {
      * @notice isAllowedCalldata - checks the calldata is valid corresponding the the allowed calldata conditions.
      * @param allowed The RLP encoded Allowed calldata
      * @param data The RLP encoded calldata
+     * @param value The value of the transaction
      * @dev To check the msg.value field, the first arg of data must be equal to msg.value and the first arg of allowed calldata must set rules for the value
      * @return In case of success returns true, otherwise fails or reverts
      */
-    function isAllowedCalldata(bytes memory data, bytes memory allowed) internal view returns (bool) {
+    function isAllowedCalldata(bytes memory allowed, bytes memory data, uint256 value) internal view returns (bool) {
         RLPReader.RLPItem[] memory allowedArguments = allowed.toRlpItem().toList();
         RLPReader.RLPItem[] memory arguments = data.toRlpItem().toList();
         require(allowedArguments.length == arguments.length, "Invalid arguments length");
+        if (value != RLPReader.toUint(arguments[0])) {
+            revert("msg.value not corresponding to parsed value");
+        }
         return _validateArguments(allowedArguments, arguments, false);
     }
 

@@ -64,6 +64,7 @@
     "@ethersproject/experimental": "^5.7.0",
     "@openzeppelin/contracts": "^4.9.2",
     "@openzeppelin/contracts-upgradeable": "^4.9.2",
+    "@openzeppelin/merkle-tree": "^1.0.5",
     "solidity-bytes-utils": "^0.8.0",
     "solidity-rlp": "^2.0.8"
   }

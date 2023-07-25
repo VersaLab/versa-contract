@@ -1,4 +1,4 @@
-export const mumbaiBundlerURL = "http://3.38.245.156:10011";
+export const mumbaiBundlerURL = "http://13.250.97.129/bundler/polygon-mumbai"; // "https://api.pimlico.io/v1/mumbai/rpc?apikey=0496d685-7894-41eb-aff2-3d13ccfaf302"
 export const mumbaiPaymasterURL = "http://3.38.245.156:10003/paymaster";
 export const mumbaiPaymasterAddress = "0xf9dcDD7113Fa9dC7176501631E3Ef9fb483dE02b";
 export const mumbaiUSDTAddress = "0x8478643D27DbE81d199f74f654E4b0e41d867de3";

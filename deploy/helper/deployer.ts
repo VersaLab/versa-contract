@@ -58,3 +58,10 @@ export async function deployMultisigValidator() {
     console.log("MultisigValidator deployed to: ", multisigValidator.address);
     return multisigValidator;
 }
+
+export async function deploySessionKeyValidator() {
+    const sessionKeyValdiator = await ethers.getContractFactory("SessionKeyValidator");
+    const sessionKeyValidator = await sessionKeyValdiator.deploy();
+    console.log("SessionKeyValidator deployed to: ", sessionKeyValidator.address);
+    return sessionKeyValidator;
+}

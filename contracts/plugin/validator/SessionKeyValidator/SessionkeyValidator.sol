@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "../../../common/SelfAuthorized.sol";
-import "./OperatorSpendingLimit.sol";
+import "./OperatorSpendingAllowance.sol";
 import "../BaseValidator.sol";
 import "../../../common/AllowanceCalldata.sol";
 import "../../../VersaWallet.sol";
@@ -72,7 +72,7 @@ library SessionLib {
  * @dev Contract that handles validation of user operations using session keys.
  * This contract is inspired by https://github.com/permissivelabs/core
  */
-contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthorized {
+contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAuthorized {
     using AllowanceCalldata for bytes;
     using ECDSA for bytes32;
     using SessionLib for Session;
@@ -173,10 +173,10 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
             bytes memory operatorSignature,
             bytes memory offchainPermitSignature,
             OperatorPermission memory permission, // only needed for offchain permit
-            SpendingLimitSetConfig[] memory configs // only needed for offchain permit
+            SpendingAllowanceConfig[] memory config // only needed for offchain permit
         ) = abi.decode(
                 userOp.signature.slice(20, userOp.signature.length - 20),
-                (bytes32[], address, Session, bytes, bytes, bytes, OperatorPermission, SpendingLimitSetConfig[])
+                (bytes32[], address, Session, bytes, bytes, bytes, OperatorPermission, SpendingAllowanceConfig[])
             );
         _validateSignature(
             offchainPermitSignature,
@@ -185,7 +185,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
             operator,
             userOpHash,
             permission,
-            configs
+            config
         );
         _validatePaymaster(userOp.sender, operator, userOp.paymasterAndData);
         _validateSession(operator, userOp, proof, session, rlpCalldata, to, value, data);
@@ -221,10 +221,10 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
             bytes memory operatorSignature,
             bytes memory offchainPermitSignature,
             OperatorPermission memory permission, // only needed for offchain permit
-            SpendingLimitSetConfig[] memory configs // only needed for offchain permit
+            SpendingAllowanceConfig[] memory config // only needed for offchain permit
         ) = abi.decode(
                 userOp.signature.slice(20, userOp.signature.length - 20),
-                (bytes32[][], address, Session[], bytes[], bytes, bytes, OperatorPermission, SpendingLimitSetConfig[])
+                (bytes32[][], address, Session[], bytes[], bytes, bytes, OperatorPermission, SpendingAllowanceConfig[])
             );
         _validateSignature(
             offchainPermitSignature,
@@ -233,7 +233,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
             operator,
             userOpHash,
             permission,
-            configs
+            config
         );
         _validatePaymaster(userOp.sender, operator, userOp.paymasterAndData);
         _validateMultipleSessions(operator, userOp, proof, session, rlpCalldata, to, value, data);
@@ -243,25 +243,23 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
     }
 
     /**
-     * @dev Sets the spending limit for the caller based on the provided SpendingLimitSetConfig.
-     * @param config The SpendingLimitSetConfig to set the spending limit.
+     * @dev Sets the spending allowance for the operator.
      */
-    function setSpendingLimit(
+    function setAllowance(
         address operator,
-        SpendingLimitSetConfig memory config
+        SpendingAllowanceConfig memory config
     ) public override onlyEnabledValidator {
-        super.setSpendingLimit(operator, config);
+        super.setAllowance(operator, config);
     }
 
     /**
-     * @dev Sets spending limits for multiple tokens based on the provided SpendingLimitSetConfig array.
-     * @param configs An array of SpendingLimitSetConfig objects.
+     * @dev Sets spending limits for multiple tokens for the operator.
      */
-    function batchSetSpendingLimit(
+    function batchSetAllowance(
         address operator,
-        SpendingLimitSetConfig[] memory configs
+        SpendingAllowanceConfig[] memory config
     ) public override onlyEnabledValidator {
-        super.batchSetSpendingLimit(operator, configs);
+        super.batchSetAllowance(operator, config);
     }
 
     /**
@@ -336,10 +334,10 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
         address operator,
         bytes32 userOpHash,
         OperatorPermission memory permission,
-        SpendingLimitSetConfig[] memory configs
+        SpendingAllowanceConfig[] memory config
     ) internal {
         if (ownerSignature.length > 0) {
-            bytes32 spendingLimitConfigHash = keccak256(abi.encode(configs));
+            bytes32 spendingLimitConfigHash = keccak256(abi.encode(config));
             _validateOffchainPermitSignature(
                 wallet,
                 operator,
@@ -349,7 +347,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
             );
             _incrementPermitNonce(wallet);
             _setOperatorPermission(wallet, operator, permission);
-            _batchSetSpendingLimit(wallet, operator, configs);
+            _batchSetAllowance(wallet, operator, config);
         }
         // verify operatorSignature
         _validateOperatorSiganture(operator, operatorSignature, userOpHash);
@@ -376,7 +374,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingLimit, SelfAuthor
         bytes32 sessionHash = session.hash();
         _validateSessionRoot(proof, _getSessionRoot(userOp.sender, operator), sessionHash);
         // check spending limit
-        _checkSpendingLimit(userOp.sender, operator, to, data, value);
+        _checkAllowance(userOp.sender, operator, to, data, value);
         // check arguments
         _checkArguments(session, to, data, value, rlpCalldata);
         emit SessionUsed(userOp.sender, operator, sessionHash);

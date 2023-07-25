@@ -8,11 +8,15 @@ import {
     CompatibilityFallbackHandler__factory,
 } from "../typechain-types";
 
-export async function deployVersaWallet(options: { signer: SignerWithAddress; entryPoint: string }) {
-    const {
+export async function deployVersaWallet(options: {
+    signer: SignerWithAddress;
+    entryPoint: string;
+    sudoValidatorAddr?: string;
+}) {
+    let {
         signer,
         entryPoint,
-        // sudoValidator,
+        sudoValidatorAddr = ethers.constants.AddressZero,
         // sudoValidatorInitData,
         // hooks = [],
         // hooksInitData = [],
@@ -29,12 +33,15 @@ export async function deployVersaWallet(options: { signer: SignerWithAddress; en
         fallbackHandler.address
     );
 
-    let sudoValidator = await new MockValidator__factory(signer).deploy();
+    sudoValidatorAddr =
+        sudoValidatorAddr == ethers.constants.AddressZero
+            ? (await new MockValidator__factory(signer).deploy()).address
+            : sudoValidatorAddr;
 
-    let tx = await versaFactory.createAccount([sudoValidator.address], ["0x"], [1], [], [], [], [], 0);
+    let tx = await versaFactory.createAccount([sudoValidatorAddr], ["0x"], [1], [], [], [], [], 0);
     await tx.wait();
 
-    let walletAddress = await versaFactory.getAddress([sudoValidator.address], ["0x"], [1], [], [], [], [], 0);
+    let walletAddress = await versaFactory.getAddress([sudoValidatorAddr], ["0x"], [1], [], [], [], [], 0);
     return VersaWallet__factory.connect(walletAddress, signer);
 }
 

@@ -299,32 +299,6 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     }
 
     /**
-     * @dev View function to validate offchain permit signature
-     */
-    function validateOffchainPermit(
-        address wallet,
-        address operator,
-        bytes32 permissionHash,
-        bytes32 spendingLimitConfigHash,
-        bytes memory ownerSignature
-    ) external view returns (bool) {
-        _validateOffchainPermitSignature(wallet, operator, permissionHash, spendingLimitConfigHash, ownerSignature);
-        return true;
-    }
-
-    /**
-     * @dev Pure function to validate if the given session is in the given merkle tree
-     */
-    function validateSessionRoot(
-        bytes32[] memory proof,
-        bytes32 sessionRoot,
-        Session memory session
-    ) external pure returns (bool) {
-        _validateSessionRoot(proof, sessionRoot, session.hash());
-        return true;
-    }
-
-    /**
      * @dev Validate offchain permit signature(if provided) and operator signature.
      */
     function _validateSignature(
@@ -410,14 +384,14 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
      * @dev Check if the operator has enough gas and times to use and update usage.
      */
     function _checkAndUpdateUsage(address operator, UserOperation memory userOp, uint256 sessionsToUse) internal {
-        (uint256 gasLeft, uint256 timesLeft) = _getRemainingUsage(userOp.sender, operator);
+        (uint128 gasLeft, uint128 timesLeft) = _getRemainingUsage(userOp.sender, operator);
         uint256 gasFee = _computeGasFee(userOp);
-        require(gasLeft > gasFee && timesLeft > 0, "SessionKeyValidator: exceed usage");
+        require(gasLeft >= gasFee && timesLeft >= sessionsToUse, "SessionKeyValidator: exceed usage");
         if (gasLeft != type(uint128).max) {
-            gasLeft -= gasFee;
+            gasLeft -= uint128(gasFee);
         }
         if (timesLeft != type(uint128).max) {
-            timesLeft -= sessionsToUse;
+            timesLeft -= uint128(sessionsToUse);
         }
         _setRemaningUsage(userOp.sender, operator, gasLeft, timesLeft);
     }
@@ -457,15 +431,17 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
         bytes memory data,
         uint256 value,
         bytes memory rlpCalldata
-    ) public view {
+    ) internal view {
         // Parse rlpCalldata to abi encoded data, the first 32 bytes is native token value
         bytes memory callDataWithValue = rlpCalldata.rlpToABI();
-        // Verify rlpCalldata is encoded from execution data
-        require(
-            keccak256(data.slice(4, data.length - 4)) ==
-                keccak256(callDataWithValue.slice(32, callDataWithValue.length - 32)),
-            "SessionKeyValidator: rlpCalldata is not equally encoded from execution data"
-        );
+        // If the target function has arguments, verify rlpCalldata is encoded from function arguments
+        if (data.length > 4) {
+            require(
+                keccak256(data.slice(4, data.length - 4)) ==
+                    keccak256(callDataWithValue.slice(32, callDataWithValue.length - 32)),
+                "SessionKeyValidator: rlpCalldata is not equally encoded from execution data"
+            );
+        }
         require(session.to == to, "SessionKeyValidator: invalid to");
         require(session.selector == bytes4(data), "SessionKeyValidator: invalid selector");
         require(
@@ -592,8 +568,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     /**
      * @dev Set remaining permission usage for an operator.
      */
-    function _setRemaningUsage(address wallet, address operator, uint256 gasUsage, uint256 times) internal {
-        require(times | gasUsage <= type(uint128).max, "SessionKeyValidator: invalid usage");
+    function _setRemaningUsage(address wallet, address operator, uint128 gasUsage, uint128 times) internal {
         _operatorPermission[operator][wallet].gasRemaining = uint128(gasUsage);
         _operatorPermission[operator][wallet].timesRemaining = uint128(times);
     }
@@ -604,7 +579,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     function _getRemainingUsage(
         address wallet,
         address operator
-    ) internal view returns (uint256 gasUsage, uint256 times) {
+    ) internal view returns (uint128 gasUsage, uint128 times) {
         gasUsage = _operatorPermission[operator][wallet].gasRemaining;
         times = _operatorPermission[operator][wallet].timesRemaining;
     }

@@ -713,10 +713,6 @@ describe("MultiSigValidator", () => {
             "0000000000000000000000000000000000000000000000000000000000000041" +
             "00" + // r, s, v
             "0000000000000000000000000000000000000000000000000000000000000055"; // length: 20 bytes validator address + 65 bytes signature
-
-        console.log("========717=======");
-        console.log("raw siganture", sign);
-        console.log("offchain guardian: ", wallet_2.address);
         signature = hexConcat([signature, contractGuardian.address, sign]);
         await multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1);
     });

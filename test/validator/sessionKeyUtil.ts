@@ -51,26 +51,14 @@ export function getSessionSigleExecuteSignature(
     operatorAddress: string,
     session: string[],
     rlpCalldata: string,
-    operatorSignature: string,
+    operatorSignature: string
 ) {
     let abiCoder = new AbiCoder();
     const signature = hexConcat([
         sessionKeyValidatorAddress,
         abiCoder.encode(
-            [
-                "bytes32[]",
-                "address",
-                "tuple(address, bytes4, bytes)",
-                "bytes",
-                "bytes"
-            ],
-            [
-                proof,
-                operatorAddress,
-                session,
-                rlpCalldata,
-                operatorSignature
-            ]
+            ["bytes32[]", "address", "tuple(address, bytes4, bytes)", "bytes", "bytes"],
+            [proof, operatorAddress, session, rlpCalldata, operatorSignature]
         ),
     ]);
     return signature;
@@ -88,20 +76,8 @@ export function getSessionBatchExecuteSignature(
     const signature = hexConcat([
         sessionKeyValidatorAddress,
         abiCoder.encode(
-            [
-                "bytes32[][]",
-                "address",
-                "tuple(address, bytes4, bytes)[]",
-                "bytes[]",
-                "bytes"
-            ],
-            [
-                proof,
-                operatorAddress,
-                session,
-                rlpCalldata,
-                operatorSignature
-            ]
+            ["bytes32[][]", "address", "tuple(address, bytes4, bytes)[]", "bytes[]", "bytes"],
+            [proof, operatorAddress, session, rlpCalldata, operatorSignature]
         ),
     ]);
     return signature;

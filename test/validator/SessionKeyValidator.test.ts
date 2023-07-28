@@ -1196,7 +1196,7 @@ describe("SessionKeyValidator", function () {
                 operator.address,
                 session,
                 rlpTransaferData,
-                operatorSignature,
+                operatorSignature
             );
             op.signature = signature;
             const validationData = await wallet.callStatic.validateUserOp(op, userOpHash, 0);

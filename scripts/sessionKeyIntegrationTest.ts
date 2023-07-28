@@ -138,13 +138,13 @@ async function integration_test() {
 
     let setPermission = sessionKeyValidator.interface.encodeFunctionData("setOperatorPermission", [
         operator.address,
-        permission
-    ])
+        permission,
+    ]);
 
     let setAllowance = sessionKeyValidator.interface.encodeFunctionData("setAllowance", [
         operator.address,
-        erc20SpendingLimitConfig
-    ])
+        erc20SpendingLimitConfig,
+    ]);
 
     calldata = wallet.interface.encodeFunctionData("batchSudoExecute", [
         [walletAddress, sessionKeyValidatorAddress, sessionKeyValidatorAddress],
@@ -213,7 +213,7 @@ async function integration_test() {
         sessionToUse,
         rlpTransaferData,
         operatorSignature
-    )
+    );
 
     userOp.signature = signature;
 

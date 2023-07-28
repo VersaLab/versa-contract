@@ -25,11 +25,11 @@ Our contract architecture is designed as depicted in the following diagram：
 
 ![](https://hackmd.io/_uploads/H1A6kJTt3.png)
 
-> In Versa Wallet, we have five main components: EntryPointManager, ValidatorManager, HooksManager, ModuleManager and FallbackManager.
-> 
-> EntryPointManager is responsible for implementing compatibility with the ERC-4337 standard. ValidatorManager, ModuleManager, and HooksManager serve as powerful management components for Versa's comprehensive plug-in system. FallbackManager empowers the Versa wallet with unparalleled extensibility, enabling the implementation of advanced native functionalities.
-> 
-> The following diagram illustrates the complete lifecycle of different type of transactions in the Versa wallet based on the ERC-4337 protocol:
+In Versa Wallet, we have five main components: EntryPointManager, ValidatorManager, HooksManager, ModuleManager and FallbackManager.
+
+EntryPointManager is responsible for implementing compatibility with the ERC-4337 standard. ValidatorManager, ModuleManager, and HooksManager serve as powerful management components for Versa's comprehensive plug-in system. FallbackManager empowers the Versa wallet with unparalleled extensibility, enabling the implementation of advanced native functionalities.
+
+The following diagram illustrates the complete lifecycle of different type of transactions in the Versa wallet based on the ERC-4337 protocol:
 
 ![](https://hackmd.io/_uploads/BJH1IqRt2.png)
 

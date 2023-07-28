@@ -12,6 +12,7 @@ import { getUserOpHash } from "../test/utils";
 import axios from "axios";
 import { hex } from "@openzeppelin/merkle-tree/dist/bytes";
 import fs from "fs";
+import { getSessionBatchExecuteSignature } from "../test/validator/sessionKeyUtil";
 
 const bundlerURL = config.mumbaiBundlerURL;
 const paymasterURL = config.mumbaiPaymasterURL;
@@ -101,19 +102,8 @@ async function integration_test() {
         2,
         "0x",
     ]);
-    calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, enableSessionKeyValidator, 0]);
-    userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
-    await estimateGasAndSendUserOpAndGetReceipt({
-        bundlerURL,
-        userOp,
-        entryPoint: entryPointAddress,
-        validator: ecdsaValidator,
-        signers: [signer1],
-    });
 
-    console.log("test using session key...");
     let operator = signer2;
-    let owner = signer1;
     // set operator permission
     let allowedArguments = [
         [EQ, abiCoder.encode(["uint256"], [0])], // native token amount
@@ -146,46 +136,32 @@ async function integration_test() {
         allowance: parseUnits("1", 6),
     };
 
-    //  construct offchain permit
-    const permissionHash = keccak256(
-        abiCoder.encode(
-            ["bytes32", "address", "uint48", "uint48", "uint128", "uint128"],
-            [
-                permission.sessionRoot,
-                permission.paymaster,
-                permission.validUntil,
-                permission.validAfter,
-                permission.gasRemaining,
-                permission.timesRemaining,
-            ]
-        )
-    );
+    let setPermission = sessionKeyValidator.interface.encodeFunctionData("setOperatorPermission", [
+        operator.address,
+        permission
+    ])
 
-    const spendingLimitConfigHash = keccak256(
-        abiCoder.encode(["tuple(address token, uint256 allowance)[]"], [[erc20SpendingLimitConfig]])
-    );
+    let setAllowance = sessionKeyValidator.interface.encodeFunctionData("setAllowance", [
+        operator.address,
+        erc20SpendingLimitConfig
+    ])
 
-    const chainId = await ethers.provider.getNetwork().then((network) => network.chainId);
-    const nonce = await sessionKeyValidator.getPermitNonce(wallet.address);
-    const permitMessageHash = keccak256(
-        abiCoder.encode(
-            ["address", "address", "bytes32", "bytes32", "uint256", "uint256"],
-            [wallet.address, operator.address, permissionHash, spendingLimitConfigHash, chainId, nonce]
-        )
-    );
+    calldata = wallet.interface.encodeFunctionData("batchSudoExecute", [
+        [walletAddress, sessionKeyValidatorAddress, sessionKeyValidatorAddress],
+        [0, 0, 0],
+        [enableSessionKeyValidator, setPermission, setAllowance],
+        [0, 0, 0],
+    ]);
+    userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: ecdsaValidator,
+        signers: [signer1],
+    });
 
-    const siganture = await owner.signMessage(arrayify(permitMessageHash));
-    const ownerSignature = hexConcat([ecdsaValidator, siganture]);
-    console.log(
-        "valdiate offchain permit",
-        await sessionKeyValidator.validateOffchainPermit(
-            wallet.address,
-            operator.address,
-            permissionHash,
-            spendingLimitConfigHash,
-            ownerSignature
-        )
-    );
+    console.log("test using session key...");
 
     const targetERC20Contract = await ethers.getContractAt("IERC20", targetERC20);
     if ((await targetERC20Contract.balanceOf(walletAddress)).lt(parseUnits("2", 6))) {
@@ -230,31 +206,14 @@ async function integration_test() {
     const sessionToUse = [session];
 
     // construct signature
-    const signature = hexConcat([
+    const signature = getSessionBatchExecuteSignature(
         sessionKeyValidatorAddress,
-        abiCoder.encode(
-            [
-                "bytes32[][]",
-                "address",
-                "tuple(address, bytes4, bytes)[]",
-                "bytes[]",
-                "bytes",
-                "bytes",
-                "tuple(bytes32 sessionRoot, address paymaster, uint48 validUntil, uint48 validAfter, uint128 gasRemaining, uint128 timesRemaining)",
-                "tuple(address token, uint256 allowance)[]",
-            ],
-            [
-                proof,
-                operator.address,
-                sessionToUse,
-                rlpTransaferData,
-                operatorSignature,
-                ownerSignature,
-                permission,
-                [erc20SpendingLimitConfig],
-            ]
-        ),
-    ]);
+        proof,
+        operator.address,
+        sessionToUse,
+        rlpTransaferData,
+        operatorSignature
+    )
 
     userOp.signature = signature;
 
@@ -273,18 +232,6 @@ async function integration_test() {
             },
         ],
     };
-
-    let constructData: ConstructData = {
-        wallet: walletAddress,
-        operator: operator.address,
-        permission: permission,
-        sessions: [session],
-        permitSignature: signature,
-        chainId: chainId,
-        txData: txData,
-    };
-    console.log("constructData", constructData);
-    fs.writeFileSync("constructData.json", JSON.stringify(constructData, null, 4));
 
     console.log("============= send userOp =====================");
     let ret = await axios.post(bundlerURL, {

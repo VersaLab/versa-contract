@@ -24,17 +24,6 @@ contract MockSessionKeyValidator is SessionKeyValidator {
         return this.validateBatchExecute(userOp, userOpHash);
     }
 
-    function testValidateOffchainPermit(
-        address wallet,
-        address operator,
-        bytes32 permissionHash,
-        bytes32 spendingLimitConfigHash,
-        bytes memory ownerSignature
-    ) external view returns (bool) {
-        _validateOffchainPermitSignature(wallet, operator, permissionHash, spendingLimitConfigHash, ownerSignature);
-        return true;
-    }
-
     function testValidateSessionRoot(
         bytes32[] memory proof,
         bytes32 sessionRoot,

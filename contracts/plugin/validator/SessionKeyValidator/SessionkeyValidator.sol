@@ -87,24 +87,10 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     /// @dev The operator permission for each wallet
     mapping(address operator => mapping(address wallet => OperatorPermission)) internal _operatorPermission;
 
-    /// @dev The offchain permit nonce for each wallet
-    mapping(address => uint256) internal _permissionNonce;
-
-    /**
-     * @dev Internal function to handle wallet initialization.
-     * Subclass must implement this function
-     * @param data The initialization data.
-     */
-    function _init(bytes memory data) internal override {}
-
-    /**
-     * @dev Internal function to handle wallet configuration clearing.
-     * Subclass must implement this function
-     */
-    function _clear() internal override {}
-
     /**
      * @dev Checks if the specified wallet has been initialized.
+     * @notice This validator is supposed to be enabled during wallet initialization without performing
+     * validator initialization.
      * @return A boolean indicating if the wallet is initialized.
      */
     function _isWalletInited(address) internal pure override returns (bool) {
@@ -170,23 +156,12 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
             address operator,
             Session memory session,
             bytes memory rlpCalldata,
-            bytes memory operatorSignature,
-            bytes memory offchainPermitSignature,
-            OperatorPermission memory permission, // only needed for offchain permit
-            SpendingAllowanceConfig[] memory config // only needed for offchain permit
+            bytes memory operatorSignature
         ) = abi.decode(
                 userOp.signature.slice(20, userOp.signature.length - 20),
-                (bytes32[], address, Session, bytes, bytes, bytes, OperatorPermission, SpendingAllowanceConfig[])
+                (bytes32[], address, Session, bytes, bytes)
             );
-        _validateSignature(
-            offchainPermitSignature,
-            operatorSignature,
-            userOp.sender,
-            operator,
-            userOpHash,
-            permission,
-            config
-        );
+        _validateOperatorSiganture(operator, operatorSignature, userOpHash);
         _validatePaymaster(userOp.sender, operator, userOp.paymasterAndData);
         _validateSession(operator, userOp, proof, session, rlpCalldata, to, value, data);
         // check and update usage
@@ -218,23 +193,13 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
             address operator,
             Session[] memory session,
             bytes[] memory rlpCalldata,
-            bytes memory operatorSignature,
-            bytes memory offchainPermitSignature,
-            OperatorPermission memory permission, // only needed for offchain permit
-            SpendingAllowanceConfig[] memory config // only needed for offchain permit
+            bytes memory operatorSignature
         ) = abi.decode(
                 userOp.signature.slice(20, userOp.signature.length - 20),
-                (bytes32[][], address, Session[], bytes[], bytes, bytes, OperatorPermission, SpendingAllowanceConfig[])
+                (bytes32[][], address, Session[], bytes[], bytes)
             );
-        _validateSignature(
-            offchainPermitSignature,
-            operatorSignature,
-            userOp.sender,
-            operator,
-            userOpHash,
-            permission,
-            config
-        );
+        _validateOperatorSiganture(operator, operatorSignature, userOpHash);
+
         _validatePaymaster(userOp.sender, operator, userOp.paymasterAndData);
         _validateMultipleSessions(operator, userOp, proof, session, rlpCalldata, to, value, data);
         // check and update usage
@@ -277,54 +242,6 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
         address operator
     ) external view returns (OperatorPermission memory permission) {
         permission = _operatorPermission[operator][wallet];
-    }
-
-    /**
-     * @dev View function to get permit message hash
-     */
-    function getPermitMessessageHash(
-        address wallet,
-        address operator,
-        bytes32 permissionHash,
-        bytes32 spendingLimitConfigHash
-    ) external view returns (bytes32) {
-        return _getPermitMessageHash(wallet, operator, permissionHash, spendingLimitConfigHash);
-    }
-
-    /**
-     * @dev View function to get offchain permit nonce
-     */
-    function getPermitNonce(address wallet) external view returns (uint256) {
-        return _getPermitNonce(wallet);
-    }
-
-    /**
-     * @dev Validate offchain permit signature(if provided) and operator signature.
-     */
-    function _validateSignature(
-        bytes memory ownerSignature,
-        bytes memory operatorSignature,
-        address wallet,
-        address operator,
-        bytes32 userOpHash,
-        OperatorPermission memory permission,
-        SpendingAllowanceConfig[] memory config
-    ) internal {
-        if (ownerSignature.length > 0) {
-            bytes32 spendingLimitConfigHash = keccak256(abi.encode(config));
-            _validateOffchainPermitSignature(
-                wallet,
-                operator,
-                permission.hash(),
-                spendingLimitConfigHash,
-                ownerSignature
-            );
-            _incrementPermitNonce(wallet);
-            _setOperatorPermission(wallet, operator, permission);
-            _batchSetAllowance(wallet, operator, config);
-        }
-        // verify operatorSignature
-        _validateOperatorSiganture(operator, operatorSignature, userOpHash);
     }
 
     /**
@@ -397,32 +314,6 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     }
 
     /**
-     * @dev Validate the signature of the offchain permit.
-     */
-    function _validateOffchainPermitSignature(
-        address wallet,
-        address operator,
-        bytes32 permissionHash,
-        bytes32 spendingLimitConfigHash,
-        bytes memory ownerSignature
-    ) internal view {
-        address validator = ownerSignature.slice(0, 20).toAddress(0);
-        require(
-            VersaWallet(payable(wallet)).getValidatorType(validator) == ValidatorManager.ValidatorType.Sudo,
-            "SessionKeyValidator: invalid validator"
-        );
-        bytes32 messageHash = _getPermitMessageHash(wallet, operator, permissionHash, spendingLimitConfigHash);
-        require(
-            IValidator(validator).isValidSignature(
-                messageHash,
-                ownerSignature.slice(20, ownerSignature.length - 20),
-                wallet
-            ),
-            "SessionKeyValidator: invalid offchain signature"
-        );
-    }
-
-    /**
      * @dev Check if the arguments of the executiondata is in the range of pre-set allowed arguments.
      */
     function _checkArguments(
@@ -456,13 +347,6 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     function _setOperatorPermission(address wallet, address operator, OperatorPermission memory permission) internal {
         _operatorPermission[operator][wallet] = permission;
         emit OperatorPermissionSet(wallet, operator, permission);
-    }
-
-    /**
-     * @dev Internal function to increment offchain permit nonce
-     */
-    function _incrementPermitNonce(address wallet) internal {
-        _permissionNonce[wallet] += 1;
     }
 
     /**
@@ -510,35 +394,6 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     ) internal view returns (uint48 validUnitil, uint48 validAfter) {
         validUnitil = _operatorPermission[operator][wallet].validUntil;
         validAfter = _operatorPermission[operator][wallet].validAfter;
-    }
-
-    /**
-     * @dev Internal function to get offchain permit nonce
-     */
-    function _getPermitNonce(address wallet) internal view returns (uint256) {
-        return _permissionNonce[wallet];
-    }
-
-    /**
-     * @dev Internal view function to get offchain permit message hash
-     */
-    function _getPermitMessageHash(
-        address wallet,
-        address operator,
-        bytes32 permissionHash,
-        bytes32 spendingLimitConfigHash
-    ) internal view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    wallet,
-                    operator,
-                    permissionHash,
-                    spendingLimitConfigHash,
-                    _getChainId(),
-                    _getPermitNonce(wallet)
-                )
-            );
     }
 
     /**

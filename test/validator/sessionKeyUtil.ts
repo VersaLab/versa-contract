@@ -44,44 +44,6 @@ export function buildSession(sessionItem: Session) {
     ];
     return session;
 }
-export function getPermissionHash(permission: Permission) {
-    let abiCoder = new AbiCoder();
-    return keccak256(
-        abiCoder.encode(
-            ["bytes32", "address", "uint48", "uint48", "uint128", "uint128"],
-            [
-                permission.sessionRoot,
-                permission.paymaster,
-                permission.validUntil,
-                permission.validAfter,
-                permission.gasRemaining,
-                permission.timesRemaining,
-            ]
-        )
-    );
-}
-
-export function getSpendingAllowanceConfigHash(spendingLimits: SpendingLimit[]) {
-    let abiCoder = new AbiCoder();
-    return keccak256(abiCoder.encode(["tuple(address token, uint256 allowance)[]"], [spendingLimits]));
-}
-
-export function getPermitMessageHash(
-    walletAddress: string,
-    operatorAddress: string,
-    permissionHash: string,
-    spendingLimitConfigHash: string,
-    chainId: number,
-    nonce: number
-) {
-    let abiCoder = new AbiCoder();
-    return keccak256(
-        abiCoder.encode(
-            ["address", "address", "bytes32", "bytes32", "uint256", "uint256"],
-            [walletAddress, operatorAddress, permissionHash, spendingLimitConfigHash, chainId, nonce]
-        )
-    );
-}
 
 export function getSessionSigleExecuteSignature(
     sessionKeyValidatorAddress: string,
@@ -90,9 +52,6 @@ export function getSessionSigleExecuteSignature(
     session: string[],
     rlpCalldata: string,
     operatorSignature: string,
-    ownerSignature: string,
-    permission: Permission,
-    spendingLimits: SpendingLimit[]
 ) {
     let abiCoder = new AbiCoder();
     const signature = hexConcat([
@@ -103,20 +62,14 @@ export function getSessionSigleExecuteSignature(
                 "address",
                 "tuple(address, bytes4, bytes)",
                 "bytes",
-                "bytes",
-                "bytes",
-                "tuple(bytes32 sessionRoot, address paymaster, uint48 validUntil, uint48 validAfter, uint128 gasRemaining, uint128 timesRemaining)",
-                "tuple(address token, uint256 allowance)[]",
+                "bytes"
             ],
             [
                 proof,
                 operatorAddress,
                 session,
                 rlpCalldata,
-                operatorSignature,
-                ownerSignature,
-                permission,
-                spendingLimits,
+                operatorSignature
             ]
         ),
     ]);
@@ -129,10 +82,7 @@ export function getSessionBatchExecuteSignature(
     operatorAddress: string,
     session: string[][],
     rlpCalldata: string[],
-    operatorSignature: string,
-    ownerSignature: string,
-    permission: Permission,
-    spendingLimits: SpendingLimit[]
+    operatorSignature: string
 ) {
     let abiCoder = new AbiCoder();
     const signature = hexConcat([
@@ -143,20 +93,14 @@ export function getSessionBatchExecuteSignature(
                 "address",
                 "tuple(address, bytes4, bytes)[]",
                 "bytes[]",
-                "bytes",
-                "bytes",
-                "tuple(bytes32 sessionRoot, address paymaster, uint48 validUntil, uint48 validAfter, uint128 gasRemaining, uint128 timesRemaining)",
-                "tuple(address token, uint256 allowance)[]",
+                "bytes"
             ],
             [
                 proof,
                 operatorAddress,
                 session,
                 rlpCalldata,
-                operatorSignature,
-                ownerSignature,
-                permission,
-                spendingLimits,
+                operatorSignature
             ]
         ),
     ]);

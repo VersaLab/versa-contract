@@ -12,7 +12,7 @@ import { getUserOpHash } from "../test/utils";
 import axios from "axios";
 import { hex } from "@openzeppelin/merkle-tree/dist/bytes";
 import fs from "fs";
-import { getSessionBatchExecuteSignature } from "../test/validator/sessionKeyUtil";
+import { getSessionBatchExecuteSignature, buildSessionTree } from "../test/validator/sessionKeyUtil";
 
 const bundlerURL = config.mumbaiBundlerURL;
 const paymasterURL = config.mumbaiPaymasterURL;
@@ -86,13 +86,13 @@ async function integration_test() {
     console.log("============deploy new wallet=================");
     let calldata = wallet.interface.encodeFunctionData("normalExecute", [signer2.address, 0, "0x", 0]);
     let userOp = await generateUserOp({ signer: signer1, walletAddress: walletAddress, callData: calldata, initCode });
-    await estimateGasAndSendUserOpAndGetReceipt({
-        bundlerURL,
-        userOp,
-        entryPoint: entryPointAddress,
-        validator: ecdsaValidator,
-        signers: [signer1],
-    });
+    // await estimateGasAndSendUserOpAndGetReceipt({
+    //     bundlerURL,
+    //     userOp,
+    //     entryPoint: entryPointAddress,
+    //     validator: ecdsaValidator,
+    //     signers: [signer1],
+    // });
 
     console.log("============ sessionkey validator =============");
     const sessionKeyValidator = await ethers.getContractAt("SessionKeyValidator", sessionKeyValidatorAddress);
@@ -115,51 +115,42 @@ async function integration_test() {
         targetERC20,
         ethers.utils.id("transfer(address,uint256)").substring(0, 10),
         RLP.encode(allowedArguments),
+        ethers.constants.AddressZero,
+        0,
+        0,
+        1,
     ];
 
     let leaves = [session];
-    const tree = StandardMerkleTree.of(leaves, ["address", "bytes4", "bytes"]);
+    const tree = buildSessionTree(leaves);
     const sessionRoot = tree.root;
     const proof = [tree.getProof(session)];
 
-    const permission: Permission = {
-        sessionRoot: sessionRoot,
-        paymaster: ethers.constants.AddressZero,
-        validUntil: 0,
-        validAfter: 0,
-        gasRemaining: MAX_UINT128,
-        timesRemaining: MAX_UINT128,
-    };
-
-    const erc20SpendingLimitConfig: SpendingLimit = {
-        token: targetERC20,
-        allowance: parseUnits("1", 6),
-    };
-
-    let setPermission = sessionKeyValidator.interface.encodeFunctionData("setOperatorPermission", [
+    const setSessionRoot = sessionKeyValidator.interface.encodeFunctionData("setSessionRoot", [
         operator.address,
-        permission,
+        sessionRoot,
     ]);
 
-    let setAllowance = sessionKeyValidator.interface.encodeFunctionData("setAllowance", [
+    const gasFee = parseEther("1");
+    const setOperatorRemainingGas = sessionKeyValidator.interface.encodeFunctionData("setOperatorRemainingGas", [
         operator.address,
-        erc20SpendingLimitConfig,
+        gasFee,
     ]);
 
     calldata = wallet.interface.encodeFunctionData("batchSudoExecute", [
         [walletAddress, sessionKeyValidatorAddress, sessionKeyValidatorAddress],
         [0, 0, 0],
-        [enableSessionKeyValidator, setPermission, setAllowance],
+        [enableSessionKeyValidator, setSessionRoot, setOperatorRemainingGas],
         [0, 0, 0],
     ]);
     userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
-    await estimateGasAndSendUserOpAndGetReceipt({
-        bundlerURL,
-        userOp,
-        entryPoint: entryPointAddress,
-        validator: ecdsaValidator,
-        signers: [signer1],
-    });
+    // await estimateGasAndSendUserOpAndGetReceipt({
+    //     bundlerURL,
+    //     userOp,
+    //     entryPoint: entryPointAddress,
+    //     validator: ecdsaValidator,
+    //     signers: [signer1],
+    // });
 
     console.log("test using session key...");
 

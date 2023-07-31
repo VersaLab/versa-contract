@@ -3,25 +3,16 @@ import { hexConcat, hexlify, RLP, keccak256 } from "ethers/lib/utils";
 import { string } from "hardhat/internal/core/params/argumentTypes";
 import { AbiCoder } from "ethers/lib/utils";
 import { ethers } from "hardhat";
-
-export interface SpendingLimit {
-    token: string;
-    allowance: BigNumber | number;
-}
+import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
 export interface Session {
     to: string;
     selector: string;
     allowedArguments: string[][];
-}
-
-export interface Permission {
-    sessionRoot: string;
     paymaster: string;
-    validUntil: number;
-    validAfter: number;
-    gasRemaining: BigNumber;
-    timesRemaining: BigNumber;
+    validUntil: number | BigNumber;
+    validAfter: number | BigNumber;
+    timesLimit: number | BigNumber;
 }
 
 type PrefixValue = "0x00" | "0x01" | "0x02" | "0x03" | "0x04" | "0x05" | "0x06";
@@ -41,15 +32,61 @@ export function buildSession(sessionItem: Session) {
         sessionItem.to,
         ethers.utils.id(sessionItem.selector).substring(0, 10),
         RLP.encode(sessionItem.allowedArguments),
+        sessionItem.paymaster,
+        sessionItem.validUntil,
+        sessionItem.validAfter,
+        sessionItem.timesLimit,
     ];
     return session;
+}
+
+export function getSession(options: {
+    to?: string;
+    selector?: string;
+    allowedArguments?: string;
+    paymaster?: string;
+    validUntil?: number | BigNumber;
+    validAfter?: number | BigNumber;
+    timesLimit?: number | BigNumber;
+}) {
+    const {
+        to = ethers.constants.AddressZero,
+        selector = "0x00000000",
+        allowedArguments = "0x",
+        paymaster = ethers.constants.AddressZero,
+        validUntil = 0,
+        validAfter = 0,
+        timesLimit = 0,
+    } = options;
+    return {
+        to,
+        selector,
+        allowedArguments,
+        paymaster,
+        validUntil,
+        validAfter,
+        timesLimit,
+    };
+}
+
+export function buildSessionTree(leaves: any) {
+    const tree = StandardMerkleTree.of(leaves, [
+        "address",
+        "bytes4",
+        "bytes",
+        "address",
+        "uint48",
+        "uint48",
+        "uint256",
+    ]);
+    return tree;
 }
 
 export function getSessionSigleExecuteSignature(
     sessionKeyValidatorAddress: string,
     proof: string[],
     operatorAddress: string,
-    session: string[],
+    session: (string | number | BigNumber)[],
     rlpCalldata: string,
     operatorSignature: string
 ) {
@@ -57,7 +94,13 @@ export function getSessionSigleExecuteSignature(
     const signature = hexConcat([
         sessionKeyValidatorAddress,
         abiCoder.encode(
-            ["bytes32[]", "address", "tuple(address, bytes4, bytes)", "bytes", "bytes"],
+            [
+                "bytes32[]",
+                "address",
+                "tuple(address, bytes4, bytes, address, uint48, uint48, uint256)",
+                "bytes",
+                "bytes",
+            ],
             [proof, operatorAddress, session, rlpCalldata, operatorSignature]
         ),
     ]);
@@ -68,7 +111,7 @@ export function getSessionBatchExecuteSignature(
     sessionKeyValidatorAddress: string,
     proof: string[][],
     operatorAddress: string,
-    session: string[][],
+    session: (string | number | BigNumber)[][],
     rlpCalldata: string[],
     operatorSignature: string
 ) {
@@ -76,11 +119,21 @@ export function getSessionBatchExecuteSignature(
     const signature = hexConcat([
         sessionKeyValidatorAddress,
         abiCoder.encode(
-            ["bytes32[][]", "address", "tuple(address, bytes4, bytes)[]", "bytes[]", "bytes"],
+            [
+                "bytes32[][]",
+                "address",
+                "tuple(address, bytes4, bytes, address, uint48, uint48, uint256)[]",
+                "bytes[]",
+                "bytes",
+            ],
             [proof, operatorAddress, session, rlpCalldata, operatorSignature]
         ),
     ]);
     return signature;
+}
+
+export function packValidationData(sigFailed: number, validUntil: number, validAfter: number): number {
+    return sigFailed | (validUntil << 160) | (validAfter << (160 + 48));
 }
 
 export class argumentItem {

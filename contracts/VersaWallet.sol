@@ -207,7 +207,7 @@ contract VersaWallet is
         if (execution == ExecutionType.Sudo) {
             executeAndRevert(to, value, data, operation);
         } else {
-            _checkNormalExecute(to, operation);
+            _checkNormalExecute(to, data, operation);
             _beforeTransaction(to, value, data, operation);
             executeAndRevert(to, value, data, operation);
             _afterTransaction(to, value, data, operation);
@@ -261,9 +261,9 @@ contract VersaWallet is
      * @param to The address to which the transaction is directed.
      * @param _operation The operation type of the transaction.
      */
-    function _checkNormalExecute(address to, Enum.Operation _operation) internal view {
+    function _checkNormalExecute(address to, bytes memory data, Enum.Operation _operation) internal view {
         require(
-            to != address(this) &&
+            (to != address(this) || (to == address(this) && data.length == 0)) &&
                 !isValidatorEnabled(to) &&
                 !isHooksEnabled(to) &&
                 !isModuleEnabled(to) &&

@@ -326,12 +326,20 @@ describe("VersaWallet", () => {
         );
     });
 
+    it("should allow self-transfer for normal transaction", async () => {
+        await helpers.setBalance(wallet.address, parseEther("1"));
+
+        // Perform a self call
+        await wallet.connect(entryPoint).normalExecute(wallet.address, parseEther("0.1"), "0x", 0);
+        expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("1"));
+    });
+
     it("should revert if normal execution uses banned operation", async () => {
         await helpers.setBalance(wallet.address, parseEther("1"));
 
         // Perform a self call
         await expect(
-            wallet.connect(entryPoint).normalExecute(wallet.address, parseEther("0.1"), "0x", 0)
+            wallet.connect(entryPoint).normalExecute(wallet.address, parseEther("0.1"), "0xaaaaaaaa", 0)
         ).to.be.revertedWith("Versa: operation is not allowed");
 
         // Use delegatecall

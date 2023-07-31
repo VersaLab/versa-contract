@@ -5,12 +5,11 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
-import "../../../common/SelfAuthorized.sol";
-import "./OperatorSpendingAllowance.sol";
-import "../BaseValidator.sol";
-import "../../../common/AllowanceCalldata.sol";
-import "../../../VersaWallet.sol";
-import "../../../base/ValidatorManager.sol";
+import "../../common/SelfAuthorized.sol";
+import "./BaseValidator.sol";
+import "../../common/AllowanceCalldata.sol";
+import "../../VersaWallet.sol";
+import "../../base/ValidatorManager.sol";
 
 /**
  * @dev A session is delegated by a wallet to an operator for specific use.
@@ -22,24 +21,14 @@ struct Session {
     bytes4 selector;
     // Allowed arguments
     bytes allowedArguments;
-}
-
-/**
- * @dev Permissions and restrictions for an operator
- */
-struct OperatorPermission {
-    // The root of the merkle tree of all sessions
-    bytes32 sessionRoot;
     // The paymaster allowed to use
     address paymaster;
-    // The timestamp when the permission is expired, 0 for infinite
+    // The timestamp when the session is expired, 0 for infinite
     uint48 validUntil;
-    // The timestamp when the permission is valid
+    // The timestamp when the session is valid
     uint48 validAfter;
-    // The gas limit for the operator
-    uint128 gasRemaining;
-    // The times limit for the operator
-    uint128 timesRemaining;
+    // The times limit for the session
+    uint256 timesLimit;
 }
 
 library SessionLib {
@@ -47,21 +36,15 @@ library SessionLib {
      * @dev Returns the hash of a session.
      */
     function hash(Session memory session) internal pure returns (bytes32 sessionHash) {
-        sessionHash = keccak256(abi.encode(session.to, session.selector, session.allowedArguments));
-    }
-
-    /**
-     * @dev Returns the hash of a operator permission.
-     */
-    function hash(OperatorPermission memory permission) internal pure returns (bytes32 permissionHash) {
-        permissionHash = keccak256(
+        sessionHash = keccak256(
             abi.encode(
-                permission.sessionRoot,
-                permission.paymaster,
-                permission.validUntil,
-                permission.validAfter,
-                permission.gasRemaining,
-                permission.timesRemaining
+                session.to,
+                session.selector,
+                session.allowedArguments,
+                session.paymaster,
+                session.validUntil,
+                session.validAfter,
+                session.timesLimit
             )
         );
     }
@@ -72,20 +55,27 @@ library SessionLib {
  * @dev Contract that handles validation of user operations using session keys.
  * This contract is inspired by https://github.com/permissivelabs/core
  */
-contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAuthorized {
+contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     using AllowanceCalldata for bytes;
     using ECDSA for bytes32;
     using SessionLib for Session;
-    using SessionLib for OperatorPermission;
     using BytesLib for bytes;
 
-    /// @dev Emit on an oepraotr permission set
-    event OperatorPermissionSet(address indexed wallet, address indexed operator, OperatorPermission permission);
+    /// @dev Emit on an session root set
+    event SessionRootSet(address indexed wallet, address indexed operator, bytes32 sessionRoot);
+    /// @dev Emit on an operator gas limit set
+    event OperatorRemainingGasSet(address indexed wallet, address indexed operator, uint256 gasLimit);
     /// @dev Emit on a session used
     event SessionUsed(address indexed wallet, address indexed operator, bytes32 indexed sessionHash);
 
     /// @dev The operator permission for each wallet
-    mapping(address operator => mapping(address wallet => OperatorPermission)) internal _operatorPermission;
+    mapping(address operator => mapping(address wallet => bytes32)) internal _sessionRoot;
+
+    /// @dev The remaining gas for each operator of wallet
+    mapping(address operator => mapping(address wallet => uint256)) internal _remainingGas;
+
+    /// @dev The session usage for each session
+    mapping(bytes32 sessionHash => mapping(address wallet => uint256)) internal _sessionUsage;
 
     /**
      * @dev Checks if the specified wallet has been initialized.
@@ -100,11 +90,12 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     /**
      * @dev Sets the operator permission for the wallet.
      */
-    function setOperatorPermission(
-        address operator,
-        OperatorPermission memory permission
-    ) external onlyEnabledValidator {
-        _setOperatorPermission(msg.sender, operator, permission);
+    function setSessionRoot(address operator, bytes32 sessionRoot) external onlyEnabledValidator {
+        _setSessionRoot(msg.sender, operator, sessionRoot);
+    }
+
+    function setOperatorRemainingGas(address operator, uint256 remainingGas) external onlyEnabledValidator {
+        _setRemainingGas(msg.sender, operator, remainingGas);
     }
 
     /**
@@ -162,11 +153,11 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
                 (bytes32[], address, Session, bytes, bytes)
             );
         _validateOperatorSiganture(operator, operatorSignature, userOpHash);
-        _validatePaymaster(userOp.sender, operator, userOp.paymasterAndData);
-        _validateSession(operator, userOp, proof, session, rlpCalldata, to, value, data);
+        _validateOperatorGasUsage(operator, userOp);
+        address paymaster = _parsePaymaster(userOp.paymasterAndData);
+        _validateSession(operator, userOp, proof, session, rlpCalldata, paymaster, to, value, data);
         // check and update usage
-        _checkAndUpdateUsage(operator, userOp, 1);
-        validationData = _getValidVerifyData(userOp.sender, operator);
+        validationData = _packValidationData(0, session.validUntil, session.validAfter);
     }
 
     /**
@@ -199,32 +190,18 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
                 (bytes32[][], address, Session[], bytes[], bytes)
             );
         _validateOperatorSiganture(operator, operatorSignature, userOpHash);
-
-        _validatePaymaster(userOp.sender, operator, userOp.paymasterAndData);
-        _validateMultipleSessions(operator, userOp, proof, session, rlpCalldata, to, value, data);
-        // check and update usage
-        _checkAndUpdateUsage(operator, userOp, session.length);
-        validationData = _getValidVerifyData(userOp.sender, operator);
-    }
-
-    /**
-     * @dev Sets the spending allowance for the operator.
-     */
-    function setAllowance(
-        address operator,
-        SpendingAllowanceConfig memory config
-    ) public override onlyEnabledValidator {
-        super.setAllowance(operator, config);
-    }
-
-    /**
-     * @dev Sets spending limits for multiple tokens for the operator.
-     */
-    function batchSetAllowance(
-        address operator,
-        SpendingAllowanceConfig[] memory config
-    ) public override onlyEnabledValidator {
-        super.batchSetAllowance(operator, config);
+        _validateOperatorGasUsage(operator, userOp);
+        (uint48 validUntil, uint48 validAfter) = _validateMultipleSessions(
+            operator,
+            userOp,
+            proof,
+            session,
+            rlpCalldata,
+            to,
+            value,
+            data
+        );
+        validationData = _packValidationData(0, validUntil, validAfter);
     }
 
     /**
@@ -235,13 +212,25 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     }
 
     /**
-     * @dev get operator permission of a wallet
+     * @dev get operator sessionRoot of a wallet
      */
-    function getOperatorPermission(
-        address wallet,
-        address operator
-    ) external view returns (OperatorPermission memory permission) {
-        permission = _operatorPermission[operator][wallet];
+    function getSesionRoot(address wallet, address operator) external view returns (bytes32 sessionRoot) {
+        sessionRoot = _sessionRoot[operator][wallet];
+    }
+
+    function getRemainingGas(address wallet, address operator) external view returns (uint256) {
+        return _getRemainingGas(wallet, operator);
+    }
+
+    function _getRemainingGas(address wallet, address operator) internal view returns (uint256) {
+        return _remainingGas[operator][wallet];
+    }
+
+    function _validateOperatorGasUsage(address operator, UserOperation memory userOp) internal {
+        uint256 gasFee = _computeGasFee(userOp);
+        uint256 remainingGas = _getRemainingGas(userOp.sender, operator);
+        require(remainingGas >= gasFee, "SessionKeyValidator: gas fee exceeds remaining gas");
+        _setRemainingGas(userOp.sender, operator, remainingGas - gasFee);
     }
 
     /**
@@ -257,6 +246,7 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
         bytes32[] memory proof,
         Session memory session,
         bytes memory rlpCalldata,
+        address paymaster,
         address to,
         uint256 value,
         bytes memory data
@@ -264,9 +254,9 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
         // if the session is premitted offchain, verify ownerSignature
         bytes32 sessionHash = session.hash();
         _validateSessionRoot(proof, _getSessionRoot(userOp.sender, operator), sessionHash);
-        // check spending limit
-        _checkAllowance(userOp.sender, operator, to, data, value);
-        // check arguments
+        _validatePaymaster(session.paymaster, paymaster);
+        _checkAndUpdateSessionUsage(sessionHash, userOp, session);
+        // check calldata arguments
         _checkArguments(session, to, data, value, rlpCalldata);
         emit SessionUsed(userOp.sender, operator, sessionHash);
     }
@@ -287,30 +277,45 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
         address[] memory to,
         uint256[] memory value,
         bytes[] memory data
-    ) internal {
+    ) internal returns (uint48 validUntil, uint48 validAfter) {
         require(
             to.length == session.length && session.length == proof.length,
             "SessionKeyValidator: invalid batch length"
         );
+        address paymaster = _parsePaymaster(userOp.paymasterAndData);
         for (uint256 i = 0; i < data.length; i++) {
-            _validateSession(operator, userOp, proof[i], session[i], rlpCalldata[i], to[i], value[i], data[i]);
+            // Get the intersection of all sessions' validation durations
+            (validUntil, validAfter) = _getValidationIntersection(
+                validUntil,
+                session[i].validUntil,
+                validAfter,
+                session[i].validAfter
+            );
+            _validateSession(
+                operator,
+                userOp,
+                proof[i],
+                session[i],
+                rlpCalldata[i],
+                paymaster,
+                to[i],
+                value[i],
+                data[i]
+            );
         }
     }
 
     /**
-     * @dev Check if the operator has enough gas and times to use and update usage.
+     * @dev Check if the session has enough gas and times to remaining.
      */
-    function _checkAndUpdateUsage(address operator, UserOperation memory userOp, uint256 sessionsToUse) internal {
-        (uint128 gasLeft, uint128 timesLeft) = _getRemainingUsage(userOp.sender, operator);
-        uint256 gasFee = _computeGasFee(userOp);
-        require(gasLeft >= gasFee && timesLeft >= sessionsToUse, "SessionKeyValidator: exceed usage");
-        if (gasLeft != type(uint128).max) {
-            gasLeft -= uint128(gasFee);
-        }
-        if (timesLeft != type(uint128).max) {
-            timesLeft -= uint128(sessionsToUse);
-        }
-        _setRemaningUsage(userOp.sender, operator, gasLeft, timesLeft);
+    function _checkAndUpdateSessionUsage(
+        bytes32 sessionHash,
+        UserOperation memory userOp,
+        Session memory session
+    ) internal {
+        uint256 timesUsed = _getSessionUsage(userOp.sender, sessionHash) + 1;
+        require(timesUsed <= session.timesLimit, "SessionKeyValidator: exceed usage");
+        _setSessionUsage(userOp.sender, sessionHash, timesUsed);
     }
 
     /**
@@ -342,11 +347,20 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     }
 
     /**
-     * @dev Internal function to set operator permission for a wallet.
+     * @dev Internal function to set operator session root for a wallet.
      */
-    function _setOperatorPermission(address wallet, address operator, OperatorPermission memory permission) internal {
-        _operatorPermission[operator][wallet] = permission;
-        emit OperatorPermissionSet(wallet, operator, permission);
+    function _setSessionRoot(address wallet, address operator, bytes32 sessionRoot) internal {
+        _sessionRoot[operator][wallet] = sessionRoot;
+        emit SessionRootSet(wallet, operator, sessionRoot);
+    }
+
+    function _setRemainingGas(address wallet, address operator, uint256 remainingGas) internal {
+        _remainingGas[operator][wallet] = remainingGas;
+        emit OperatorRemainingGasSet(wallet, operator, remainingGas);
+    }
+
+    function _setSessionUsage(address wallet, bytes32 sessionHash, uint256 times) internal {
+        _sessionUsage[sessionHash][wallet] = times;
     }
 
     /**
@@ -367,33 +381,42 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
     /**
      * @dev Internal function to validate paymaster.
      */
-    function _validatePaymaster(address wallet, address operator, bytes memory paymasterAndData) internal view {
-        address permissionPaymaster = _operatorPermission[operator][wallet].paymaster;
-        if (permissionPaymaster != address(0)) {
-            require(
-                paymasterAndData.length >= 20 && paymasterAndData.slice(0, 20).toAddress(0) == permissionPaymaster,
-                "SessionKeyValidator: invalid paymaster"
-            );
+    function _validatePaymaster(address sessionPaymaster, address actualPaymaster) internal pure {
+        if (sessionPaymaster != address(0)) {
+            require(sessionPaymaster == actualPaymaster, "SessionKeyValidator: invalid paymaster");
         }
     }
 
     /**
-     * @dev Internal function to pack validation data.
+     * @dev Get session root of a wallet to an operator.
      */
-    function _getValidVerifyData(address wallet, address operator) internal view returns (uint256 validationData) {
-        (uint256 validUntil, uint256 validAfter) = _getOperatorPermissionDuration(wallet, operator);
-        validationData = _packValidationData(0, validUntil, validAfter);
+    function getSessionRoot(address wallet, address operator) external view returns (bytes32) {
+        return _getSessionRoot(wallet, operator);
     }
 
     /**
-     * @dev Internal function to get operator permission valid duration.
+     * @dev Get remaining gas of a wallet to an operator.
      */
-    function _getOperatorPermissionDuration(
-        address wallet,
-        address operator
-    ) internal view returns (uint48 validUnitil, uint48 validAfter) {
-        validUnitil = _operatorPermission[operator][wallet].validUntil;
-        validAfter = _operatorPermission[operator][wallet].validAfter;
+    function getOperatorRemainingGas(address wallet, address operator) external view returns (uint256) {
+        return _remainingGas[operator][wallet];
+    }
+
+    /**
+     * @dev Get session usage
+     */
+    function getSessionUsage(address wallet, bytes32 sessionHash) external view returns (uint256 times) {
+        return _getSessionUsage(wallet, sessionHash);
+    }
+
+    /**
+     * @dev Internal function to get session root of a wallet to an operator.
+     */
+    function _getSessionRoot(address wallet, address operator) internal view returns (bytes32) {
+        return _sessionRoot[operator][wallet];
+    }
+
+    function _getSessionUsage(address wallet, bytes32 sessionHash) internal view returns (uint256 times) {
+        return _sessionUsage[sessionHash][wallet];
     }
 
     /**
@@ -406,47 +429,35 @@ contract SessionKeyValidator is BaseValidator, OperatorSpendingAllowance, SelfAu
         );
     }
 
-    /**
-     * @dev Get session root of a wallet to an operator.
-     */
-    function getSessionRoot(address wallet, address operator) external view returns (bytes32) {
-        return _getSessionRoot(wallet, operator);
+    function _parsePaymaster(bytes memory paymasterAndData) internal pure returns (address paymaster) {
+        if (paymasterAndData.length >= 20) {
+            paymaster = paymasterAndData.slice(0, 20).toAddress(0);
+        }
     }
 
     /**
-     * @dev Internal function to get session root of a wallet to an operator.
-     */
-    function _getSessionRoot(address wallet, address operator) internal view returns (bytes32) {
-        return _operatorPermission[operator][wallet].sessionRoot;
-    }
-
-    /**
-     * @dev Set remaining permission usage for an operator.
-     */
-    function _setRemaningUsage(address wallet, address operator, uint128 gasUsage, uint128 times) internal {
-        _operatorPermission[operator][wallet].gasRemaining = uint128(gasUsage);
-        _operatorPermission[operator][wallet].timesRemaining = uint128(times);
-    }
-
-    /**
-     * @dev Internal function to get remaining permission usage for an operator.
-     */
-    function _getRemainingUsage(
-        address wallet,
-        address operator
-    ) internal view returns (uint128 gasUsage, uint128 times) {
-        gasUsage = _operatorPermission[operator][wallet].gasRemaining;
-        times = _operatorPermission[operator][wallet].timesRemaining;
-    }
-
-    /**
-     * Compute the max allowed gas fee of a user operation.
+     * @dev Compute the max allowed gas fee for an user operation.
      */
     function _computeGasFee(UserOperation memory userOp) internal pure returns (uint256 fee) {
         uint256 mul = address(bytes20(userOp.paymasterAndData)) != address(0) ? 3 : 1;
         uint256 requiredGas = userOp.callGasLimit + userOp.verificationGasLimit * mul + userOp.preVerificationGas;
-
         fee = requiredGas * userOp.maxFeePerGas;
+    }
+
+    /// @dev Get the intersection of given validation durations.
+    function _getValidationIntersection(
+        uint48 validUntil1,
+        uint48 validunitil2,
+        uint48 validAfter1,
+        uint48 validAfter2
+    ) internal pure returns (uint48 validUntil, uint48 validAfter) {
+        if (validUntil1 != 0 && validunitil2 != 0) {
+            validUntil = validUntil1 < validunitil2 ? validUntil1 : validunitil2;
+        } else {
+            validUntil = validUntil1 > validunitil2 ? validUntil1 : validunitil2;
+        }
+        validAfter = validAfter1 > validAfter2 ? validAfter1 : validAfter2;
+        require(validUntil >= validAfter, "SessionKeyValidator: invalid validation duration");
     }
 
     function _getChainId() internal view returns (uint256 id) {

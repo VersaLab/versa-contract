@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "solidity-coverage";
 import "dotenv/config";
+import "hardhat-contract-sizer";
 
 const POLYGON_MUMBAI_RPC = process.env.POLYGON_MUMBAI_RPC || "https://polygon-testnet.public.blastapi.io";
 
@@ -29,14 +30,8 @@ const config: HardhatUserConfig = {
                 settings: {
                     optimizer: {
                         enabled: true,
-                        runs: 200,
-                        details: {
-                            yulDetails: {
-                                optimizerSteps: "u",
-                            },
-                        },
+                        runs: 20000,
                     },
-                    viaIR: true,
                 },
             },
         ],

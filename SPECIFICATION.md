@@ -61,16 +61,14 @@ The SessionKeyValidator contract is designed to be a normal validator of versa w
 - `value`: the value allowed to send along with the call
 - `functionSelector`: the function allowed to call
 - `allowedArguments`: the arguments range allowed to pass to the function
+- `paymaster`: the paymaster contract address that the session is allowed to use
+- `validUntil`: the timestamp when the session is expired, 0 for infinite
+- `validAfter`: the timestamp when the session is valid
+- `timesLimit`: the times limit for the session
   
-An operator can hold multiple sessions of a wallet, and all the sessions of a wallet for a specific operator are organized as a Merkle tree and it's root is stored on-chain. Besides sessions, an user can also set other restrictions for an operator to minimize the risk, which we defined as `Permission`, including:
-- `sessionRoot`: the merkle root of the sessions of the operator
-- `paymaster`: the paymaster contract address that the operator is allowed to use
-- `validUntil`: the timestamp when the permission is expired, 0 for infinite
-- `validAfter`: the timestamp when the permission is valid
-- `gasRemaining`: the gas limit for the operator
-- `timeRemaining`: the times limit for the operator
+An operator can hold multiple sessions of a wallet, and all the sessions of a wallet for a specific operator are organized as a Merkle tree and it's root is stored on-chain. Besides sessions, an user can also set gas limit for an operator to prevent the operator from consuming too much gas.
 
-The SessionKeyValidator contract allows the user to set an overall token allowance for the operator if the user doesn't care about the token amount consumed by individual sessions. The permission and token allowance configuration can be authorized by the wallet owner through an off-chain permit signature and later submitted on-chain by the operator along with the session key transaction.
+The SessionKeyValidator contract supports Versa Wallet's `batch` transaction and validates if each operation of the batch has a valid session.
 
 ### SpendingLimitHooks
 

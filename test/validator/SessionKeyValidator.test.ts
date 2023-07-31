@@ -18,10 +18,8 @@ import { enablePlugin, execute } from "../base/utils";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 import { AbiCoder, RLP, arrayify, hexConcat, hexlify, keccak256, parseEther } from "ethers/lib/utils";
-import { BigNumber } from "ethers";
 import * as utils from "./sessionKeyUtil";
 import { ANY, EQ, GT, LT, NE, AND, OR, buildSessionTree, getSession } from "./sessionKeyUtil";
-import fs from "fs";
 
 // test for sessionkeyvalidator
 describe("SessionKeyValidator", function () {
@@ -65,530 +63,550 @@ describe("SessionKeyValidator", function () {
         return { sessionKeyValidator, owner, operator, entryPoint, wallet, mockValidator, ecdsaValidator, mockERC20 };
     }
 
-    // describe("SessionKeyValidator basic set and get functions", function () {
-    //     beforeEach(async function () {
-    //         let fixture = await loadFixture(deployfixture);
-    //         sessionKeyValidator = fixture.sessionKeyValidator;
-    //         owner = fixture.owner;
-    //         operator = fixture.operator;
-    //         entryPoint = fixture.entryPoint;
-    //         wallet = fixture.wallet;
-    //         mockValidator = fixture.mockValidator;
-    //         mockERC20 = fixture.mockERC20;
-    //     });
+    describe("SessionKeyValidator basic set and get functions", function () {
+        beforeEach(async function () {
+            let fixture = await loadFixture(deployfixture);
+            sessionKeyValidator = fixture.sessionKeyValidator;
+            owner = fixture.owner;
+            operator = fixture.operator;
+            entryPoint = fixture.entryPoint;
+            wallet = fixture.wallet;
+            mockValidator = fixture.mockValidator;
+            mockERC20 = fixture.mockERC20;
+        });
 
-    //     it("should set session root", async function () {
-    //         let allowedArguments = [
-    //             [EQ, abiCoder.encode(["address"], [mockERC20.address])], // transfer: to
-    //             [EQ, abiCoder.encode(["uint256"], [parseEther("1").toHexString()])], // transfer: value
-    //         ];
+        it("should set session root", async function () {
+            let allowedArguments = [
+                [EQ, abiCoder.encode(["address"], [mockERC20.address])], // transfer: to
+                [EQ, abiCoder.encode(["uint256"], [parseEther("1").toHexString()])], // transfer: value
+            ];
 
-    //         let session = utils.buildSession({
-    //             to: mockERC20.address,
-    //             selector: "transfer(address, uint256)",
-    //             allowedArguments: allowedArguments,
-    //             paymaster: ethers.constants.AddressZero,
-    //             validUntil: 0,
-    //             validAfter: 0,
-    //             timesLimit: 0,
-    //         })
+            let session = utils.buildSession({
+                to: mockERC20.address,
+                selector: "transfer(address,uint256)",
+                allowedArguments: allowedArguments,
+                paymaster: ethers.constants.AddressZero,
+                validUntil: 0,
+                validAfter: 0,
+                timesLimit: 0,
+            });
 
-    //         let leaves = [session];
-    //         const tree = StandardMerkleTree.of(leaves, [
-    //             "address", "bytes4", "bytes", "address", "uint48", "uint48", "uint256"
-    //         ]);
-    //         const sessionRoot = tree.root;
+            let session2 = {
+                to: mockERC20.address,
+                selector: ethers.utils.id("transfer(address,uint256)").substring(0, 10),
+                allowedArguments: RLP.encode(allowedArguments),
+                paymaster: ethers.constants.AddressZero,
+                validUntil: 0,
+                validAfter: 0,
+                timesLimit: 0,
+            };
 
-    //         let data = sessionKeyValidator.interface.encodeFunctionData("setSessionRoot", [
-    //             operator.address,
-    //             sessionRoot,
-    //         ]);
+            let leaves = [session];
+            const tree = StandardMerkleTree.of(leaves, [
+                "address",
+                "bytes4",
+                "bytes",
+                "address",
+                "uint48",
+                "uint48",
+                "uint256",
+            ]);
+            const sessionRoot = tree.root;
+            console.log("session root using oz tree: ", sessionRoot);
 
-    //         await expect(
-    //             execute({
-    //                 executor: wallet,
-    //                 to: sessionKeyValidator.address,
-    //                 data: data,
-    //             })
-    //         )
-    //             .to.emit(sessionKeyValidator, "SessionRootSet")
-    //             .withArgs(wallet.address, operator.address, sessionRoot);
-    //         let sessionRootRes = await sessionKeyValidator.getSesionRoot(wallet.address, operator.address);
-    //         expect(sessionRootRes).to.equal(sessionRoot);
-    //     });
+            let data = sessionKeyValidator.interface.encodeFunctionData("setSessionRoot", [
+                operator.address,
+                sessionRoot,
+            ]);
 
-    //     it("should set operator remaining gas", async function () {
-    //         let data = sessionKeyValidator.interface.encodeFunctionData("setOperatorRemainingGas", [
-    //             operator.address,
-    //             parseEther("1"),
-    //         ]);
+            await expect(
+                execute({
+                    executor: wallet,
+                    to: sessionKeyValidator.address,
+                    data: data,
+                })
+            )
+                .to.emit(sessionKeyValidator, "SessionRootSet")
+                .withArgs(wallet.address, operator.address, sessionRoot);
+            let sessionRootRes = await sessionKeyValidator.getSesionRoot(wallet.address, operator.address);
+            expect(sessionRootRes).to.equal(sessionRoot);
+        });
 
-    //         await expect(
-    //             execute({
-    //                 executor: wallet,
-    //                 to: sessionKeyValidator.address,
-    //                 data: data,
-    //             })
-    //         )
-    //             .to.emit(sessionKeyValidator, "OperatorRemainingGasSet")
-    //             .withArgs(wallet.address, operator.address, parseEther("1"));
-    //         let operatorRemainingGas = await sessionKeyValidator.getOperatorRemainingGas(wallet.address, operator.address);
-    //         expect(operatorRemainingGas).to.equal(parseEther("1"));
-    //     })
-    // })
+        it("should set operator remaining gas", async function () {
+            let data = sessionKeyValidator.interface.encodeFunctionData("setOperatorRemainingGas", [
+                operator.address,
+                parseEther("1"),
+            ]);
 
-    // describe("Check rlp arguments", function () {
-    //     beforeEach(async function () {
-    //         let fixture = await loadFixture(deployfixture);
-    //         sessionKeyValidator = fixture.sessionKeyValidator;
-    //         owner = fixture.owner;
-    //         operator = fixture.operator;
-    //         entryPoint = fixture.entryPoint;
-    //         wallet = fixture.wallet;
-    //         mockValidator = fixture.mockValidator;
-    //         mockERC20 = fixture.mockERC20;
-    //     });
+            await expect(
+                execute({
+                    executor: wallet,
+                    to: sessionKeyValidator.address,
+                    data: data,
+                })
+            )
+                .to.emit(sessionKeyValidator, "OperatorRemainingGasSet")
+                .withArgs(wallet.address, operator.address, parseEther("1"));
+            let operatorRemainingGas = await sessionKeyValidator.getOperatorRemainingGas(
+                wallet.address,
+                operator.address
+            );
+            expect(operatorRemainingGas).to.equal(parseEther("1"));
+        });
+    });
 
-    //     it("should revert if data length is not equal to rlpData length", async function () {
-    //         let allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
-    //         await expect(
-    //             sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([]),
-    //                 parseEther("1")
-    //             )
-    //         ).to.revertedWith("Invalid arguments length");
-    //     });
+    describe("Check rlp arguments", function () {
+        beforeEach(async function () {
+            let fixture = await loadFixture(deployfixture);
+            sessionKeyValidator = fixture.sessionKeyValidator;
+            owner = fixture.owner;
+            operator = fixture.operator;
+            entryPoint = fixture.entryPoint;
+            wallet = fixture.wallet;
+            mockValidator = fixture.mockValidator;
+            mockERC20 = fixture.mockERC20;
+        });
 
-    //     it("should reject invalid prefix", async function () {
-    //         await expect(
-    //             sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([["0x07", abiCoder.encode(["uint256"], [parseEther("1")])]]),
-    //                 RLP.encode([abiCoder.encode(["uint256"], [parseEther("1")])]),
-    //                 parseEther("1")
-    //             )
-    //         ).to.be.revertedWith("Invalid calldata prefix");
-    //     });
+        it("should revert if data length is not equal to rlpData length", async function () {
+            let allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
+            await expect(
+                sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([]),
+                    parseEther("1")
+                )
+            ).to.revertedWith("Invalid arguments length");
+        });
 
-    //     it("should validate value", async function () {
-    //         let allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([allowedArgument.abiItem]),
-    //                 allowedArgument.value
-    //             )
-    //         ).to.be.equal(true);
+        it("should reject invalid prefix", async function () {
+            await expect(
+                sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([["0x07", abiCoder.encode(["uint256"], [parseEther("1")])]]),
+                    RLP.encode([abiCoder.encode(["uint256"], [parseEther("1")])]),
+                    parseEther("1")
+                )
+            ).to.be.revertedWith("Invalid calldata prefix");
+        });
 
-    //         allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
-    //         await expect(
-    //             sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([allowedArgument.abiItem]),
-    //                 0
-    //             )
-    //         ).to.revertedWith("msg.value not corresponding to parsed value");
-    //     });
+        it("should validate value", async function () {
+            let allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([allowedArgument.abiItem]),
+                    allowedArgument.value
+                )
+            ).to.be.equal(true);
 
-    //     it("should validate EQ", async function () {
-    //         let allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
-    //         let actualArgument = new utils.argumentItem(EQ, "uint256", 0);
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(false);
+            allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
+            await expect(
+                sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([allowedArgument.abiItem]),
+                    0
+                )
+            ).to.revertedWith("msg.value not corresponding to parsed value");
+        });
 
-    //         allowedArgument = new utils.argumentItem(EQ, "uint256", ethers.constants.MaxUint256);
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([allowedArgument.abiItem]),
-    //                 allowedArgument.value
-    //             )
-    //         ).to.be.equal(true);
-    //     });
+        it("should validate EQ", async function () {
+            let allowedArgument = new utils.argumentItem(EQ, "uint256", parseEther("1"));
+            let actualArgument = new utils.argumentItem(EQ, "uint256", 0);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(false);
 
-    //     it("should validate NE", async function () {
-    //         let allowedArgument = new utils.argumentItem(NE, "uint256", parseEther("1"));
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([allowedArgument.abiItem]),
-    //                 allowedArgument.value
-    //             )
-    //         ).to.be.equal(false);
+            allowedArgument = new utils.argumentItem(EQ, "uint256", ethers.constants.MaxUint256);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([allowedArgument.abiItem]),
+                    allowedArgument.value
+                )
+            ).to.be.equal(true);
+        });
 
-    //         allowedArgument = new utils.argumentItem(NE, "uint256", parseEther("1"));
-    //         let actualArgument = new utils.argumentItem(NE, "uint256", 0);
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(true);
-    //     });
+        it("should validate NE", async function () {
+            let allowedArgument = new utils.argumentItem(NE, "uint256", parseEther("1"));
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([allowedArgument.abiItem]),
+                    allowedArgument.value
+                )
+            ).to.be.equal(false);
 
-    //     it("should validate GT", async function () {
-    //         let allowedArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
-    //         let actualArgument = new utils.argumentItem(GT, "uint256", 0);
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(false);
+            allowedArgument = new utils.argumentItem(NE, "uint256", parseEther("1"));
+            let actualArgument = new utils.argumentItem(NE, "uint256", 0);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(true);
+        });
 
-    //         allowedArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
-    //         actualArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(false);
+        it("should validate GT", async function () {
+            let allowedArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
+            let actualArgument = new utils.argumentItem(GT, "uint256", 0);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(false);
 
-    //         allowedArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
-    //         actualArgument = new utils.argumentItem(GT, "uint256", parseEther("1").add(1));
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(true);
-    //     });
+            allowedArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
+            actualArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(false);
 
-    //     it("should validate LT", async function () {
-    //         let allowedArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
-    //         let actualArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(false);
+            allowedArgument = new utils.argumentItem(GT, "uint256", parseEther("1"));
+            actualArgument = new utils.argumentItem(GT, "uint256", parseEther("1").add(1));
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(true);
+        });
 
-    //         allowedArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
-    //         actualArgument = new utils.argumentItem(LT, "uint256", parseEther("1").add(1));
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(false);
+        it("should validate LT", async function () {
+            let allowedArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
+            let actualArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(false);
 
-    //         allowedArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
-    //         actualArgument = new utils.argumentItem(LT, "uint256", parseEther("1").sub(1));
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([allowedArgument.rlpItem]),
-    //                 RLP.encode([actualArgument.abiItem]),
-    //                 actualArgument.value
-    //             )
-    //         ).to.be.equal(true);
-    //     });
+            allowedArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
+            actualArgument = new utils.argumentItem(LT, "uint256", parseEther("1").add(1));
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(false);
 
-    //     it("should validate AND", async function () {
-    //         // 100 < value < 200
-    //         let subArgument1 = new utils.argumentItem(GT, "uint256", 100);
-    //         let subArgument2 = new utils.argumentItem(LT, "uint256", 200);
+            allowedArgument = new utils.argumentItem(LT, "uint256", parseEther("1"));
+            actualArgument = new utils.argumentItem(LT, "uint256", parseEther("1").sub(1));
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([allowedArgument.rlpItem]),
+                    RLP.encode([actualArgument.abiItem]),
+                    actualArgument.value
+                )
+            ).to.be.equal(true);
+        });
 
-    //         let actualArgument1 = new utils.argumentItem(EQ, "uint256", 201);
-    //         let actualArgument2 = new utils.argumentItem(EQ, "uint256", 99);
-    //         let actualArgument3 = new utils.argumentItem(EQ, "uint256", 150);
+        it("should validate AND", async function () {
+            // 100 < value < 200
+            let subArgument1 = new utils.argumentItem(GT, "uint256", 100);
+            let subArgument2 = new utils.argumentItem(LT, "uint256", 200);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([[AND, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
-    //                 RLP.encode([actualArgument1.abiItem]),
-    //                 actualArgument1.value
-    //             )
-    //         ).to.be.equal(false);
+            let actualArgument1 = new utils.argumentItem(EQ, "uint256", 201);
+            let actualArgument2 = new utils.argumentItem(EQ, "uint256", 99);
+            let actualArgument3 = new utils.argumentItem(EQ, "uint256", 150);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([[AND, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
-    //                 RLP.encode([actualArgument2.abiItem]),
-    //                 actualArgument2.value
-    //             )
-    //         ).to.be.equal(false);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([[AND, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
+                    RLP.encode([actualArgument1.abiItem]),
+                    actualArgument1.value
+                )
+            ).to.be.equal(false);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([[AND, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
-    //                 RLP.encode([actualArgument3.abiItem]),
-    //                 actualArgument3.value
-    //             )
-    //         ).to.be.equal(true);
-    //     });
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([[AND, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
+                    RLP.encode([actualArgument2.abiItem]),
+                    actualArgument2.value
+                )
+            ).to.be.equal(false);
 
-    //     it("should validate OR", async function () {
-    //         // a < 100 or a > 200
-    //         let subArgument1 = new utils.argumentItem(LT, "uint256", 100);
-    //         let subArgument2 = new utils.argumentItem(GT, "uint256", 200);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([[AND, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
+                    RLP.encode([actualArgument3.abiItem]),
+                    actualArgument3.value
+                )
+            ).to.be.equal(true);
+        });
 
-    //         let actualArgument1 = new utils.argumentItem(EQ, "uint256", 150);
-    //         let actualArgument2 = new utils.argumentItem(EQ, "uint256", 99);
-    //         let actualArgument3 = new utils.argumentItem(EQ, "uint256", 201);
+        it("should validate OR", async function () {
+            // a < 100 or a > 200
+            let subArgument1 = new utils.argumentItem(LT, "uint256", 100);
+            let subArgument2 = new utils.argumentItem(GT, "uint256", 200);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([[OR, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
-    //                 RLP.encode([actualArgument1.abiItem]),
-    //                 actualArgument1.value
-    //             )
-    //         ).to.be.equal(false);
+            let actualArgument1 = new utils.argumentItem(EQ, "uint256", 150);
+            let actualArgument2 = new utils.argumentItem(EQ, "uint256", 99);
+            let actualArgument3 = new utils.argumentItem(EQ, "uint256", 201);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([[OR, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
-    //                 RLP.encode([actualArgument2.abiItem]),
-    //                 actualArgument2.value
-    //             )
-    //         ).to.be.equal(true);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([[OR, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
+                    RLP.encode([actualArgument1.abiItem]),
+                    actualArgument1.value
+                )
+            ).to.be.equal(false);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([[OR, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
-    //                 RLP.encode([actualArgument3.abiItem]),
-    //                 actualArgument3.value
-    //             )
-    //         ).to.be.equal(true);
-    //     });
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([[OR, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
+                    RLP.encode([actualArgument2.abiItem]),
+                    actualArgument2.value
+                )
+            ).to.be.equal(true);
 
-    //     it("should validate multi-arguments", async function () {
-    //         let allowedArgument1 = new utils.argumentItem(GT, "uint256", 100);
-    //         let allowedArgument2 = new utils.argumentItem(LT, "uint256", 100);
-    //         let allowedArgument3 = new utils.argumentItem(EQ, "string", "Hello world");
-    //         let allowedArgument4 = new utils.argumentItem(EQ, "bytes", "0x323232");
-    //         let allowedArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([[OR, [subArgument1.rlpItem, subArgument2.rlpItem]]]),
+                    RLP.encode([actualArgument3.abiItem]),
+                    actualArgument3.value
+                )
+            ).to.be.equal(true);
+        });
 
-    //         let actualArgument1 = new utils.argumentItem(EQ, "uint256", 101);
-    //         let actualArgument2 = new utils.argumentItem(EQ, "uint256", 99);
-    //         let actualArgument3 = new utils.argumentItem(EQ, "string", "Hello world");
-    //         let actualArgument4 = new utils.argumentItem(EQ, "bytes", "0x323232");
-    //         let actualArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
+        it("should validate multi-arguments", async function () {
+            let allowedArgument1 = new utils.argumentItem(GT, "uint256", 100);
+            let allowedArgument2 = new utils.argumentItem(LT, "uint256", 100);
+            let allowedArgument3 = new utils.argumentItem(EQ, "string", "Hello world");
+            let allowedArgument4 = new utils.argumentItem(EQ, "bytes", "0x323232");
+            let allowedArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     allowedArgument1.rlpItem,
-    //                     allowedArgument2.rlpItem,
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1.abiItem,
-    //                     actualArgument2.abiItem,
-    //                     actualArgument3.abiItem,
-    //                     actualArgument4.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1.abiItem
-    //             )
-    //         ).to.be.equal(true);
-    //     });
+            let actualArgument1 = new utils.argumentItem(EQ, "uint256", 101);
+            let actualArgument2 = new utils.argumentItem(EQ, "uint256", 99);
+            let actualArgument3 = new utils.argumentItem(EQ, "string", "Hello world");
+            let actualArgument4 = new utils.argumentItem(EQ, "bytes", "0x323232");
+            let actualArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
 
-    //     it("should validate multi-arguments with nested arguments", async function () {
-    //         // 100 < allowedArgument1 < 200
-    //         let subAllowedArgument1_1 = new utils.argumentItem(GT, "uint256", 100);
-    //         let subAllowedArgument1_2 = new utils.argumentItem(LT, "uint256", 200);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        allowedArgument1.rlpItem,
+                        allowedArgument2.rlpItem,
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1.abiItem,
+                        actualArgument2.abiItem,
+                        actualArgument3.abiItem,
+                        actualArgument4.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1.abiItem
+                )
+            ).to.be.equal(true);
+        });
 
-    //         // allowedArgument2 > 200 || allowedArgument2 = 100
-    //         let subAllowedArgument2_1 = new utils.argumentItem(GT, "uint256", 200);
-    //         let subAllowedArgument2_2 = new utils.argumentItem(EQ, "uint256", 100);
+        it("should validate multi-arguments with nested arguments", async function () {
+            // 100 < allowedArgument1 < 200
+            let subAllowedArgument1_1 = new utils.argumentItem(GT, "uint256", 100);
+            let subAllowedArgument1_2 = new utils.argumentItem(LT, "uint256", 200);
 
-    //         let allowedArgument3 = new utils.argumentItem(EQ, "string", "Hello world");
-    //         let allowedArgument4 = new utils.argumentItem(EQ, "bytes", "0x323232");
-    //         let allowedArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
+            // allowedArgument2 > 200 || allowedArgument2 = 100
+            let subAllowedArgument2_1 = new utils.argumentItem(GT, "uint256", 200);
+            let subAllowedArgument2_2 = new utils.argumentItem(EQ, "uint256", 100);
 
-    //         let actualArgument1_1 = new utils.argumentItem(EQ, "uint256", 101);
-    //         let actualArgument1_2 = new utils.argumentItem(EQ, "uint256", 199);
-    //         let actualArgument1_3 = new utils.argumentItem(EQ, "uint256", 99);
-    //         let actualArgument1_4 = new utils.argumentItem(EQ, "uint256", 201);
+            let allowedArgument3 = new utils.argumentItem(EQ, "string", "Hello world");
+            let allowedArgument4 = new utils.argumentItem(EQ, "bytes", "0x323232");
+            let allowedArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
 
-    //         let actualArgument2_1 = new utils.argumentItem(EQ, "uint256", 201);
-    //         let actualArgument2_2 = new utils.argumentItem(EQ, "uint256", 100);
-    //         let actualArgument2_3 = new utils.argumentItem(EQ, "uint256", 199);
+            let actualArgument1_1 = new utils.argumentItem(EQ, "uint256", 101);
+            let actualArgument1_2 = new utils.argumentItem(EQ, "uint256", 199);
+            let actualArgument1_3 = new utils.argumentItem(EQ, "uint256", 99);
+            let actualArgument1_4 = new utils.argumentItem(EQ, "uint256", 201);
 
-    //         let actualArgument3_1 = new utils.argumentItem(EQ, "string", "Hello world");
-    //         let actualArgument3_2 = new utils.argumentItem(EQ, "string", "Hello weirdo");
+            let actualArgument2_1 = new utils.argumentItem(EQ, "uint256", 201);
+            let actualArgument2_2 = new utils.argumentItem(EQ, "uint256", 100);
+            let actualArgument2_3 = new utils.argumentItem(EQ, "uint256", 199);
 
-    //         let actualArgument4_1 = new utils.argumentItem(EQ, "bytes", "0x323232");
-    //         let actualArgument4_2 = new utils.argumentItem(EQ, "bytes", "0x232323");
+            let actualArgument3_1 = new utils.argumentItem(EQ, "string", "Hello world");
+            let actualArgument3_2 = new utils.argumentItem(EQ, "string", "Hello weirdo");
 
-    //         let actualArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
+            let actualArgument4_1 = new utils.argumentItem(EQ, "bytes", "0x323232");
+            let actualArgument4_2 = new utils.argumentItem(EQ, "bytes", "0x232323");
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_1.abiItem,
-    //                     actualArgument2_1.abiItem,
-    //                     actualArgument3_1.abiItem,
-    //                     actualArgument4_1.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_1.abiItem
-    //             )
-    //         ).to.be.equal(true);
+            let actualArgument5 = new utils.argumentItem(ANY, "address", ethers.constants.AddressZero);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_2.abiItem,
-    //                     actualArgument2_1.abiItem,
-    //                     actualArgument3_1.abiItem,
-    //                     actualArgument4_1.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_2.abiItem
-    //             )
-    //         ).to.be.equal(true);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_1.abiItem,
+                        actualArgument2_1.abiItem,
+                        actualArgument3_1.abiItem,
+                        actualArgument4_1.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_1.abiItem
+                )
+            ).to.be.equal(true);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_3.abiItem,
-    //                     actualArgument2_1.abiItem,
-    //                     actualArgument3_1.abiItem,
-    //                     actualArgument4_1.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_3.abiItem
-    //             )
-    //         ).to.be.equal(false);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_2.abiItem,
+                        actualArgument2_1.abiItem,
+                        actualArgument3_1.abiItem,
+                        actualArgument4_1.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_2.abiItem
+                )
+            ).to.be.equal(true);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_4.abiItem,
-    //                     actualArgument2_1.abiItem,
-    //                     actualArgument3_1.abiItem,
-    //                     actualArgument4_1.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_4.abiItem
-    //             )
-    //         ).to.be.equal(false);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_3.abiItem,
+                        actualArgument2_1.abiItem,
+                        actualArgument3_1.abiItem,
+                        actualArgument4_1.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_3.abiItem
+                )
+            ).to.be.equal(false);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_1.abiItem,
-    //                     actualArgument2_2.abiItem,
-    //                     actualArgument3_1.abiItem,
-    //                     actualArgument4_1.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_1.abiItem
-    //             )
-    //         ).to.be.equal(true);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_4.abiItem,
+                        actualArgument2_1.abiItem,
+                        actualArgument3_1.abiItem,
+                        actualArgument4_1.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_4.abiItem
+                )
+            ).to.be.equal(false);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_1.abiItem,
-    //                     actualArgument2_3.abiItem,
-    //                     actualArgument3_1.abiItem,
-    //                     actualArgument4_1.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_1.abiItem
-    //             )
-    //         ).to.be.equal(false);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_1.abiItem,
+                        actualArgument2_2.abiItem,
+                        actualArgument3_1.abiItem,
+                        actualArgument4_1.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_1.abiItem
+                )
+            ).to.be.equal(true);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_1.abiItem,
-    //                     actualArgument2_1.abiItem,
-    //                     actualArgument3_2.abiItem,
-    //                     actualArgument4_1.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_1.abiItem
-    //             )
-    //         ).to.be.equal(false);
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_1.abiItem,
+                        actualArgument2_3.abiItem,
+                        actualArgument3_1.abiItem,
+                        actualArgument4_1.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_1.abiItem
+                )
+            ).to.be.equal(false);
 
-    //         expect(
-    //             await sessionKeyValidator.isAllowedCalldata(
-    //                 RLP.encode([
-    //                     [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
-    //                     [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
-    //                     allowedArgument3.rlpItem,
-    //                     allowedArgument4.rlpItem,
-    //                     allowedArgument5.rlpItem,
-    //                 ]),
-    //                 RLP.encode([
-    //                     actualArgument1_1.abiItem,
-    //                     actualArgument2_1.abiItem,
-    //                     actualArgument3_1.abiItem,
-    //                     actualArgument4_2.abiItem,
-    //                     actualArgument5.abiItem,
-    //                 ]),
-    //                 actualArgument1_1.abiItem
-    //             )
-    //         ).to.be.equal(false);
-    //     });
-    // });
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_1.abiItem,
+                        actualArgument2_1.abiItem,
+                        actualArgument3_2.abiItem,
+                        actualArgument4_1.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_1.abiItem
+                )
+            ).to.be.equal(false);
+
+            expect(
+                await sessionKeyValidator.isAllowedCalldata(
+                    RLP.encode([
+                        [AND, [subAllowedArgument1_1.rlpItem, subAllowedArgument1_2.rlpItem]],
+                        [OR, [subAllowedArgument2_1.rlpItem, subAllowedArgument2_2.rlpItem]],
+                        allowedArgument3.rlpItem,
+                        allowedArgument4.rlpItem,
+                        allowedArgument5.rlpItem,
+                    ]),
+                    RLP.encode([
+                        actualArgument1_1.abiItem,
+                        actualArgument2_1.abiItem,
+                        actualArgument3_1.abiItem,
+                        actualArgument4_2.abiItem,
+                        actualArgument5.abiItem,
+                    ]),
+                    actualArgument1_1.abiItem
+                )
+            ).to.be.equal(false);
+        });
+    });
 
     describe("SessionKeyValidator validate function", function () {
         beforeEach(async function () {

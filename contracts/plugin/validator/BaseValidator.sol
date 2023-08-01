@@ -55,14 +55,12 @@ abstract contract BaseValidator is IValidator {
 
     /**
      * @dev Internal function to handle wallet initialization.
-     * Subclass must implement this function
      * @param data The initialization data.
      */
     function _init(bytes memory data) internal virtual {}
 
     /**
      * @dev Internal function to handle wallet configuration clearing.
-     * Subclass must implement this function
      */
     function _clear() internal virtual {}
 

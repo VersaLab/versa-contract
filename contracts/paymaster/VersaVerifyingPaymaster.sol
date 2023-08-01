@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-import "@account-abstraction/contracts/core/BasePaymaster.sol";
-import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import "@aa-template/contracts/core/BasePaymaster.sol";
+import "@aa-template/contracts/interfaces/IEntryPoint.sol";
 
 /**
  * @title VersaVerifyingPaymaster

@@ -117,11 +117,10 @@ abstract contract HooksManager is SelfAuthorized {
             emit DisabledHooksWithError(hooks);
         }
         // Remove hooks from exsiting linked list
-        uint256 hasHooks = IHooks(hooks).hasHooks();
-        if (hasHooks >> 128 == 1) {
+        if (beforeTxHooks.isExist(hooks)) {
             beforeTxHooks.remove(prevBeforeTxHook, hooks);
         }
-        if (uint128(hasHooks) == 1) {
+        if (afterTxHooks.isExist(hooks)) {
             afterTxHooks.remove(prevAfterTxHooks, hooks);
         }
     }

@@ -146,9 +146,11 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @param validator The validator to be disabled.
      */
     function _disableValidator(address prevValidator, address validator) internal {
-        try IValidator(validator).clearWalletConfig() {
+        // We use low level call here to make sure this call won't revert the whole transaction in any case
+        (bool success, ) = validator.call(abi.encodeWithSelector(IModule.clearWalletConfig.selector, "0x"));
+        if (success) {
             emit DisabledValidator(validator);
-        } catch {
+        } else {
             emit DisabledValidatorWithError(validator);
         }
         if (sudoValidators.isExist(validator)) {

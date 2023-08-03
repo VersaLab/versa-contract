@@ -128,9 +128,12 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param module The module to be disabled.
      */
     function _disableModule(address prevModule, address module) internal {
-        try IModule(module).clearWalletConfig() {
+        // We use low level call instead of try catch here to make sure this 
+        // call won't revert the whole transaction in any case
+        (bool success, ) = module.call(abi.encodeWithSelector(IModule.clearWalletConfig.selector, "0x"));
+        if (success) {
             emit DisabledModule(module);
-        } catch {
+        } else {
             emit DisabledModuleWithError(module);
         }
         modules.remove(prevModule, module);

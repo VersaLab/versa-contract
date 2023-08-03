@@ -111,9 +111,11 @@ abstract contract HooksManager is SelfAuthorized {
      */
     function _disableHooks(address prevBeforeTxHook, address prevAfterTxHooks, address hooks) internal {
         // Try to clear wallet configurations
-        try IHooks(hooks).clearWalletConfig() {
+        // We use low level call here to make sure this call won't revert the whole transaction in any case
+        (bool success, ) = hooks.call(abi.encodeWithSelector(IModule.clearWalletConfig.selector, "0x"));
+        if (success) {
             emit DisabledHooks(hooks);
-        } catch {
+        } else {
             emit DisabledHooksWithError(hooks);
         }
         // Remove hooks from exsiting linked list

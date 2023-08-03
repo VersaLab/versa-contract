@@ -1038,10 +1038,9 @@ describe("SessionKeyValidator", function () {
                 operatorSignature
             );
             op.signature = signature;
-            // const validationData = await wallet.callStatic.validateUserOp(op, userOpHash, 0);
-            // expect(validationData).to.be.equal(utils.packValidationData(0, 40, 20));
 
-            await sessionKeyValidator.callStatic.testValidateBatchExecute(op, userOpHash);
+            expect(await wallet.callStatic.validateUserOp(op, userOpHash, 0))
+                .to.be.equal(utils.packValidationData(0, 40, 20))
         });
 
         it("should reject non-normal execute", async function () {
@@ -1063,7 +1062,8 @@ describe("SessionKeyValidator", function () {
             };
 
             const userOpHash = getUserOpHash(op, entryPoint.address, 1);
-            expect(await wallet.connect(entryPoint).callStatic.validateUserOp(op, userOpHash, 0)).to.be.equal(1);
+            await expect(wallet.connect(entryPoint).callStatic.validateUserOp(op, userOpHash, 0))
+                .to.be.revertedWith("SessionKeyValidator: invalid wallet operation")
         });
     });
 });

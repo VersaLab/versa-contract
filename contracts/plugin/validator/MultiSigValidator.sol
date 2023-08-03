@@ -203,22 +203,11 @@ contract MultiSigValidator is BaseValidator {
         uint256 currentThreshold = _threshold(userOp.sender);
         // Check that the provided signature data is not too short
         // 20 bytes validator address + 1 byte sig type + required signatures(no less than threshold * 65)
-        if (currentThreshold == 0 || userOp.signature.length < 20 + 1 + currentThreshold * 65) {
-            return SIG_VALIDATION_FAILED;
-        }
+        require (
+            currentThreshold != 0 && userOp.signature.length >= 20 + 1 + currentThreshold * 65,
+            "Invalid signature length"
+        );
         SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(userOp, userOpHash);
-        if (
-            !_checkTransactionTypeAndFee(
-                splitedSig.signatureType,
-                splitedSig.maxFeePerGas,
-                splitedSig.maxPriorityFeePerGas,
-                userOp.maxFeePerGas,
-                userOp.maxPriorityFeePerGas
-            )
-        ) {
-            return SIG_VALIDATION_FAILED;
-        }
-
         bytes32 ethSignedMessageHash = splitedSig.hash.toEthSignedMessageHash();
         // Check if signatures are valid, return `SIG_VALIDATION_FAILED` if error occurs
         try this.checkNSignatures(userOp.sender, ethSignedMessageHash, splitedSig.signature, currentThreshold) {

@@ -105,21 +105,14 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         UserOperation memory userOp,
         bytes32 userOpHash
     ) external onlyEnabledValidator returns (uint256 validationData) {
+        bytes4 selector = bytes4(userOp.callData.slice(0, 4));
         // Split on normal execute and batch normal execute
-        if (bytes4(userOp.callData.slice(0, 4)) == VersaWallet.normalExecute.selector) {
-            try this.validateSingleExecute(userOp, userOpHash) returns (uint256 data) {
-                validationData = data;
-            } catch {
-                validationData = SIG_VALIDATION_FAILED;
-            }
-        } else if (bytes4(userOp.callData.slice(0, 4)) == VersaWallet.batchNormalExecute.selector) {
-            try this.validateBatchExecute(userOp, userOpHash) returns (uint256 data) {
-                validationData = data;
-            } catch {
-                validationData = SIG_VALIDATION_FAILED;
-            }
+        if (selector == VersaWallet.normalExecute.selector) {
+            validationData = _validateSingleExecute(userOp, userOpHash);
+        } else if (selector == VersaWallet.batchNormalExecute.selector) {
+            validationData = _validateBatchExecute(userOp, userOpHash);
         } else {
-            validationData = SIG_VALIDATION_FAILED;
+            revert("SessionKeyValidator: invalid wallet operation");
         }
     }
 
@@ -129,13 +122,12 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * - the userOp must be signed by the operator
      * - the session must be in the session merkle tree
      * - the paymaster must be equal to pre-set paymaster
-     * - must not execeed the spending limit
      * - the calldata must be in the range of pre-set allowed arguments
      */
-    function validateSingleExecute(
+    function _validateSingleExecute(
         UserOperation memory userOp,
         bytes32 userOpHash
-    ) public authorized returns (uint256 validationData) {
+    ) internal returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
         (address to, uint256 value, bytes memory data, ) = abi.decode(
             userOp.callData.slice(4, userOp.callData.length - 4),
@@ -152,12 +144,15 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
                 userOp.signature.slice(20, userOp.signature.length - 20),
                 (bytes32[], address, Session, bytes, bytes)
             );
-        _validateOperatorSiganture(operator, operatorSignature, userOpHash);
         _validateOperatorGasUsage(operator, userOp);
         address paymaster = _parsePaymaster(userOp.paymasterAndData);
         _validateSession(operator, userOp, proof, session, rlpCalldata, paymaster, to, value, data);
         // check and update usage
-        validationData = _packValidationData(0, session.validUntil, session.validAfter);
+        validationData = _packValidationData(
+            _validateOperatorSiganture(operator, operatorSignature, userOpHash),
+            session.validUntil,
+            session.validAfter
+        );
     }
 
     /**
@@ -166,13 +161,12 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * - the userOp must be signed by the operator
      * - the sessions must be in the session merkle tree
      * - the paymaster must be equal to pre-set paymaster
-     * - must not execeed the spending limit
      * - the calldata must be in the range of pre-set allowed arguments
      */
-    function validateBatchExecute(
+    function _validateBatchExecute(
         UserOperation memory userOp,
         bytes32 userOpHash
-    ) public authorized returns (uint256 validationData) {
+    ) internal returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
         (address[] memory to, uint256[] memory value, bytes[] memory data, ) = abi.decode(
             userOp.callData.slice(4, userOp.callData.length - 4),
@@ -189,7 +183,6 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
                 userOp.signature.slice(20, userOp.signature.length - 20),
                 (bytes32[][], address, Session[], bytes[], bytes)
             );
-        _validateOperatorSiganture(operator, operatorSignature, userOpHash);
         _validateOperatorGasUsage(operator, userOp);
         (uint48 validUntil, uint48 validAfter) = _validateMultipleSessions(
             operator,
@@ -201,7 +194,11 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
             value,
             data
         );
-        validationData = _packValidationData(0, validUntil, validAfter);
+        validationData = _packValidationData(
+            _validateOperatorSiganture(operator, operatorSignature, userOpHash),
+            validUntil,
+            validAfter
+        );
     }
 
     /**
@@ -370,12 +367,13 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         address operator,
         bytes memory operatorSignature,
         bytes32 userOpHash
-    ) internal view {
+    ) internal view returns (uint256) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        require(
-            SignatureChecker.isValidSignatureNow(operator, hash, operatorSignature),
-            "SessionKeyValidator: invalid operator signature"
-        );
+        if (SignatureChecker.isValidSignatureNow(operator, hash, operatorSignature)) {
+            return 0;
+        } else {
+            return SIG_VALIDATION_FAILED;
+        }
     }
 
     /**
@@ -462,6 +460,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
 
     function _getChainId() internal view returns (uint256 id) {
         // solium-disable-next-line security/no-inline-assembly
+        /// @solidity memory-safe-assembly
         assembly {
             id := chainid()
         }

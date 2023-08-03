@@ -78,7 +78,7 @@ describe("VersaFactory", () => {
         expect(hooksSize.afterTxHooksSize).to.be.equal(1);
     });
 
-    it("should not deploy wallet twice", async () => {
+    it("should return wallet address if already created", async () => {
         await versaFactory.createAccount(
             [validator.address],
             ["0x"],
@@ -90,8 +90,8 @@ describe("VersaFactory", () => {
             0
         );
 
-        await expect(
-            versaFactory.createAccount(
+        expect(
+            await versaFactory.callStatic.createAccount(
                 [validator.address],
                 ["0x"],
                 [1],
@@ -101,6 +101,15 @@ describe("VersaFactory", () => {
                 ["0x"],
                 0
             )
-        ).to.be.revertedWith("Versa factory: account already created");
+        ).to.be.equal(await versaFactory.getAddress(
+            [validator.address],
+            ["0x"],
+            [1],
+            [hooks.address],
+            ["0x"],
+            [module.address],
+            ["0x"],
+            0
+        ))
     });
 });

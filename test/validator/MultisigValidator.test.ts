@@ -457,6 +457,8 @@ describe("MultiSigValidator", () => {
         sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
         op.signature = sign;
 
+
+
         validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(1);
 
@@ -596,8 +598,8 @@ describe("MultiSigValidator", () => {
         sign = hexConcat([ethers.constants.AddressZero, "0x03", combinedSignature]);
         op.signature = sign;
 
-        validationData = await multisigValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        await expect(multisigValidator.validateSignature(op, userOpHash))
+            .to.be.revertedWith("SignatureHandler: invalid signature type")
 
         // signature must be ordered
         combinedSignature = hexConcat([sign1, sign2]);
@@ -618,14 +620,14 @@ describe("MultiSigValidator", () => {
         // Signatures data too short
         sign = hexConcat([ethers.constants.AddressZero, "0x00", sign1]);
         op.signature = sign;
-        validationData = await multisigValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        await expect(multisigValidator.validateSignature(op, userOpHash))
+            .to.be.revertedWith("Invalid signature length")
 
         // non-enabled wallet
         op.sender = wallet_2.address;
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", sign1]);
-        validationData = await multisigValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        sign = hexConcat([ethers.constants.AddressZero, "0x00"]);
+        await expect(multisigValidator.validateSignature(op, userOpHash))
+            .to.be.revertedWith("Invalid signature length")
     });
 
     it("should validate EIP-1271 signature correctly", async () => {

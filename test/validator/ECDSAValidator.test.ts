@@ -282,8 +282,9 @@ describe("ECDSAValidator", () => {
         sign = hexConcat([ethers.constants.AddressZero, "0x03", sign]);
         op.signature = sign;
 
-        const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
+            "SignatureHandler: invalid signature type"
+        );
     });
 
     it("should fail for invalid signature length", async () => {
@@ -317,8 +318,9 @@ describe("ECDSAValidator", () => {
         sign = hexConcat([ethers.constants.AddressZero, "0x00", sign.slice(0, 6)]);
         op.signature = sign;
 
-        const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
+            "Invalid signature length"
+        );
     });
 
     it("should fail validation for invalid instant tx signature", async () => {
@@ -467,9 +469,9 @@ describe("ECDSAValidator", () => {
 
         op.signature = sign;
 
-        let validationData = await ecdsaValidator.validateSignature(op, userOpHash);
-        let expectedValidationData = 1;
-        expect(validationData).to.equal(expectedValidationData);
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
+            "SignatureHandler: Invalid scheduled transaction gas fee"
+        )
 
         op.maxFeePerGas = 100;
         op.maxPriorityFeePerGas = 200;
@@ -492,9 +494,9 @@ describe("ECDSAValidator", () => {
 
         op.signature = sign;
 
-        validationData = await ecdsaValidator.validateSignature(op, userOpHash);
-        expectedValidationData = 1;
-        expect(validationData).to.equal(expectedValidationData);
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
+            "SignatureHandler: Invalid scheduled transaction gas fee"
+        )
     });
 
     it("should check if EIP1271 signature is valid", async () => {

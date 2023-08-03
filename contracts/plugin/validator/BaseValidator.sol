@@ -79,33 +79,6 @@ abstract contract BaseValidator is IValidator {
     }
 
     /**
-     * @dev Check the decoded signature type and fee.
-     * @param sigType The signature type.
-     * @param maxFeePerGas The maximum fee per gas.
-     * @param maxPriorityFeePerGas The maximum priority fee per gas.
-     * @param actualMaxFeePerGas The actual maximum fee per gas from the user operation.
-     * @param actualMaxPriorityFeePerGas The actual maximum priority fee per gas from the user operation.
-     * @return A boolean indicating whether the decoded signature is valid or not.
-     */
-    function _checkTransactionTypeAndFee(
-        uint256 sigType,
-        uint256 maxFeePerGas,
-        uint256 maxPriorityFeePerGas,
-        uint256 actualMaxFeePerGas,
-        uint256 actualMaxPriorityFeePerGas
-    ) internal pure returns (bool) {
-        if (sigType != 0x00 && sigType != 0x01) {
-            return false;
-        }
-        if (
-            sigType == 0x01 && (actualMaxFeePerGas > maxFeePerGas || actualMaxPriorityFeePerGas > maxPriorityFeePerGas)
-        ) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
      * @dev Pack the validation data.
      * @param sigFailed The signature validation result.
      * @param validUntil The valid until timestamp.

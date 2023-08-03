@@ -73,24 +73,11 @@ contract ECDSAValidator is BaseValidator {
         // 20 bytes validator address + 1 byte sig type + 65 bytes signature
         // 20 bytes validator address + 1 byte sig type
         // + 12 bytes time range data + 64 bytes fee data + 65 bytes signature
-        if (sigLength != 86 && sigLength != 162) {
-            return SIG_VALIDATION_FAILED;
-        }
+        require(sigLength == 86 || sigLength == 162, "Invalid signature length");
         SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(
             _userOp,
             _userOpHash
         );
-        if (
-            !_checkTransactionTypeAndFee(
-                splitedSig.signatureType,
-                splitedSig.maxFeePerGas,
-                splitedSig.maxPriorityFeePerGas,
-                _userOp.maxFeePerGas,
-                _userOp.maxPriorityFeePerGas
-            )
-        ) {
-            return SIG_VALIDATION_FAILED;
-        }
         validationData = _validateSignature(
             _signers[_userOp.sender],
             splitedSig.signature,

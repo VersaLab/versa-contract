@@ -66,10 +66,11 @@ abstract contract BaseValidator is IValidator {
 
     /**
      * @dev Checks if the specified wallet has been initialized.
+     * Subclasses must override this function.
      * @param wallet The wallet address to check.
      * @return A boolean indicating if the wallet is initialized.
      */
-    function _isWalletInited(address wallet) internal view virtual returns (bool) {}
+    function _isWalletInited(address wallet) internal view virtual returns (bool);
 
     /**
      * @dev Inherits from ERC165.

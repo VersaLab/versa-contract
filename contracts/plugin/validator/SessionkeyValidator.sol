@@ -80,7 +80,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     /**
      * @dev Checks if the specified wallet has been initialized.
      * @notice This validator is supposed to be enabled during wallet initialization without performing
-     * validator initialization.
+     * validator initialization. Just let it always return true.
      * @return A boolean indicating if the wallet is initialized.
      */
     function _isWalletInited(address) internal pure override returns (bool) {

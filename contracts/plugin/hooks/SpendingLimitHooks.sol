@@ -6,6 +6,9 @@ import "./BaseHooks.sol";
 
 /**
  * @title SpendingLimitHooks
+ * @dev The spendingLimitHooks supports setting spending limits for both native and starndard ERC20 tokens spending limits
+ * for versa wallet's normal executions by decoding the function selector and parameters.
+ * Custom functions beyond the standard ERC20 functions will not be compatible with this feature.
  */
 contract SpendingLimitHooks is BaseHooks {
     struct SpendingLimitSetConfig {

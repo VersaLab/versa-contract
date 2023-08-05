@@ -87,6 +87,7 @@ abstract contract HooksManager is SelfAuthorized {
      * @dev Internal function to enable hooks for a versa wallet.
      * @param hooks The address of the hooks contract.
      * @param initData Initialization data for the hooks contract.
+     * @notice Hooks contracts are not supposed to change `hasHooks` behevior after deployment.
      */
     function _enableHooks(address hooks, bytes memory initData) internal {
         // Add hooks to linked list

@@ -455,7 +455,9 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
             validUntil = validUntil1 > validunitil2 ? validUntil1 : validunitil2;
         }
         validAfter = validAfter1 > validAfter2 ? validAfter1 : validAfter2;
-        require(validUntil >= validAfter, "SessionKeyValidator: invalid validation duration");
+        if (validUntil > 0) {
+            require(validUntil >= validAfter, "SessionKeyValidator: invalid validation duration");
+        }
     }
 
     function _getChainId() internal view returns (uint256 id) {

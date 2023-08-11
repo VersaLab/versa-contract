@@ -833,6 +833,32 @@ describe("SessionKeyValidator", function () {
             );
             expect(validRange[0]).to.be.equal(200);
             expect(validRange[1]).to.be.equal(50);
+
+            validUntil1 = 40;
+            validUntil2 = 40;
+            validAfter1 = 50;
+            validAfter2 = 0;
+
+            await expect(sessionKeyValidator.testGetValidationIntersection(
+                validUntil1,
+                validUntil2,
+                validAfter1,
+                validAfter2
+            )).to.be.revertedWith("SessionKeyValidator: invalid validation duration");
+
+            validUntil1 = 0;
+            validUntil2 = 0;
+            validAfter1 = 50;
+            validAfter2 = 0;
+
+            validRange = await sessionKeyValidator.testGetValidationIntersection(
+                validUntil1,
+                validUntil2,
+                validAfter1,
+                validAfter2
+            )
+            expect(validRange[0]).to.be.equal(0);
+            expect(validRange[1]).to.be.equal(50);
         });
 
         it("should validate userOp: normalExecute", async function () {

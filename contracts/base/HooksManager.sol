@@ -93,10 +93,10 @@ abstract contract HooksManager is SelfAuthorized {
         // Add hooks to linked list
         require(IHooks(hooks).supportsInterface(type(IHooks).interfaceId), "Not a valid hooks contract");
         uint256 hasHooks = IHooks(hooks).hasHooks();
-        if (hasHooks >> 128 == 1) {
+        if ((hasHooks >> 128) & 1 == 1) {
             beforeTxHooks.add(hooks);
         }
-        if (uint128(hasHooks) == 1) {
+        if (hasHooks & 1 == 1) {
             afterTxHooks.add(hooks);
         }
         // Initialize wallet configurations

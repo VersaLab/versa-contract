@@ -255,9 +255,9 @@ contract VersaWallet is
 
     /**
      * @dev A normal execution has following restrictions:
-     * 1. Cannot selfcall, i.e., change wallet's config
+     * 1. Cannot selfcall(except for self-transfer), i.e., change wallet's config
      * 2. Cannot call to an enabled plugin, i.e, change plugin's config or call wallet from plugin
-     * 3. Cannot perform a delegatecall
+     * 3. Can only perform a call
      * @param to The address to which the transaction is directed.
      * @param _operation The operation type of the transaction.
      */
@@ -267,7 +267,7 @@ contract VersaWallet is
                 !isValidatorEnabled(to) &&
                 !isHooksEnabled(to) &&
                 !isModuleEnabled(to) &&
-                _operation != Enum.Operation.DelegateCall,
+                _operation == Enum.Operation.Call,
             "Versa: operation is not allowed"
         );
     }

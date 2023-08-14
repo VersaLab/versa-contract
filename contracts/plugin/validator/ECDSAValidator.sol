@@ -69,15 +69,22 @@ contract ECDSAValidator is BaseValidator {
         UserOperation calldata _userOp,
         bytes32 _userOpHash
     ) external view returns (uint256 validationData) {
-        uint256 sigLength = _userOp.signature.length;
-        // 20 bytes validator address + 1 byte sig type + 65 bytes signature
-        // 20 bytes validator address + 1 byte sig type
-        // + 12 bytes time range data + 64 bytes fee data + 65 bytes signature
-        require(sigLength == 86 || sigLength == 162, "Invalid signature length");
+        // Get the signature from the user operation
         SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(
             _userOp,
             _userOpHash
         );
+        uint256 sigLength = _userOp.signature.length;
+        // Instant transaction signature length: 20 bytes validator address + 1 byte sig type + 65 bytes signature
+        // Scheduled transaction signature length: 20 bytes validator address + 1 byte sig type
+        // + 12 bytes time range data + 64 bytes fee data + 65 bytes signature
+        // The signature type must be INSTANT_TRANSACTION or SCHEDULE_TRANSACTION here
+        if (
+            splitedSig.signatureType == SignatureHandler.INSTANT_TRANSACTION && sigLength != 86
+            || splitedSig.signatureType == SignatureHandler.SCHEDULE_TRANSACTION && sigLength != 162
+        ) {
+            revert("Invalid signature length");
+        }
         validationData = _validateSignature(
             _signers[_userOp.sender],
             splitedSig.signature,
@@ -96,11 +103,12 @@ contract ECDSAValidator is BaseValidator {
      * @return A boolean indicating whether the signature is valid or not.
      */
     function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
-        uint256 validUntil;
-        uint256 validAfter;
         address signer = _signers[wallet];
-        uint256 validationData = _validateSignature(signer, signature, hash, validUntil, validAfter);
-        return validationData == 0 ? true : false;
+        bytes32 messageHash = hash.toEthSignedMessageHash();
+        if (signer == messageHash.recover(signature)) {
+            return true;
+        }
+        return false;
     }
 
     /**

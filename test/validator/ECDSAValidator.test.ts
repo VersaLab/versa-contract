@@ -181,12 +181,11 @@ describe("ECDSAValidator", () => {
         let chainId = 1;
         const userOpHash = getUserOpHash(op, entryPoint, chainId);
 
-        let sign = await signer1.signMessage(arrayify(userOpHash));
+        let sign = await signer1.signMessage(arrayify(keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, ecdsaValidator.address]))));
         // The first 20 bytes of signature is validator's address
         // The 21th byte is the sig type
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", sign]);
+        sign = hexConcat([ecdsaValidator.address, "0x00", sign]);
         op.signature = sign;
-
         const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(0);
     });
@@ -225,13 +224,13 @@ describe("ECDSAValidator", () => {
             [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
         );
 
-        let finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
+        let finalHash = keccak256(abiCoder.encode(["bytes32", "address", "bytes"], [userOpHash, ecdsaValidator.address, extraData]));
         let sign = await signer1.signMessage(arrayify(finalHash));
 
         // The first 20 bytes of signature is validator's address
         // The 21th byte is the sig type
         sign = hexConcat([
-            ethers.constants.AddressZero,
+            ecdsaValidator.address,
             "0x01",
             numberToFixedHex(validUntil, 6),
             numberToFixedHex(validAfter, 6),
@@ -321,6 +320,11 @@ describe("ECDSAValidator", () => {
         await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
             "Invalid signature length"
         );
+
+        sign = hexConcat([ethers.constants.AddressZero, "0x01", sign.slice(0, 6)]);
+        op.signature = sign;
+        // revert without reason as it fails at signature handler
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.reverted
     });
 
     it("should fail validation for invalid instant tx signature", async () => {

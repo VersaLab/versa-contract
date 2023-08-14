@@ -120,8 +120,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Valdiate the normal execute user operation.
      * Requirements:
      * - the userOp must be signed by the operator
-     * - the session must be in the session merkle tree
-     * - the paymaster must be equal to pre-set paymaster
+     * - the session must be valid
      * - the calldata must be in the range of pre-set allowed arguments
      */
     function _validateSingleExecute(
@@ -159,8 +158,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Valdiate the batch normal execute user operation.
      * Requirements:
      * - the userOp must be signed by the operator
-     * - the sessions must be in the session merkle tree
-     * - the paymaster must be equal to pre-set paymaster
+     * - the sessions must be valid
      * - the calldata must be in the range of pre-set allowed arguments
      */
     function _validateBatchExecute(
@@ -234,7 +232,8 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Validate the session.
      * Requirements:
      * - the session must be in the session merkle tree
-     * - the session must not execeed the spending limit
+     * - the paymaster must be equal to pre-set paymaster
+     * - the session must not exceed the usage limit
      * - the calldata must be in the range of pre-set allowed arguments
      */
     function _validateSession(
@@ -248,7 +247,6 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         uint256 value,
         bytes memory data
     ) internal {
-        // if the session is premitted offchain, verify ownerSignature
         bytes32 sessionHash = session.hash();
         _validateSessionRoot(proof, _getSessionRoot(userOp.sender, operator), sessionHash);
         _validatePaymaster(session.paymaster, paymaster);
@@ -262,7 +260,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Validate the sessions, an execution may use multiple sessions.
      * Requirements:
      * - the sessions must be in the session merkle tree
-     * - the executions must not execeed the spending limit
+     * - each session must not exceed the usage limit
      * - the calldata of each execution must be in the range of pre-set allowed arguments
      */
     function _validateMultipleSessions(
@@ -305,7 +303,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     }
 
     /**
-     * @dev Check if the session has enough gas and times to remaining.
+     * @dev Check if the session exceeds the usage limit and update the usage.
      */
     function _checkAndUpdateSessionUsage(
         bytes32 sessionHash,
@@ -318,7 +316,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     }
 
     /**
-     * @dev Check if the arguments of the executiondata is in the range of pre-set allowed arguments.
+     * @dev Check if the arguments of the execution data is in the range of pre-set allowed arguments.
      */
     function _checkArguments(
         Session memory session,
@@ -370,7 +368,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         bytes memory operatorSignature,
         bytes32 userOpHash
     ) internal view returns (uint256) {
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
+        bytes32 hash = keccak256(abi.encode(userOpHash, address(this))).toEthSignedMessageHash();
         if (SignatureChecker.isValidSignatureNow(operator, hash, operatorSignature)) {
             return 0;
         } else {

@@ -58,11 +58,12 @@ library SignatureHandler {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal pure returns (SplitedSignature memory splitedSig) {
+        address validator = address(bytes20(userOp.signature[0:20]));
         splitedSig.signatureType = uint8(bytes1(userOp.signature[SIG_TYPE_OFFSET:SIG_TYPE_OFFSET + SIG_TYPE_LENGTH]));
         // For instant transactions, the signature start from the 22th bytes of the userOp.signature.
         if (splitedSig.signatureType == INSTANT_TRANSACTION) {
             splitedSig.signature = userOp.signature[INSTANT_SIG_OFFSET:];
-            splitedSig.hash = userOpHash;
+            splitedSig.hash = keccak256(abi.encode(userOpHash, validator));
         } else if (splitedSig.signatureType == SCHEDULE_TRANSACTION) {
             // For scheduled transactions, decode the individual fields from the signature.
             splitedSig.validUntil = uint48(
@@ -88,7 +89,7 @@ library SignatureHandler {
                 && userOp.maxPriorityFeePerGas <= splitedSig.maxPriorityFeePerGas,
                 "SignatureHandler: Invalid scheduled transaction gas fee"
             );
-            splitedSig.hash = keccak256(abi.encode(userOpHash, extraData));
+            splitedSig.hash = keccak256(abi.encode(userOpHash, validator, extraData));
         } else {
             revert("SignatureHandler: invalid signature type");
         }

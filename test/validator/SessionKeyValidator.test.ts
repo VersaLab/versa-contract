@@ -112,7 +112,6 @@ describe("SessionKeyValidator", function () {
                 "uint256",
             ]);
             const sessionRoot = tree.root;
-            console.log("session root using oz tree: ", sessionRoot);
 
             let data = sessionKeyValidator.interface.encodeFunctionData("setSessionRoot", [
                 operator.address,
@@ -941,8 +940,9 @@ describe("SessionKeyValidator", function () {
 
             const chainId = 1;
             const userOpHash = getUserOpHash(op, entryPoint.address, chainId);
+            const finalHash = keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address]))
 
-            const operatorSignature = await operator.signMessage(arrayify(userOpHash));
+            const operatorSignature = await operator.signMessage(arrayify(finalHash));
 
             const signature = utils.getSessionSigleExecuteSignature(
                 sessionKeyValidator.address,
@@ -1052,8 +1052,8 @@ describe("SessionKeyValidator", function () {
 
             const chainId = 1;
             const userOpHash = getUserOpHash(op, entryPoint.address, chainId);
-
-            const operatorSignature = await operator.signMessage(arrayify(userOpHash));
+            const finalHash = keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address]))
+            const operatorSignature = await operator.signMessage(arrayify(finalHash));
 
             const signature = utils.getSessionBatchExecuteSignature(
                 sessionKeyValidator.address,

@@ -21,6 +21,8 @@ library SignatureHandler {
     uint8 constant INSTANT_SIG_OFFSET = 21;
     uint8 constant SCHEDULE_SIG_OFFSET = MAX_PRIORITY_FEE_OFFSET + FEE_LENGTH;
 
+    address constant ENTRYPOINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+
     // Memory struct for decoded userOp signature
     struct SplitedSignature {
         uint256 signatureType;
@@ -89,10 +91,33 @@ library SignatureHandler {
                 && userOp.maxPriorityFeePerGas <= splitedSig.maxPriorityFeePerGas,
                 "SignatureHandler: Invalid scheduled transaction gas fee"
             );
-            splitedSig.hash = keccak256(abi.encode(userOpHash, validator, extraData));
+            splitedSig.hash = keccak256(abi.encode(getScheduledOpHash(userOp), validator, extraData));
         } else {
             revert("SignatureHandler: invalid signature type");
         }
+    }
+
+    function pack(UserOperation calldata userOp) internal pure returns (bytes memory ret) {
+        address sender = UserOperationLib.getSender(userOp);
+        uint256 nonce = userOp.nonce;
+        bytes32 hashInitCode = calldataKeccak(userOp.initCode);
+        bytes32 hashCallData = calldataKeccak(userOp.callData);
+        uint256 callGasLimit = userOp.callGasLimit;
+        uint256 verificationGasLimit = userOp.verificationGasLimit;
+        uint256 preVerificationGas = userOp.preVerificationGas;
+        bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
+
+        return abi.encode(
+            sender, nonce,
+            hashInitCode, hashCallData,
+            callGasLimit, verificationGasLimit, preVerificationGas,
+            hashPaymasterAndData
+        );
+    }
+
+    function getScheduledOpHash(UserOperation calldata userOp) internal view returns (bytes32) {
+        bytes32 packHash = keccak256(pack(userOp));
+        return keccak256(abi.encode(packHash, ENTRYPOINT, block.chainid));
     }
 
     /**

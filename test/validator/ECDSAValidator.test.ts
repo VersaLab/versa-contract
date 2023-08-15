@@ -3,7 +3,7 @@ import { Signer } from "ethers";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ECDSAValidator, ECDSAValidator__factory, MockValidator__factory, VersaWallet } from "../../typechain-types";
-import { deployVersaWallet, getUserOpHash } from "../utils";
+import { deployVersaWallet, getUserOpHash, getScheduledUserOpHash } from "../utils";
 import { enablePlugin, execute } from "../base/utils";
 import {
     arrayify,
@@ -191,6 +191,7 @@ describe("ECDSAValidator", () => {
     });
 
     it("should validate schedualed transaction signature correctly", async () => {
+        const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
         let initData = abiCoder.encode(["address"], [signer1.address]);
         await enablePlugin({
             executor: wallet,
@@ -211,9 +212,8 @@ describe("ECDSAValidator", () => {
             paymasterAndData: "0x",
             signature: "0x",
         };
-        let entryPoint = ethers.constants.AddressZero;
-        let chainId = 1;
-        const userOpHash = getUserOpHash(op, entryPoint, chainId);
+        let chainId = 31337;
+        let userOpHash = getScheduledUserOpHash(op, entryPointAddress, chainId);
 
         let validAfter = await helper.time.latest();
         let validUntil = validAfter + 100;
@@ -240,6 +240,8 @@ describe("ECDSAValidator", () => {
         ]);
 
         op.signature = sign;
+        op.maxFeePerGas = 99
+        op.maxPriorityFeePerGas = 99
 
         const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
         const expectedValidationData = hexConcat([

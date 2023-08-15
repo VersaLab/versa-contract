@@ -55,7 +55,6 @@ contract SpendingLimitHooks is BaseHooks {
         if (_data.length > 0) {
             SpendingLimitSetConfig[] memory initialSetConfigs = _parseSpendingLimitSetConfigData(_data);
             _batchSetSpendingLimit(initialSetConfigs);
-            _walletInited[msg.sender] = true;
         }
         _walletInited[msg.sender] = true;
     }
@@ -196,7 +195,7 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _config The SpendingLimitSetConfig to set the spending limit.
      */
     function _setSpendingLimit(SpendingLimitSetConfig memory _config) internal {
-        require(_config.resetTimeIntervalMinutes > 0, "InvSpendingLimitHooks: invalid interval");
+        require(_config.resetTimeIntervalMinutes > 0, "SpendingLimitHooks: invalid reset time interval");
         SpendingLimitInfo memory spendingLimitInfo = getSpendingLimitInfo(msg.sender, _config.tokenAddress);
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
         if (_config.resetBaseTimeMinutes > 0) {
@@ -207,6 +206,11 @@ contract SpendingLimitHooks is BaseHooks {
             spendingLimitInfo.lastResetTimeMinutes =
                 currentTimeMinutes -
                 ((currentTimeMinutes - _config.resetBaseTimeMinutes) % _config.resetTimeIntervalMinutes);
+            // else, _config.resetBaseTimeMinutes will no longer be considered
+            // and then if spendingLimitInfo.lastResetTimeMinutes == 0,
+            // it means that the spending limit configuration is brand new
+            // and we need to set spendingLimitInfo.lastResetTimeMinutes to currentTimeMinutes.
+            // if it is any other case, it means that we do not need to modify spendingLimitInfo.lastResetTimeMinutes.
         } else if (spendingLimitInfo.lastResetTimeMinutes == 0) {
             spendingLimitInfo.lastResetTimeMinutes = currentTimeMinutes;
         }
@@ -323,6 +327,9 @@ contract SpendingLimitHooks is BaseHooks {
     function getSpendingLimitInfo(address _wallet, address _token) public view returns (SpendingLimitInfo memory) {
         SpendingLimitInfo memory spendingLimitInfo = _tokenSpendingLimitInfo[_wallet][_token];
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
+        // if spendingLimitInfo.resetTimeIntervalMinutes > 0,
+        // it means that the spending limit configuration has already been set before
+        // and needs to be calculated based on the config info.
         if (
             spendingLimitInfo.resetTimeIntervalMinutes > 0 &&
             spendingLimitInfo.lastResetTimeMinutes + spendingLimitInfo.resetTimeIntervalMinutes <= currentTimeMinutes

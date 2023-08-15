@@ -61,7 +61,7 @@ abstract contract BaseHooks is IHooks {
      * @dev Returns the supported hooks of this contract.
      * @return The supported hooks (represented as a bitwise flag).
      */
-    function hasHooks() external pure virtual returns (uint256) {}
+    function hasHooks() external pure virtual returns (uint256);
 
     /**
      * @dev Perform before transaction actions.

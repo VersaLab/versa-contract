@@ -160,7 +160,7 @@ contract MultiSigValidator is BaseValidator {
         require(guardian != wallet && guardian != address(0), "Invalid guardian address");
         WalletInfo storage info = _walletInfo[wallet];
         info.guardianCount++;
-        _guardians[guardian][msg.sender] = true;
+        _guardians[guardian][wallet] = true;
         emit AddGuardian(wallet, guardian);
     }
 
@@ -172,7 +172,7 @@ contract MultiSigValidator is BaseValidator {
     function _revokeGuardian(address wallet, address guardian) internal {
         require(_isGuardian(wallet, guardian), "Not a valid guardian");
         WalletInfo storage info = _walletInfo[wallet];
-        _guardians[guardian][msg.sender] = false;
+        _guardians[guardian][wallet] = false;
         info.guardianCount--;
         emit RevokeGuardian(wallet, guardian);
     }

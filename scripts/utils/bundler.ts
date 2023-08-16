@@ -3,9 +3,10 @@ import { AbiCoder, keccak256 } from "ethers/lib/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "@ethersproject/units";
 import { arrayify, hexConcat, hexlify } from "@ethersproject/bytes";
-import { getUserOpHash } from "../../test/utils";
+import { getScheduledUserOpHash, getUserOpHash } from "../../test/utils";
 import { numberToFixedHex } from "../../test/base/utils";
 import axios from "axios";
+import { BigNumber } from "ethers";
 
 const abiCoder = new AbiCoder();
 const fakePaymasterAndData =
@@ -150,7 +151,7 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
             case 80001: {
                 tx = await signer.sendTransaction({
                     to: userOp.sender,
-                    value: parseEther("0.05"),
+                    value: parseEther("0.02"),
                 });
                 break;
             }
@@ -161,11 +162,18 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
                 });
                 break;
             }
+            case 534351: {
+                tx = await signer.sendTransaction({
+                    to: userOp.sender,
+                    value: parseEther("0.05"),
+                });
+                break;
+            }
             default: {
                 console.log("unsupported network");
             }
         }
-        await tx.wait();
+        await tx!.wait();
     }
     userOp.signature = hexConcat([validator, "0x00", fakeSignature]);
     let [gas, error] = await estimateGas(bundlerURL, userOp, entryPoint);
@@ -192,12 +200,13 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
         let now = Math.floor(new Date().getTime() / 1000);
         validUntil = 0;
         validAfter = 0;
-        maxFeePerGas = userOp.maxFeePerGas;
-        maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
+        maxFeePerGas = userOp.maxFeePerGas * 5;
+        maxPriorityFeePerGas = userOp.maxFeePerGas * 5;
         let extraData = abiCoder.encode(
             ["uint256", "uint256", "uint256", "uint256"],
             [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
         );
+        userOpHash = getScheduledUserOpHash(userOp, entryPoint, chainId);
         finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
     }
     let userOpSigs = "0x";

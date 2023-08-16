@@ -195,10 +195,10 @@ contract SpendingLimitHooks is BaseHooks {
      * @param _config The SpendingLimitSetConfig to set the spending limit.
      */
     function _setSpendingLimit(SpendingLimitSetConfig memory _config) internal {
-        require(_config.resetTimeIntervalMinutes > 0, "SpendingLimitHooks: invalid reset time interval");
         SpendingLimitInfo memory spendingLimitInfo = getSpendingLimitInfo(msg.sender, _config.tokenAddress);
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
         if (_config.resetBaseTimeMinutes > 0) {
+            require(_config.resetTimeIntervalMinutes > 0, "SpendingLimitHooks: invalid reset time interval");
             require(
                 _config.resetBaseTimeMinutes <= currentTimeMinutes,
                 "SpendingLimitHooks: resetBaseTimeMinutes can not greater than currentTimeMinutes"

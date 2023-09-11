@@ -60,11 +60,6 @@ contract SpendingLimitHooks is BaseHooks {
     }
 
     /**
-     * @dev Internal function to handle wallet configuration clearing.
-     */
-    function _clear() internal override {}
-
-    /**
      * @dev Checks if the specified wallet has been initialized.
      * @return A boolean indicating if the wallet is initialized.
      */
@@ -192,6 +187,8 @@ contract SpendingLimitHooks is BaseHooks {
 
     /**
      * @dev Sets the spending limit for the caller based on the provided SpendingLimitSetConfig.
+     * @notice Set 1 instead of 0 to force a minimum amount of token allowance, as the latter is used as
+     * an indicator of unlimited allowance or uninitialized data.
      * @param _config The SpendingLimitSetConfig to set the spending limit.
      */
     function _setSpendingLimit(SpendingLimitSetConfig memory _config) internal {

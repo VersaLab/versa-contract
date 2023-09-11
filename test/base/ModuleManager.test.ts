@@ -1,17 +1,19 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { ModuleManager, MockModule } from "../../typechain-types";
+import { MockModuleManager, MockModule, TestRevert__factory, TestRevert } from "../../typechain-types";
 import { enablePlugin, disablePlugin, SENTINEL } from "./utils";
 import { parseEther } from "ethers/lib/utils";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BigNumber } from "ethers";
 
 describe("ModuleManager", () => {
     let owner: SignerWithAddress;
-    let moduleManager: ModuleManager;
+    let moduleManager: MockModuleManager;
     let MODULE_1: string;
     let MODULE_2: string;
     let MODULE_3: string;
+    let TestRevert: TestRevert;
 
     beforeEach(async () => {
         [owner] = await ethers.getSigners();
@@ -25,6 +27,8 @@ describe("ModuleManager", () => {
         MODULE_1 = (await ModuleFactory.deploy()).address;
         MODULE_2 = (await ModuleFactory_2.deploy()).address;
         MODULE_3 = (await ModuleFactory.deploy()).address;
+
+        TestRevert = await new TestRevert__factory(owner).deploy();
     });
 
     it("should enable and disable modules correctly", async () => {
@@ -114,4 +118,49 @@ describe("ModuleManager", () => {
             moduleManager.execTransactionFromModule(moduleManager.address, parseEther("1"), "0x", 0)
         ).to.be.revertedWith("Only enabled module");
     });
+
+    it("should correctly return error message", async () => {
+        await expect(moduleManager.execute(
+            TestRevert.address,
+            0,
+            TestRevert.interface.encodeFunctionData("testRevert", [0]),
+            0
+        )).to.revertedWithoutReason();
+
+        await expect(moduleManager.execute(
+            TestRevert.address,
+            0,
+            TestRevert.interface.encodeFunctionData("testRevert", [1]),
+            0
+        )).to.revertedWithCustomError(TestRevert, "TestError")
+
+        await expect(moduleManager.execute(
+            TestRevert.address,
+            0,
+            TestRevert.interface.encodeFunctionData("testRevert", [2]),
+            0
+        )).to.revertedWithCustomError(TestRevert, "TestErrorWithoutPara")
+
+        await expect(moduleManager.execute(
+            TestRevert.address,
+            0,
+            TestRevert.interface.encodeFunctionData("testRevert", [3]),
+            0
+        )).to.revertedWithCustomError(TestRevert, "TestErrorWithMultiPara")
+        .withArgs(3, 1, 2, 3)
+
+        await expect(moduleManager.execute(
+            TestRevert.address,
+            0,
+            TestRevert.interface.encodeFunctionData("testRevert", [4]),
+            0
+        )).to.revertedWith("test revert string")
+
+        await expect(moduleManager.execute(
+            TestRevert.address,
+            0,
+            TestRevert.interface.encodeFunctionData("testRevert", [5]),
+            0
+        )).to.revertedWithPanic(0x11)
+    })
 });

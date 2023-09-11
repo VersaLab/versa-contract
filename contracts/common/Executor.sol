@@ -47,20 +47,15 @@ abstract contract Executor {
      */
     function executeAndRevert(address to, uint256 value, bytes memory data, Enum.Operation operation) internal {
         bool success = execute(to, value, data, operation, type(uint256).max);
-
-        bytes memory returnData = getReturnData(type(uint256).max);
-        // Revert with the actual reason string
-        // Adopted from: https://github.com/Uniswap/v3-periphery/blob/464a8a49611272f7349c970e0fadb7ec1d3c1086/contracts/base/Multicall.sol#L16-L23
         if (!success) {
-            if (returnData.length < 68) revert();
             assembly {
-                returnData := add(returnData, 0x04)
+                returndatacopy(0, 0, returndatasize())
+                revert(0, returndatasize())
             }
-            revert(abi.decode(returnData, (string)));
         }
     }
 
-    // get returned data from last call or calldelegate
+    // get returned data from last call or delegatecall
     function getReturnData(uint256 maxLen) internal pure returns (bytes memory returnData) {
         assembly {
             let len := returndatasize()

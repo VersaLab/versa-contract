@@ -149,19 +149,19 @@ contract SpendingLimitHooks is BaseHooks {
             bytes4 methodSelector = bytes4(_data[:4]);
             if (methodSelector == TRANSFER || methodSelector == INCREASE_ALLOWANCE) {
                 (address target, uint256 value) = abi.decode(_data[4:], (address, uint256));
-                if (target != msg.sender) {
+                if (target != _wallet) {
                     spendingLimitInfo.spentAmount += value;
                     _checkAmountAndUpdate(_token, spendingLimitInfo);
                 }
             } else if (methodSelector == TRANSFER_FROM) {
                 (address target, , uint256 value) = abi.decode(_data[4:], (address, address, uint256));
-                if (target == msg.sender) {
+                if (target == _wallet) {
                     spendingLimitInfo.spentAmount += value;
                     _checkAmountAndUpdate(_token, spendingLimitInfo);
                 }
             } else if (methodSelector == APPROVE) {
                 (address target, uint256 value) = abi.decode(_data[4:], (address, uint256));
-                if (target != msg.sender) {
+                if (target != _wallet) {
                     uint256 preAllowanceAmount = ERC20(_token).allowance(_wallet, target);
                     if (value > preAllowanceAmount) {
                         spendingLimitInfo.spentAmount = spendingLimitInfo.spentAmount + value - preAllowanceAmount;

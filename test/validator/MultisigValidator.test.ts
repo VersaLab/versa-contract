@@ -9,7 +9,7 @@ import {
     MultiSigValidator__factory,
     VersaWallet,
 } from "../../typechain-types";
-import { deployVersaWallet, getUserOpHash } from "../utils";
+import { deployVersaWallet, getScheduledUserOpHash, getUserOpHash, entryPointAddress } from "../utils";
 import { enablePlugin, execute } from "../base/utils";
 import { arrayify, hexConcat, hexlify, keccak256, toUtf8Bytes } from "ethers/lib/utils";
 import * as helper from "@nomicfoundation/hardhat-network-helpers";
@@ -489,11 +489,9 @@ describe("MultiSigValidator", () => {
             paymasterAndData: "0x",
             signature: "0x",
         };
-        let entryPoint = ethers.constants.AddressZero;
-        let chainId = 1;
-        const userOpHash = getUserOpHash(op, entryPoint, chainId);
+        let chainId = 31337;
+        const userOpHash = getScheduledUserOpHash(op, entryPointAddress, chainId);
 
-        // let now = Math.floor((new Date().getTime() / 1000));
         let validAfter = 0;
         let validUntil = 0;
         let maxFeePerGas = op.maxFeePerGas;

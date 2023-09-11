@@ -3,7 +3,7 @@ import { Signer } from "ethers";
 import { expect } from "chai";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { ECDSAValidator, ECDSAValidator__factory, MockValidator__factory, VersaWallet } from "../../typechain-types";
-import { deployVersaWallet, getUserOpHash, getScheduledUserOpHash } from "../utils";
+import { deployVersaWallet, getUserOpHash, getScheduledUserOpHash, entryPointAddress } from "../utils";
 import { enablePlugin, execute } from "../base/utils";
 import {
     arrayify,
@@ -191,7 +191,6 @@ describe("ECDSAValidator", () => {
     });
 
     it("should validate schedualed transaction signature correctly", async () => {
-        const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
         let initData = abiCoder.encode(["address"], [signer1.address]);
         await enablePlugin({
             executor: wallet,

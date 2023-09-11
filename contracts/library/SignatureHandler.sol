@@ -59,7 +59,7 @@ library SignatureHandler {
     function splitUserOpSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal pure returns (SplitedSignature memory splitedSig) {
+    ) internal view returns (SplitedSignature memory splitedSig) {
         address validator = address(bytes20(userOp.signature[0:20]));
         splitedSig.signatureType = uint8(bytes1(userOp.signature[SIG_TYPE_OFFSET:SIG_TYPE_OFFSET + SIG_TYPE_LENGTH]));
         // For instant transactions, the signature start from the 22th bytes of the userOp.signature.

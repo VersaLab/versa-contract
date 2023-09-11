@@ -62,8 +62,10 @@ abstract contract Executor {
             if gt(len, maxLen) {
                 len := maxLen
             }
+            // Roundup len to nearest 32 bytes, ensure free memory pointer is aligned by 0x20
+            let roundUpLen := mul(div(add(len, 0x1f), 0x20), 0x20)
             let ptr := mload(0x40)
-            mstore(0x40, add(ptr, add(len, 0x20)))
+            mstore(0x40, add(ptr, add(roundUpLen, 0x20)))
             mstore(ptr, len)
             returndatacopy(add(ptr, 0x20), 0, len)
             returnData := ptr

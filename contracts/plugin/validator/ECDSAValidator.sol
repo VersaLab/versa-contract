@@ -104,6 +104,7 @@ contract ECDSAValidator is BaseValidator {
      */
     function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
         address signer = _signers[wallet];
+        _checkSigner(signer);
         bytes32 messageHash = hash.toEthSignedMessageHash();
         if (signer == messageHash.recover(signature)) {
             return true;
@@ -136,11 +137,16 @@ contract ECDSAValidator is BaseValidator {
         uint256 validUntil,
         uint256 validAfter
     ) internal pure returns (uint256) {
+        _checkSigner(signer);
         uint256 sigFailed;
         bytes32 messageHash = hash.toEthSignedMessageHash();
         if (signer != messageHash.recover(signature)) {
             sigFailed = SIG_VALIDATION_FAILED;
         }
         return _packValidationData(sigFailed, validUntil, validAfter);
+    }
+
+    function _checkSigner(address signer) internal pure {
+        require(signer != address(0), "Invalid signer of the wallet");
     }
 }

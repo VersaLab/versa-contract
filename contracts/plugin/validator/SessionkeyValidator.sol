@@ -445,26 +445,18 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     /// @dev Get the intersection of given validation durations.
     function _getValidationIntersection(
         uint48 validUntil1,
-        uint48 validunitil2,
+        uint48 validUntil2,
         uint48 validAfter1,
         uint48 validAfter2
     ) internal pure returns (uint48 validUntil, uint48 validAfter) {
-        if (validUntil1 != 0 && validunitil2 != 0) {
-            validUntil = validUntil1 < validunitil2 ? validUntil1 : validunitil2;
+        if (validUntil1 != 0 && validUntil2 != 0) {
+            validUntil = validUntil1 < validUntil2 ? validUntil1 : validUntil2;
         } else {
-            validUntil = validUntil1 > validunitil2 ? validUntil1 : validunitil2;
+            validUntil = validUntil1 > validUntil2 ? validUntil1 : validUntil2;
         }
         validAfter = validAfter1 > validAfter2 ? validAfter1 : validAfter2;
         if (validUntil > 0) {
             require(validUntil >= validAfter, "SessionKeyValidator: invalid validation duration");
-        }
-    }
-
-    function _getChainId() internal view returns (uint256 id) {
-        // solium-disable-next-line security/no-inline-assembly
-        /// @solidity memory-safe-assembly
-        assembly {
-            id := chainid()
         }
     }
 }

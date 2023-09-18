@@ -274,9 +274,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         bytes[] memory data
     ) internal returns (uint48 validUntil, uint48 validAfter) {
         require(
-            to.length == rlpCalldata.length
-            && rlpCalldata.length == session.length
-            && session.length == proof.length,
+            to.length == rlpCalldata.length && rlpCalldata.length == session.length && session.length == proof.length,
             "SessionKeyValidator: invalid batch length"
         );
         address paymaster = _parsePaymaster(userOp.paymasterAndData);

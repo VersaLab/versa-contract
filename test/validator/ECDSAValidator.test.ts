@@ -181,7 +181,9 @@ describe("ECDSAValidator", () => {
         let chainId = 1;
         const userOpHash = getUserOpHash(op, entryPoint, chainId);
 
-        let sign = await signer1.signMessage(arrayify(keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, ecdsaValidator.address]))));
+        let sign = await signer1.signMessage(
+            arrayify(keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, ecdsaValidator.address])))
+        );
         // The first 20 bytes of signature is validator's address
         // The 21th byte is the sig type
         sign = hexConcat([ecdsaValidator.address, "0x00", sign]);
@@ -223,7 +225,9 @@ describe("ECDSAValidator", () => {
             [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
         );
 
-        let finalHash = keccak256(abiCoder.encode(["bytes32", "address", "bytes"], [userOpHash, ecdsaValidator.address, extraData]));
+        let finalHash = keccak256(
+            abiCoder.encode(["bytes32", "address", "bytes"], [userOpHash, ecdsaValidator.address, extraData])
+        );
         let sign = await signer1.signMessage(arrayify(finalHash));
 
         // The first 20 bytes of signature is validator's address
@@ -239,8 +243,8 @@ describe("ECDSAValidator", () => {
         ]);
 
         op.signature = sign;
-        op.maxFeePerGas = 99
-        op.maxPriorityFeePerGas = 99
+        op.maxFeePerGas = 99;
+        op.maxPriorityFeePerGas = 99;
 
         const validationData = await ecdsaValidator.validateSignature(op, userOpHash);
         const expectedValidationData = hexConcat([
@@ -318,14 +322,12 @@ describe("ECDSAValidator", () => {
         sign = hexConcat([ethers.constants.AddressZero, "0x00", sign.slice(0, 6)]);
         op.signature = sign;
 
-        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
-            "Invalid signature length"
-        );
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith("Invalid signature length");
 
         sign = hexConcat([ethers.constants.AddressZero, "0x01", sign.slice(0, 6)]);
         op.signature = sign;
         // revert without reason as it fails at signature handler
-        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.reverted
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.reverted;
     });
 
     it("should fail validation for invalid instant tx signature", async () => {
@@ -476,7 +478,7 @@ describe("ECDSAValidator", () => {
 
         await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
             "SignatureHandler: Invalid scheduled transaction gas fee"
-        )
+        );
 
         op.maxFeePerGas = 100;
         op.maxPriorityFeePerGas = 200;
@@ -501,7 +503,7 @@ describe("ECDSAValidator", () => {
 
         await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
             "SignatureHandler: Invalid scheduled transaction gas fee"
-        )
+        );
     });
 
     it("should check if EIP1271 signature is valid", async () => {

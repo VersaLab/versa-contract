@@ -13,6 +13,8 @@ import {
     MockModule__factory,
 } from "../typechain-types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { computeWalletAddress } from "./utils";
+import { BigNumber } from "ethers";
 
 describe("VersaFactory", () => {
     let versaFactory: VersaAccountFactory;
@@ -78,6 +80,38 @@ describe("VersaFactory", () => {
         expect(hooksSize.afterTxHooksSize).to.be.equal(1);
     });
 
+    it("should calculate wallet address off-chain", async () => {
+        const salt = BigNumber.from(0);
+        let walletAddress = await versaFactory.getAddress(
+            [validator.address],
+            ["0x"],
+            [1],
+            [hooks.address],
+            ["0x"],
+            [module.address],
+            ["0x"],
+            salt
+        );
+        let fallbackHandler = ethers.constants.AddressZero;
+        const versaProxyCreationCode = await versaFactory.proxyCreationCode();
+
+        let computedAddress = await computeWalletAddress(
+            fallbackHandler,
+            [validator.address],
+            ["0x"],
+            [1],
+            [hooks.address],
+            ["0x"],
+            [module.address],
+            ["0x"],
+            versaProxyCreationCode,
+            versaWalletSingleton.address,
+            versaFactory.address,
+            salt
+        );
+        expect(computedAddress).to.be.equal(walletAddress);
+    });
+
     it("should return wallet address if already created", async () => {
         await versaFactory.createAccount(
             [validator.address],
@@ -101,15 +135,17 @@ describe("VersaFactory", () => {
                 ["0x"],
                 0
             )
-        ).to.be.equal(await versaFactory.getAddress(
-            [validator.address],
-            ["0x"],
-            [1],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
-            0
-        ))
+        ).to.be.equal(
+            await versaFactory.getAddress(
+                [validator.address],
+                ["0x"],
+                [1],
+                [hooks.address],
+                ["0x"],
+                [module.address],
+                ["0x"],
+                0
+            )
+        );
     });
 });

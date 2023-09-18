@@ -203,7 +203,7 @@ contract MultiSigValidator is BaseValidator {
         uint256 currentThreshold = _threshold(userOp.sender);
         // Check that the provided signature data is not too short
         // 20 bytes validator address + 1 byte sig type + required signatures(no less than threshold * 65)
-        require (
+        require(
             currentThreshold != 0 && userOp.signature.length >= 20 + 1 + currentThreshold * 65,
             "Invalid signature length"
         );

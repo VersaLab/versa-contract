@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { hexConcat } from "ethers/lib/utils";
+import { hexConcat, keccak256, solidityPack } from "ethers/lib/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import {
     VersaWallet__factory,
@@ -7,6 +7,9 @@ import {
     MockValidator__factory,
     CompatibilityFallbackHandler__factory,
 } from "../typechain-types";
+import { BigNumber } from "ethers";
+
+export const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
 export async function deployVersaWallet(options: {
     signer: SignerWithAddress;
@@ -131,4 +134,94 @@ export function getUserOpHash(op: userOp, entryPoint: string, chainId: number) {
 
     let hashPack = ethers.utils.keccak256(pack);
     return ethers.utils.keccak256(abiCoder.encode(["bytes32", "address", "uint256"], [hashPack, entryPoint, chainId]));
+}
+
+export function getScheduledUserOpHash(op: userOp, entryPoint: string, chainId: number) {
+    let hashInitCode = ethers.utils.keccak256(op.initCode);
+    let hashCallData = ethers.utils.keccak256(op.callData);
+    let hashPaymasterAndData = ethers.utils.keccak256(op.paymasterAndData);
+
+    let abiCoder = new ethers.utils.AbiCoder();
+
+    let pack = abiCoder.encode(
+        ["address", "uint256", "bytes32", "bytes32", "uint256", "uint256", "uint256", "bytes32"],
+        [
+            op.sender,
+            op.nonce,
+            hashInitCode,
+            hashCallData,
+            op.callGasLimit,
+            op.verificationGasLimit,
+            op.preVerificationGas,
+            hashPaymasterAndData,
+        ]
+    );
+
+    let hashPack = ethers.utils.keccak256(pack);
+    return ethers.utils.keccak256(abiCoder.encode(["bytes32", "address", "uint256"], [hashPack, entryPoint, chainId]));
+}
+
+export async function computeWalletAddress(
+    fallbackHandler: string,
+    validators: string[],
+    validatorInitData: string[],
+    validatorType: number[],
+    hooks: string[],
+    hooksInitData: string[],
+    modules: string[],
+    moduleInitData: string[],
+    creationCode: string,
+    singletonAddress: string,
+    versaFactory: string,
+    salt: BigNumber
+) {
+    const finalSalt = await getFinalSalt(
+        fallbackHandler,
+        validators,
+        validatorInitData,
+        validatorType,
+        hooks,
+        hooksInitData,
+        modules,
+        moduleInitData,
+        salt
+    );
+    const initCodeHash = getInitcodeHash(creationCode, singletonAddress);
+    const walletAddress =
+        "0x" +
+        keccak256(
+            solidityPack(["bytes1", "address", "bytes32", "bytes32"], ["0xff", versaFactory, finalSalt, initCodeHash])
+        ).slice(-40);
+    // to ethereum checksum address
+    return ethers.utils.getAddress(walletAddress);
+}
+
+export function getInitcodeHash(creationCode: string, singletonAddress: string) {
+    const initCodeHash = keccak256(ethers.utils.solidityPack(["bytes", "uint256"], [creationCode, singletonAddress]));
+    return initCodeHash;
+}
+
+export async function getFinalSalt(
+    fallbackHandler: string,
+    validators: string[],
+    validatorInitData: string[],
+    validatorType: number[],
+    hooks: string[],
+    hooksInitData: string[],
+    modules: string[],
+    moduleInitData: string[],
+    salt: BigNumber
+) {
+    const versaSingleton = await ethers.getContractAt("VersaWallet", ethers.constants.AddressZero);
+    const finalSalt = versaSingleton.interface.encodeFunctionData("initialize", [
+        fallbackHandler,
+        validators,
+        validatorInitData,
+        validatorType,
+        hooks,
+        hooksInitData,
+        modules,
+        moduleInitData,
+    ]);
+    return keccak256(ethers.utils.solidityPack(["bytes32", "uint256"], [keccak256(finalSalt), salt]));
 }

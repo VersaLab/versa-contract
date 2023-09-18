@@ -19,7 +19,7 @@ contract MockModule is IModule {
 }
 
 contract MockModule2 is MockModule {
-    function clearWalletConfig() external override {
+    function clearWalletConfig() external pure override {
         revert("Unsupported function");
     }
 }

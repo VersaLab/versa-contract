@@ -838,12 +838,9 @@ describe("SessionKeyValidator", function () {
             validAfter1 = 50;
             validAfter2 = 0;
 
-            await expect(sessionKeyValidator.testGetValidationIntersection(
-                validUntil1,
-                validUntil2,
-                validAfter1,
-                validAfter2
-            )).to.be.revertedWith("SessionKeyValidator: invalid validation duration");
+            await expect(
+                sessionKeyValidator.testGetValidationIntersection(validUntil1, validUntil2, validAfter1, validAfter2)
+            ).to.be.revertedWith("SessionKeyValidator: invalid validation duration");
 
             validUntil1 = 0;
             validUntil2 = 0;
@@ -855,7 +852,7 @@ describe("SessionKeyValidator", function () {
                 validUntil2,
                 validAfter1,
                 validAfter2
-            )
+            );
             expect(validRange[0]).to.be.equal(0);
             expect(validRange[1]).to.be.equal(50);
         });
@@ -940,7 +937,9 @@ describe("SessionKeyValidator", function () {
 
             const chainId = 1;
             const userOpHash = getUserOpHash(op, entryPoint.address, chainId);
-            const finalHash = keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address]))
+            const finalHash = keccak256(
+                abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address])
+            );
 
             const operatorSignature = await operator.signMessage(arrayify(finalHash));
 
@@ -1052,7 +1051,9 @@ describe("SessionKeyValidator", function () {
 
             const chainId = 1;
             const userOpHash = getUserOpHash(op, entryPoint.address, chainId);
-            const finalHash = keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address]))
+            const finalHash = keccak256(
+                abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address])
+            );
             const operatorSignature = await operator.signMessage(arrayify(finalHash));
 
             const signature = utils.getSessionBatchExecuteSignature(
@@ -1065,8 +1066,9 @@ describe("SessionKeyValidator", function () {
             );
             op.signature = signature;
 
-            expect(await wallet.callStatic.validateUserOp(op, userOpHash, 0))
-                .to.be.equal(utils.packValidationData(0, 40, 20))
+            expect(await wallet.callStatic.validateUserOp(op, userOpHash, 0)).to.be.equal(
+                utils.packValidationData(0, 40, 20)
+            );
         });
 
         it("should reject non-normal execute", async function () {
@@ -1088,8 +1090,9 @@ describe("SessionKeyValidator", function () {
             };
 
             const userOpHash = getUserOpHash(op, entryPoint.address, 1);
-            await expect(wallet.connect(entryPoint).callStatic.validateUserOp(op, userOpHash, 0))
-                .to.be.revertedWith("SessionKeyValidator: invalid wallet operation")
+            await expect(wallet.connect(entryPoint).callStatic.validateUserOp(op, userOpHash, 0)).to.be.revertedWith(
+                "SessionKeyValidator: invalid wallet operation"
+            );
         });
     });
 });

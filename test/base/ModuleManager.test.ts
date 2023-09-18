@@ -120,47 +120,30 @@ describe("ModuleManager", () => {
     });
 
     it("should correctly return error message", async () => {
-        await expect(moduleManager.execute(
-            TestRevert.address,
-            0,
-            TestRevert.interface.encodeFunctionData("testRevert", [0]),
-            0
-        )).to.revertedWithoutReason();
+        await expect(
+            moduleManager.execute(TestRevert.address, 0, TestRevert.interface.encodeFunctionData("testRevert", [0]), 0)
+        ).to.revertedWithoutReason();
 
-        await expect(moduleManager.execute(
-            TestRevert.address,
-            0,
-            TestRevert.interface.encodeFunctionData("testRevert", [1]),
-            0
-        )).to.revertedWithCustomError(TestRevert, "TestError")
+        await expect(
+            moduleManager.execute(TestRevert.address, 0, TestRevert.interface.encodeFunctionData("testRevert", [1]), 0)
+        ).to.revertedWithCustomError(TestRevert, "TestError");
 
-        await expect(moduleManager.execute(
-            TestRevert.address,
-            0,
-            TestRevert.interface.encodeFunctionData("testRevert", [2]),
-            0
-        )).to.revertedWithCustomError(TestRevert, "TestErrorWithoutPara")
+        await expect(
+            moduleManager.execute(TestRevert.address, 0, TestRevert.interface.encodeFunctionData("testRevert", [2]), 0)
+        ).to.revertedWithCustomError(TestRevert, "TestErrorWithoutPara");
 
-        await expect(moduleManager.execute(
-            TestRevert.address,
-            0,
-            TestRevert.interface.encodeFunctionData("testRevert", [3]),
-            0
-        )).to.revertedWithCustomError(TestRevert, "TestErrorWithMultiPara")
-        .withArgs(3, 1, 2, 3)
+        await expect(
+            moduleManager.execute(TestRevert.address, 0, TestRevert.interface.encodeFunctionData("testRevert", [3]), 0)
+        )
+            .to.revertedWithCustomError(TestRevert, "TestErrorWithMultiPara")
+            .withArgs(3, 1, 2, 3);
 
-        await expect(moduleManager.execute(
-            TestRevert.address,
-            0,
-            TestRevert.interface.encodeFunctionData("testRevert", [4]),
-            0
-        )).to.revertedWith("test revert string")
+        await expect(
+            moduleManager.execute(TestRevert.address, 0, TestRevert.interface.encodeFunctionData("testRevert", [4]), 0)
+        ).to.revertedWith("test revert string");
 
-        await expect(moduleManager.execute(
-            TestRevert.address,
-            0,
-            TestRevert.interface.encodeFunctionData("testRevert", [5]),
-            0
-        )).to.revertedWithPanic(0x11)
-    })
+        await expect(
+            moduleManager.execute(TestRevert.address, 0, TestRevert.interface.encodeFunctionData("testRevert", [5]), 0)
+        ).to.revertedWithPanic(0x11);
+    });
 });

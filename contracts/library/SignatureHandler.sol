@@ -87,8 +87,8 @@ library SignatureHandler {
                 splitedSig.maxPriorityFeePerGas
             );
             require(
-                userOp.maxFeePerGas <= splitedSig.maxFeePerGas
-                && userOp.maxPriorityFeePerGas <= splitedSig.maxPriorityFeePerGas,
+                userOp.maxFeePerGas <= splitedSig.maxFeePerGas &&
+                    userOp.maxPriorityFeePerGas <= splitedSig.maxPriorityFeePerGas,
                 "SignatureHandler: Invalid scheduled transaction gas fee"
             );
             splitedSig.hash = keccak256(abi.encode(getScheduledOpHash(userOp), validator, extraData));
@@ -107,12 +107,17 @@ library SignatureHandler {
         uint256 preVerificationGas = userOp.preVerificationGas;
         bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
 
-        return abi.encode(
-            sender, nonce,
-            hashInitCode, hashCallData,
-            callGasLimit, verificationGasLimit, preVerificationGas,
-            hashPaymasterAndData
-        );
+        return
+            abi.encode(
+                sender,
+                nonce,
+                hashInitCode,
+                hashCallData,
+                callGasLimit,
+                verificationGasLimit,
+                preVerificationGas,
+                hashPaymasterAndData
+            );
     }
 
     function getScheduledOpHash(UserOperation calldata userOp) internal view returns (bytes32) {

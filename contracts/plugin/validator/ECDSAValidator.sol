@@ -80,8 +80,8 @@ contract ECDSAValidator is BaseValidator {
         // + 12 bytes time range data + 64 bytes fee data + 65 bytes signature
         // The signature type must be INSTANT_TRANSACTION or SCHEDULE_TRANSACTION here
         if (
-            splitedSig.signatureType == SignatureHandler.INSTANT_TRANSACTION && sigLength != 86
-            || splitedSig.signatureType == SignatureHandler.SCHEDULE_TRANSACTION && sigLength != 162
+            (splitedSig.signatureType == SignatureHandler.INSTANT_TRANSACTION && sigLength != 86) ||
+            (splitedSig.signatureType == SignatureHandler.SCHEDULE_TRANSACTION && sigLength != 162)
         ) {
             revert("Invalid signature length");
         }

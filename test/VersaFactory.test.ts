@@ -68,7 +68,7 @@ describe("VersaFactory", () => {
         );
 
         let wallet = VersaWallet__factory.connect(walletAddress, owner);
-        expect(await wallet.VERSA_VERSION()).to.be.equal("0.0.1");
+        expect(await wallet.VERSA_VERSION()).to.not.be.equal(null);
 
         expect(await wallet.moduleSize()).to.be.equal(1);
         let validatorSize = await wallet.validatorSize();

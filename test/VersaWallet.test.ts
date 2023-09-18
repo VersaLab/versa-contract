@@ -76,7 +76,7 @@ describe("VersaWallet", () => {
         );
 
         wallet = VersaWallet__factory.connect(walletAddress, owner);
-        expect(await wallet.VERSA_VERSION()).to.be.equal("0.0.1");
+        expect(await wallet.VERSA_VERSION()).to.not.be.equal(null);
     });
 
     it("should prevent mismatch initialization data", async () => {

@@ -2,15 +2,16 @@ import { ethers } from "hardhat";
 import * as deployer from "./helper/deployer";
 import { VersaAccountFactoryData } from "./helper/deployer";
 import mumbaiAddresses from "./addresses/polygonMumbai.json";
-import scrollTestnetAddresses from "./addresses/scrollTestnet.json";
+import scrollSepoliaAddresses from "./addresses/scrollSepolia.json";
 import fs from "fs";
+import { salt } from "./helper/config";
 
 async function deployWithAddresses(addresses: any) {
     const versaAccountFactoryData: VersaAccountFactoryData = {
         versaSingleton: addresses.versaSingleton,
         defaultFallbackHandler: addresses.compatibilityFallbackHandler,
     };
-    const versaAccountFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData);
+    const versaAccountFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData, salt);
     addresses.versaAccountFactory = versaAccountFactory.address;
     return addresses;
 }
@@ -26,10 +27,10 @@ async function main() {
             fs.writeFileSync("deploy/addresses/polygonMumbai.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
-        case 534353: {
-            const result = await deployWithAddresses(scrollTestnetAddresses);
-            console.log("writing changed address to output file 'deploy/addresses/scrollTestnet.json'");
-            fs.writeFileSync("deploy/addresses/scrollTestnet.json", JSON.stringify(result, null, "\t"), "utf8");
+        case 534351: {
+            const result = await deployWithAddresses(scrollSepoliaAddresses);
+            console.log("writing changed address to output file 'deploy/addresses/scrollSepolia.json'");
+            fs.writeFileSync("deploy/addresses/scrollSepolia.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
         default: {

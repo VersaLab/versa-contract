@@ -6,8 +6,12 @@ import fs from "fs";
 import { salt } from "../helper/config";
 
 async function deployWithAddresses(addresses: any) {
-    const ecdsaValidator = await deployer.deployECDSAValidator(salt);
-    addresses.ecdsaValidator = ecdsaValidator.address;
+    const versaVerifyingPaymaster = await deployer.deployVersaVerifyingPaymaster(
+        addresses.entryPoint,
+        addresses.verifyingPaymasterOwner,
+        salt
+    );
+    addresses.versaVerifyingPaymaster = versaVerifyingPaymaster.address;
     return addresses;
 }
 

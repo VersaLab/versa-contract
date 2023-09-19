@@ -132,8 +132,8 @@ export function getSessionBatchExecuteSignature(
     return signature;
 }
 
-export function packValidationData(sigFailed: number, validUntil: number, validAfter: number): number {
-    return sigFailed | (validUntil << 160) | (validAfter << (160 + 48));
+export function packValidationData(sigFailed: number, validUntil: number, validAfter: number): BigNumber {
+    return BigNumber.from(sigFailed).add(BigNumber.from(validUntil).shl(160)).add(BigNumber.from(validAfter).shl(208));
 }
 
 export class argumentItem {

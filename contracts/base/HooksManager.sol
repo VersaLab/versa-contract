@@ -87,15 +87,16 @@ abstract contract HooksManager is SelfAuthorized {
      * @dev Internal function to enable hooks for a versa wallet.
      * @param hooks The address of the hooks contract.
      * @param initData Initialization data for the hooks contract.
+     * @notice Hooks contracts are not supposed to change `hasHooks` behevior after deployment.
      */
     function _enableHooks(address hooks, bytes memory initData) internal {
         // Add hooks to linked list
         require(IHooks(hooks).supportsInterface(type(IHooks).interfaceId), "Not a valid hooks contract");
         uint256 hasHooks = IHooks(hooks).hasHooks();
-        if (hasHooks >> 128 == 1) {
+        if ((hasHooks >> 128) & 1 == 1) {
             beforeTxHooks.add(hooks);
         }
-        if (uint128(hasHooks) == 1) {
+        if (hasHooks & 1 == 1) {
             afterTxHooks.add(hooks);
         }
         // Initialize wallet configurations
@@ -111,17 +112,18 @@ abstract contract HooksManager is SelfAuthorized {
      */
     function _disableHooks(address prevBeforeTxHook, address prevAfterTxHooks, address hooks) internal {
         // Try to clear wallet configurations
-        try IHooks(hooks).clearWalletConfig() {
+        // We use low level call here to make sure this call won't revert the whole transaction in any case
+        (bool success, ) = hooks.call(abi.encodeWithSelector(IModule.clearWalletConfig.selector, "0x"));
+        if (success) {
             emit DisabledHooks(hooks);
-        } catch {
+        } else {
             emit DisabledHooksWithError(hooks);
         }
         // Remove hooks from exsiting linked list
-        uint256 hasHooks = IHooks(hooks).hasHooks();
-        if (hasHooks >> 128 == 1) {
+        if (beforeTxHooks.isExist(hooks)) {
             beforeTxHooks.remove(prevBeforeTxHook, hooks);
         }
-        if (uint128(hasHooks) == 1) {
+        if (afterTxHooks.isExist(hooks)) {
             afterTxHooks.remove(prevAfterTxHooks, hooks);
         }
     }

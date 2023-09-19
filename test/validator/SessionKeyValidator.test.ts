@@ -112,7 +112,6 @@ describe("SessionKeyValidator", function () {
                 "uint256",
             ]);
             const sessionRoot = tree.root;
-            console.log("session root using oz tree: ", sessionRoot);
 
             let data = sessionKeyValidator.interface.encodeFunctionData("setSessionRoot", [
                 operator.address,
@@ -833,6 +832,29 @@ describe("SessionKeyValidator", function () {
             );
             expect(validRange[0]).to.be.equal(200);
             expect(validRange[1]).to.be.equal(50);
+
+            validUntil1 = 40;
+            validUntil2 = 40;
+            validAfter1 = 50;
+            validAfter2 = 0;
+
+            await expect(
+                sessionKeyValidator.testGetValidationIntersection(validUntil1, validUntil2, validAfter1, validAfter2)
+            ).to.be.revertedWith("SessionKeyValidator: invalid validation duration");
+
+            validUntil1 = 0;
+            validUntil2 = 0;
+            validAfter1 = 50;
+            validAfter2 = 0;
+
+            validRange = await sessionKeyValidator.testGetValidationIntersection(
+                validUntil1,
+                validUntil2,
+                validAfter1,
+                validAfter2
+            );
+            expect(validRange[0]).to.be.equal(0);
+            expect(validRange[1]).to.be.equal(50);
         });
 
         it("should validate userOp: normalExecute", async function () {
@@ -915,8 +937,11 @@ describe("SessionKeyValidator", function () {
 
             const chainId = 1;
             const userOpHash = getUserOpHash(op, entryPoint.address, chainId);
+            const finalHash = keccak256(
+                abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address])
+            );
 
-            const operatorSignature = await operator.signMessage(arrayify(userOpHash));
+            const operatorSignature = await operator.signMessage(arrayify(finalHash));
 
             const signature = utils.getSessionSigleExecuteSignature(
                 sessionKeyValidator.address,
@@ -1026,8 +1051,10 @@ describe("SessionKeyValidator", function () {
 
             const chainId = 1;
             const userOpHash = getUserOpHash(op, entryPoint.address, chainId);
-
-            const operatorSignature = await operator.signMessage(arrayify(userOpHash));
+            const finalHash = keccak256(
+                abiCoder.encode(["bytes32", "address"], [userOpHash, sessionKeyValidator.address])
+            );
+            const operatorSignature = await operator.signMessage(arrayify(finalHash));
 
             const signature = utils.getSessionBatchExecuteSignature(
                 sessionKeyValidator.address,
@@ -1038,10 +1065,10 @@ describe("SessionKeyValidator", function () {
                 operatorSignature
             );
             op.signature = signature;
-            // const validationData = await wallet.callStatic.validateUserOp(op, userOpHash, 0);
-            // expect(validationData).to.be.equal(utils.packValidationData(0, 40, 20));
 
-            await sessionKeyValidator.callStatic.testValidateBatchExecute(op, userOpHash);
+            expect(await wallet.callStatic.validateUserOp(op, userOpHash, 0)).to.be.equal(
+                utils.packValidationData(0, 40, 20)
+            );
         });
 
         it("should reject non-normal execute", async function () {
@@ -1063,7 +1090,9 @@ describe("SessionKeyValidator", function () {
             };
 
             const userOpHash = getUserOpHash(op, entryPoint.address, 1);
-            expect(await wallet.connect(entryPoint).callStatic.validateUserOp(op, userOpHash, 0)).to.be.equal(1);
+            await expect(wallet.connect(entryPoint).callStatic.validateUserOp(op, userOpHash, 0)).to.be.revertedWith(
+                "SessionKeyValidator: invalid wallet operation"
+            );
         });
     });
 });

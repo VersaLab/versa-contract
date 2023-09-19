@@ -11,19 +11,11 @@ contract MockSessionKeyValidator is SessionKeyValidator {
         return allowed.isAllowedCalldata(data, value);
     }
 
-    function testValidateSingleExecute(UserOperation memory userOp, bytes32 userOpHash) external returns (uint256) {
-        return this.validateSingleExecute(userOp, userOpHash);
-    }
-
-    function testValidateBatchExecute(UserOperation memory userOp, bytes32 userOpHash) external returns (uint256) {
-        return this.validateBatchExecute(userOp, userOpHash);
-    }
-
     function testValidateSessionRoot(
         bytes32[] memory proof,
         bytes32 sessionRoot,
         Session memory session
-    ) external view returns (bool) {
+    ) external pure returns (bool) {
         _validateSessionRoot(proof, sessionRoot, session.hash());
         return true;
     }
@@ -32,7 +24,7 @@ contract MockSessionKeyValidator is SessionKeyValidator {
         bytes32[] memory proof,
         bytes32 sessionRoot,
         bytes32 sessionHash
-    ) external returns (bool) {
+    ) external pure returns (bool) {
         _validateSessionRoot(proof, sessionRoot, sessionHash);
         return true;
     }

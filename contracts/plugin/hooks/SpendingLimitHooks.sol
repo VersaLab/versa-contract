@@ -6,6 +6,9 @@ import "./BaseHooks.sol";
 
 /**
  * @title SpendingLimitHooks
+ * @dev The spendingLimitHooks supports setting spending limits for both native and starndard ERC20 tokens spending limits
+ * for versa wallet's normal executions by decoding the function selector and parameters.
+ * Custom functions beyond the standard ERC20 functions will not be compatible with this feature.
  */
 contract SpendingLimitHooks is BaseHooks {
     struct SpendingLimitSetConfig {
@@ -52,15 +55,9 @@ contract SpendingLimitHooks is BaseHooks {
         if (_data.length > 0) {
             SpendingLimitSetConfig[] memory initialSetConfigs = _parseSpendingLimitSetConfigData(_data);
             _batchSetSpendingLimit(initialSetConfigs);
-            _walletInited[msg.sender] = true;
         }
         _walletInited[msg.sender] = true;
     }
-
-    /**
-     * @dev Internal function to handle wallet configuration clearing.
-     */
-    function _clear() internal override {}
 
     /**
      * @dev Checks if the specified wallet has been initialized.
@@ -152,19 +149,19 @@ contract SpendingLimitHooks is BaseHooks {
             bytes4 methodSelector = bytes4(_data[:4]);
             if (methodSelector == TRANSFER || methodSelector == INCREASE_ALLOWANCE) {
                 (address target, uint256 value) = abi.decode(_data[4:], (address, uint256));
-                if (target != msg.sender) {
+                if (target != _wallet) {
                     spendingLimitInfo.spentAmount += value;
                     _checkAmountAndUpdate(_token, spendingLimitInfo);
                 }
             } else if (methodSelector == TRANSFER_FROM) {
                 (address target, , uint256 value) = abi.decode(_data[4:], (address, address, uint256));
-                if (target == msg.sender) {
+                if (target == _wallet) {
                     spendingLimitInfo.spentAmount += value;
                     _checkAmountAndUpdate(_token, spendingLimitInfo);
                 }
             } else if (methodSelector == APPROVE) {
                 (address target, uint256 value) = abi.decode(_data[4:], (address, uint256));
-                if (target != msg.sender) {
+                if (target != _wallet) {
                     uint256 preAllowanceAmount = ERC20(_token).allowance(_wallet, target);
                     if (value > preAllowanceAmount) {
                         spendingLimitInfo.spentAmount = spendingLimitInfo.spentAmount + value - preAllowanceAmount;
@@ -190,19 +187,15 @@ contract SpendingLimitHooks is BaseHooks {
 
     /**
      * @dev Sets the spending limit for the caller based on the provided SpendingLimitSetConfig.
+     * @notice Set 1 instead of 0 to force a minimum amount of token allowance, as the latter is used as
+     * an indicator of unlimited allowance or uninitialized data.
      * @param _config The SpendingLimitSetConfig to set the spending limit.
      */
     function _setSpendingLimit(SpendingLimitSetConfig memory _config) internal {
-        if (_config.tokenAddress != address(0)) {
-            try ERC20(_config.tokenAddress).totalSupply() returns (uint256 totalSupply) {
-                require(totalSupply != 0, "SpendingLimitHooks: illegal token address");
-            } catch {
-                revert("SpendingLimitHooks: illegal token address");
-            }
-        }
         SpendingLimitInfo memory spendingLimitInfo = getSpendingLimitInfo(msg.sender, _config.tokenAddress);
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
         if (_config.resetBaseTimeMinutes > 0) {
+            require(_config.resetTimeIntervalMinutes > 0, "SpendingLimitHooks: invalid reset time interval");
             require(
                 _config.resetBaseTimeMinutes <= currentTimeMinutes,
                 "SpendingLimitHooks: resetBaseTimeMinutes can not greater than currentTimeMinutes"
@@ -210,6 +203,11 @@ contract SpendingLimitHooks is BaseHooks {
             spendingLimitInfo.lastResetTimeMinutes =
                 currentTimeMinutes -
                 ((currentTimeMinutes - _config.resetBaseTimeMinutes) % _config.resetTimeIntervalMinutes);
+            // else, _config.resetBaseTimeMinutes will no longer be considered
+            // and then if spendingLimitInfo.lastResetTimeMinutes == 0,
+            // it means that the spending limit configuration is brand new
+            // and we need to set spendingLimitInfo.lastResetTimeMinutes to currentTimeMinutes.
+            // if it is any other case, it means that we do not need to modify spendingLimitInfo.lastResetTimeMinutes.
         } else if (spendingLimitInfo.lastResetTimeMinutes == 0) {
             spendingLimitInfo.lastResetTimeMinutes = currentTimeMinutes;
         }
@@ -326,6 +324,9 @@ contract SpendingLimitHooks is BaseHooks {
     function getSpendingLimitInfo(address _wallet, address _token) public view returns (SpendingLimitInfo memory) {
         SpendingLimitInfo memory spendingLimitInfo = _tokenSpendingLimitInfo[_wallet][_token];
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
+        // if spendingLimitInfo.resetTimeIntervalMinutes > 0,
+        // it means that the spending limit configuration has already been set before
+        // and needs to be calculated based on the config info.
         if (
             spendingLimitInfo.resetTimeIntervalMinutes > 0 &&
             spendingLimitInfo.lastResetTimeMinutes + spendingLimitInfo.resetTimeIntervalMinutes <= currentTimeMinutes

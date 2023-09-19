@@ -69,27 +69,21 @@ contract ECDSAValidator is BaseValidator {
         UserOperation calldata _userOp,
         bytes32 _userOpHash
     ) external view returns (uint256 validationData) {
-        uint256 sigLength = _userOp.signature.length;
-        // 20 bytes validator address + 1 byte sig type + 65 bytes signature
-        // 20 bytes validator address + 1 byte sig type
-        // + 12 bytes time range data + 64 bytes fee data + 65 bytes signature
-        if (sigLength != 86 && sigLength != 162) {
-            return SIG_VALIDATION_FAILED;
-        }
+        // Get the signature from the user operation
         SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(
             _userOp,
             _userOpHash
         );
+        uint256 sigLength = _userOp.signature.length;
+        // Instant transaction signature length: 20 bytes validator address + 1 byte sig type + 65 bytes signature
+        // Scheduled transaction signature length: 20 bytes validator address + 1 byte sig type
+        // + 12 bytes time range data + 64 bytes fee data + 65 bytes signature
+        // The signature type must be INSTANT_TRANSACTION or SCHEDULE_TRANSACTION here
         if (
-            !_checkTransactionTypeAndFee(
-                splitedSig.signatureType,
-                splitedSig.maxFeePerGas,
-                splitedSig.maxPriorityFeePerGas,
-                _userOp.maxFeePerGas,
-                _userOp.maxPriorityFeePerGas
-            )
+            (splitedSig.signatureType == SignatureHandler.INSTANT_TRANSACTION && sigLength != 86) ||
+            (splitedSig.signatureType == SignatureHandler.SCHEDULE_TRANSACTION && sigLength != 162)
         ) {
-            return SIG_VALIDATION_FAILED;
+            revert("Invalid signature length");
         }
         validationData = _validateSignature(
             _signers[_userOp.sender],
@@ -109,11 +103,13 @@ contract ECDSAValidator is BaseValidator {
      * @return A boolean indicating whether the signature is valid or not.
      */
     function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
-        uint256 validUntil;
-        uint256 validAfter;
         address signer = _signers[wallet];
-        uint256 validationData = _validateSignature(signer, signature, hash, validUntil, validAfter);
-        return validationData == 0 ? true : false;
+        _checkSigner(signer);
+        bytes32 messageHash = hash.toEthSignedMessageHash();
+        if (signer == messageHash.recover(signature)) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -141,11 +137,16 @@ contract ECDSAValidator is BaseValidator {
         uint256 validUntil,
         uint256 validAfter
     ) internal pure returns (uint256) {
+        _checkSigner(signer);
         uint256 sigFailed;
         bytes32 messageHash = hash.toEthSignedMessageHash();
         if (signer != messageHash.recover(signature)) {
             sigFailed = SIG_VALIDATION_FAILED;
         }
         return _packValidationData(sigFailed, validUntil, validAfter);
+    }
+
+    function _checkSigner(address signer) internal pure {
+        require(signer != address(0), "Invalid signer of the wallet");
     }
 }

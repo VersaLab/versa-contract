@@ -22,7 +22,11 @@ library AddressLinkedList {
         }
     }
 
-    function replace(mapping(address => address) storage self, address oldAddr, address newAddr) internal {
+    function replace(
+        mapping(address => address) storage self,
+        address oldAddr,
+        address newAddr
+    ) internal onlyAddress(newAddr) {
         require(isExist(self, oldAddr), "address not exists");
         require(!isExist(self, newAddr), "new address already exists");
 

@@ -9,7 +9,7 @@ import {
     MultiSigValidator__factory,
     VersaWallet,
 } from "../../typechain-types";
-import { deployVersaWallet, getUserOpHash } from "../utils";
+import { deployVersaWallet, getScheduledUserOpHash, getUserOpHash, entryPointAddress } from "../utils";
 import { enablePlugin, execute } from "../base/utils";
 import { arrayify, hexConcat, hexlify, keccak256, toUtf8Bytes } from "ethers/lib/utils";
 import * as helper from "@nomicfoundation/hardhat-network-helpers";
@@ -429,15 +429,18 @@ describe("MultiSigValidator", () => {
         let entryPoint = ethers.constants.AddressZero;
         let chainId = 1;
         const userOpHash = getUserOpHash(op, entryPoint, chainId);
-
-        let sign1 = await signer1.signMessage(arrayify(userOpHash));
-        let sign2 = await signer2.signMessage(arrayify(userOpHash));
+        let sign1 = await signer1.signMessage(
+            arrayify(keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, multisigValidator.address])))
+        );
+        let sign2 = await signer2.signMessage(
+            arrayify(keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, multisigValidator.address])))
+        );
 
         // The first 20 bytes of signature is validator's address
         // The 21th byte is the sig type
         // signature must be sorted, here sign2 < sign1
         let combinedSignature = hexConcat([sign2, sign1]);
-        let sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
+        let sign = hexConcat([multisigValidator.address, "0x00", combinedSignature]);
         op.signature = sign;
 
         let validationData = await multisigValidator.validateSignature(op, userOpHash);
@@ -445,7 +448,7 @@ describe("MultiSigValidator", () => {
 
         // un-ordered siganture
         combinedSignature = hexConcat([sign1, sign2]);
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
+        sign = hexConcat([multisigValidator.address, "0x00", combinedSignature]);
         op.signature = sign;
 
         validationData = await multisigValidator.validateSignature(op, userOpHash);
@@ -454,14 +457,14 @@ describe("MultiSigValidator", () => {
         // invalid guardian signature
         let sign3 = await signer3.signMessage(arrayify(userOpHash));
         combinedSignature = hexConcat([sign3, sign1]);
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
+        sign = hexConcat([multisigValidator.address, "0x00", combinedSignature]);
         op.signature = sign;
 
         validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(1);
 
         // Signatures data too short
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", sign1]);
+        sign = hexConcat([multisigValidator.address, "0x00", sign1]);
         validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(1);
     });
@@ -490,11 +493,9 @@ describe("MultiSigValidator", () => {
             paymasterAndData: "0x",
             signature: "0x",
         };
-        let entryPoint = ethers.constants.AddressZero;
-        let chainId = 1;
-        const userOpHash = getUserOpHash(op, entryPoint, chainId);
+        let chainId = 31337;
+        const userOpHash = getScheduledUserOpHash(op, entryPointAddress, chainId);
 
-        // let now = Math.floor((new Date().getTime() / 1000));
         let validAfter = 0;
         let validUntil = 0;
         let maxFeePerGas = op.maxFeePerGas;
@@ -504,7 +505,9 @@ describe("MultiSigValidator", () => {
             [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
         );
 
-        let finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
+        let finalHash = keccak256(
+            abiCoder.encode(["bytes32", "address", "bytes"], [userOpHash, multisigValidator.address, extraData])
+        );
 
         let userOpSigs = "0x";
 
@@ -531,7 +534,7 @@ describe("MultiSigValidator", () => {
         // The first 20 bytes of signature is validator's address
         // The 21th byte is the sig type
         let sign = hexConcat([
-            ethers.constants.AddressZero,
+            multisigValidator.address,
             "0x01",
             numberToFixedHex(validUntil, 6),
             numberToFixedHex(validAfter, 6),
@@ -578,30 +581,32 @@ describe("MultiSigValidator", () => {
         let entryPoint = ethers.constants.AddressZero;
         let chainId = 1;
         let userOpHash = getUserOpHash(op, entryPoint, chainId);
+        let finalHash = keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, multisigValidator.address]));
 
-        let sign1 = await signer1.signMessage(arrayify(userOpHash));
-        let sign2 = await signer2.signMessage(arrayify(userOpHash));
+        let sign1 = await signer1.signMessage(arrayify(finalHash));
+        let sign2 = await signer2.signMessage(arrayify(finalHash));
 
         // The first 20 bytes of signature is validator's address
         // The 21th byte is the sig type
         // signature must be sorted, here signer2 < signer1
         let combinedSignature = hexConcat([sign2, sign1]);
-        let sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
+        let sign = hexConcat([multisigValidator.address, "0x00", combinedSignature]);
         op.signature = sign;
 
         let validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(0);
 
         // invalid sig type
-        sign = hexConcat([ethers.constants.AddressZero, "0x03", combinedSignature]);
+        sign = hexConcat([multisigValidator.address, "0x03", combinedSignature]);
         op.signature = sign;
 
-        validationData = await multisigValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
+            "SignatureHandler: invalid signature type"
+        );
 
         // signature must be ordered
         combinedSignature = hexConcat([sign1, sign2]);
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
+        sign = hexConcat([multisigValidator.address, "0x00", combinedSignature]);
         op.signature = sign;
 
         validationData = await multisigValidator.validateSignature(op, userOpHash);
@@ -609,23 +614,25 @@ describe("MultiSigValidator", () => {
 
         let sign3 = await signer3.signMessage(arrayify(userOpHash));
         combinedSignature = hexConcat([sign3, sign1]);
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", combinedSignature]);
+        sign = hexConcat([multisigValidator.address, "0x00", combinedSignature]);
         op.signature = sign;
 
         validationData = await multisigValidator.validateSignature(op, userOpHash);
         expect(validationData).to.equal(1);
 
         // Signatures data too short
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", sign1]);
+        sign = hexConcat([multisigValidator.address, "0x00", sign1]);
         op.signature = sign;
-        validationData = await multisigValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
+            "Invalid signature length"
+        );
 
         // non-enabled wallet
         op.sender = wallet_2.address;
-        sign = hexConcat([ethers.constants.AddressZero, "0x00", sign1]);
-        validationData = await multisigValidator.validateSignature(op, userOpHash);
-        expect(validationData).to.equal(1);
+        sign = hexConcat([multisigValidator.address, "0x00"]);
+        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
+            "Invalid signature length"
+        );
     });
 
     it("should validate EIP-1271 signature correctly", async () => {

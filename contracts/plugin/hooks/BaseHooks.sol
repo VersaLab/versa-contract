@@ -61,7 +61,7 @@ abstract contract BaseHooks is IHooks {
      * @dev Returns the supported hooks of this contract.
      * @return The supported hooks (represented as a bitwise flag).
      */
-    function hasHooks() external pure virtual returns (uint256) {}
+    function hasHooks() external pure virtual returns (uint256);
 
     /**
      * @dev Perform before transaction actions.
@@ -111,8 +111,9 @@ abstract contract BaseHooks is IHooks {
 
     /**
      * @dev Checks if the specified wallet has been initialized.
+     * Subclasses must override this function.
      * @param wallet The wallet address to check.
      * @return A boolean indicating if the wallet is initialized.
      */
-    function _isWalletInited(address wallet) internal view virtual returns (bool) {}
+    function _isWalletInited(address wallet) internal view virtual returns (bool);
 }

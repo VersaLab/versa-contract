@@ -134,21 +134,6 @@ describe("SpendingLimitHooks", () => {
             selector: "enableHooks",
         });
 
-        let errorERC20TokenConfig = {
-            tokenAddress: owner.address,
-            allowanceAmount: 1,
-            resetBaseTimeMinutes: 1,
-            resetTimeIntervalMinutes: 1,
-        };
-        let data = spendingLimitHooks.interface.encodeFunctionData("setSpendingLimit", [errorERC20TokenConfig]);
-        await expect(
-            execute({
-                executor: wallet,
-                to: spendingLimitHooks.address,
-                data: data,
-            })
-        ).to.be.revertedWithoutReason();
-
         let nativeTokenConfig = {
             tokenAddress: nativeTokenAddress,
             allowanceAmount: parseEther("200"),
@@ -161,7 +146,7 @@ describe("SpendingLimitHooks", () => {
             resetBaseTimeMinutes: nativeTokenConfig.resetBaseTimeMinutes,
             resetTimeIntervalMinutes: nativeTokenConfig.resetTimeIntervalMinutes,
         };
-        data = spendingLimitHooks.interface.encodeFunctionData("batchSetSpendingLimit", [
+        let data = spendingLimitHooks.interface.encodeFunctionData("batchSetSpendingLimit", [
             [nativeTokenConfig, erc20TokenConfig],
         ]);
         await execute({

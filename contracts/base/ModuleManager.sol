@@ -49,7 +49,6 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
     /**
      * @notice Execute `operation` (0: Call, 1: DelegateCall) to `to` with `value` (Native Token).
      * @dev This function is marked as virtual to allow overriding for L2 singleton to emit an event for indexing.
-     * @notice Subclasses must override `_isPluginEnabled` to ensure the plugin is enabled.
      * @param to Destination address of the module transaction.
      * @param value Ether value of the module transaction.
      * @param data Data payload of the module transaction.
@@ -128,9 +127,12 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param module The module to be disabled.
      */
     function _disableModule(address prevModule, address module) internal {
-        try IModule(module).clearWalletConfig() {
+        // We use low level call instead of try catch here to make sure this
+        // call won't revert the whole transaction in any case
+        (bool success, ) = module.call(abi.encodeWithSelector(IModule.clearWalletConfig.selector, "0x"));
+        if (success) {
             emit DisabledModule(module);
-        } catch {
+        } else {
             emit DisabledModuleWithError(module);
         }
         modules.remove(prevModule, module);

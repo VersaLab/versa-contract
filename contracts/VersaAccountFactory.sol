@@ -37,7 +37,9 @@ contract VersaAccountFactory is SafeProxyFactory {
             moduleInitData,
             salt
         );
-        require(addr.code.length == 0, "Versa factory: account already created");
+        if (addr.code.length > 0) {
+            return addr;
+        }
         return
             address(
                 createProxyWithNonce(

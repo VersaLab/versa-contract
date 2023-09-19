@@ -80,7 +80,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     /**
      * @dev Checks if the specified wallet has been initialized.
      * @notice This validator is supposed to be enabled during wallet initialization without performing
-     * validator initialization.
+     * validator initialization. Just let it always return true.
      * @return A boolean indicating if the wallet is initialized.
      */
     function _isWalletInited(address) internal pure override returns (bool) {
@@ -105,21 +105,14 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         UserOperation memory userOp,
         bytes32 userOpHash
     ) external onlyEnabledValidator returns (uint256 validationData) {
+        bytes4 selector = bytes4(userOp.callData.slice(0, 4));
         // Split on normal execute and batch normal execute
-        if (bytes4(userOp.callData.slice(0, 4)) == VersaWallet.normalExecute.selector) {
-            try this.validateSingleExecute(userOp, userOpHash) returns (uint256 data) {
-                validationData = data;
-            } catch {
-                validationData = SIG_VALIDATION_FAILED;
-            }
-        } else if (bytes4(userOp.callData.slice(0, 4)) == VersaWallet.batchNormalExecute.selector) {
-            try this.validateBatchExecute(userOp, userOpHash) returns (uint256 data) {
-                validationData = data;
-            } catch {
-                validationData = SIG_VALIDATION_FAILED;
-            }
+        if (selector == VersaWallet.normalExecute.selector) {
+            validationData = _validateSingleExecute(userOp, userOpHash);
+        } else if (selector == VersaWallet.batchNormalExecute.selector) {
+            validationData = _validateBatchExecute(userOp, userOpHash);
         } else {
-            validationData = SIG_VALIDATION_FAILED;
+            revert("SessionKeyValidator: invalid wallet operation");
         }
     }
 
@@ -127,15 +120,13 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Valdiate the normal execute user operation.
      * Requirements:
      * - the userOp must be signed by the operator
-     * - the session must be in the session merkle tree
-     * - the paymaster must be equal to pre-set paymaster
-     * - must not execeed the spending limit
+     * - the session must be valid
      * - the calldata must be in the range of pre-set allowed arguments
      */
-    function validateSingleExecute(
+    function _validateSingleExecute(
         UserOperation memory userOp,
         bytes32 userOpHash
-    ) public authorized returns (uint256 validationData) {
+    ) internal returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
         (address to, uint256 value, bytes memory data, ) = abi.decode(
             userOp.callData.slice(4, userOp.callData.length - 4),
@@ -152,27 +143,28 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
                 userOp.signature.slice(20, userOp.signature.length - 20),
                 (bytes32[], address, Session, bytes, bytes)
             );
-        _validateOperatorSiganture(operator, operatorSignature, userOpHash);
         _validateOperatorGasUsage(operator, userOp);
         address paymaster = _parsePaymaster(userOp.paymasterAndData);
         _validateSession(operator, userOp, proof, session, rlpCalldata, paymaster, to, value, data);
         // check and update usage
-        validationData = _packValidationData(0, session.validUntil, session.validAfter);
+        validationData = _packValidationData(
+            _validateOperatorSiganture(operator, operatorSignature, userOpHash),
+            session.validUntil,
+            session.validAfter
+        );
     }
 
     /**
      * @dev Valdiate the batch normal execute user operation.
      * Requirements:
      * - the userOp must be signed by the operator
-     * - the sessions must be in the session merkle tree
-     * - the paymaster must be equal to pre-set paymaster
-     * - must not execeed the spending limit
+     * - the sessions must be valid
      * - the calldata must be in the range of pre-set allowed arguments
      */
-    function validateBatchExecute(
+    function _validateBatchExecute(
         UserOperation memory userOp,
         bytes32 userOpHash
-    ) public authorized returns (uint256 validationData) {
+    ) internal returns (uint256 validationData) {
         // Decode calldata from userOp.calldata
         (address[] memory to, uint256[] memory value, bytes[] memory data, ) = abi.decode(
             userOp.callData.slice(4, userOp.callData.length - 4),
@@ -189,7 +181,6 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
                 userOp.signature.slice(20, userOp.signature.length - 20),
                 (bytes32[][], address, Session[], bytes[], bytes)
             );
-        _validateOperatorSiganture(operator, operatorSignature, userOpHash);
         _validateOperatorGasUsage(operator, userOp);
         (uint48 validUntil, uint48 validAfter) = _validateMultipleSessions(
             operator,
@@ -201,7 +192,11 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
             value,
             data
         );
-        validationData = _packValidationData(0, validUntil, validAfter);
+        validationData = _packValidationData(
+            _validateOperatorSiganture(operator, operatorSignature, userOpHash),
+            validUntil,
+            validAfter
+        );
     }
 
     /**
@@ -237,7 +232,8 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Validate the session.
      * Requirements:
      * - the session must be in the session merkle tree
-     * - the session must not execeed the spending limit
+     * - the paymaster must be equal to pre-set paymaster
+     * - the session must not exceed the usage limit
      * - the calldata must be in the range of pre-set allowed arguments
      */
     function _validateSession(
@@ -251,7 +247,6 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         uint256 value,
         bytes memory data
     ) internal {
-        // if the session is premitted offchain, verify ownerSignature
         bytes32 sessionHash = session.hash();
         _validateSessionRoot(proof, _getSessionRoot(userOp.sender, operator), sessionHash);
         _validatePaymaster(session.paymaster, paymaster);
@@ -265,7 +260,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Validate the sessions, an execution may use multiple sessions.
      * Requirements:
      * - the sessions must be in the session merkle tree
-     * - the executions must not execeed the spending limit
+     * - each session must not exceed the usage limit
      * - the calldata of each execution must be in the range of pre-set allowed arguments
      */
     function _validateMultipleSessions(
@@ -279,7 +274,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         bytes[] memory data
     ) internal returns (uint48 validUntil, uint48 validAfter) {
         require(
-            to.length == session.length && session.length == proof.length,
+            to.length == rlpCalldata.length && rlpCalldata.length == session.length && session.length == proof.length,
             "SessionKeyValidator: invalid batch length"
         );
         address paymaster = _parsePaymaster(userOp.paymasterAndData);
@@ -306,7 +301,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     }
 
     /**
-     * @dev Check if the session has enough gas and times to remaining.
+     * @dev Check if the session exceeds the usage limit and update the usage.
      */
     function _checkAndUpdateSessionUsage(
         bytes32 sessionHash,
@@ -319,7 +314,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     }
 
     /**
-     * @dev Check if the arguments of the executiondata is in the range of pre-set allowed arguments.
+     * @dev Check if the arguments of the execution data is in the range of pre-set allowed arguments.
      */
     function _checkArguments(
         Session memory session,
@@ -370,12 +365,13 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         address operator,
         bytes memory operatorSignature,
         bytes32 userOpHash
-    ) internal view {
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        require(
-            SignatureChecker.isValidSignatureNow(operator, hash, operatorSignature),
-            "SessionKeyValidator: invalid operator signature"
-        );
+    ) internal view returns (uint256) {
+        bytes32 hash = keccak256(abi.encode(userOpHash, address(this))).toEthSignedMessageHash();
+        if (SignatureChecker.isValidSignatureNow(operator, hash, operatorSignature)) {
+            return 0;
+        } else {
+            return SIG_VALIDATION_FAILED;
+        }
     }
 
     /**
@@ -447,23 +443,18 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     /// @dev Get the intersection of given validation durations.
     function _getValidationIntersection(
         uint48 validUntil1,
-        uint48 validunitil2,
+        uint48 validUntil2,
         uint48 validAfter1,
         uint48 validAfter2
     ) internal pure returns (uint48 validUntil, uint48 validAfter) {
-        if (validUntil1 != 0 && validunitil2 != 0) {
-            validUntil = validUntil1 < validunitil2 ? validUntil1 : validunitil2;
+        if (validUntil1 != 0 && validUntil2 != 0) {
+            validUntil = validUntil1 < validUntil2 ? validUntil1 : validUntil2;
         } else {
-            validUntil = validUntil1 > validunitil2 ? validUntil1 : validunitil2;
+            validUntil = validUntil1 > validUntil2 ? validUntil1 : validUntil2;
         }
         validAfter = validAfter1 > validAfter2 ? validAfter1 : validAfter2;
-        require(validUntil >= validAfter, "SessionKeyValidator: invalid validation duration");
-    }
-
-    function _getChainId() internal view returns (uint256 id) {
-        // solium-disable-next-line security/no-inline-assembly
-        assembly {
-            id := chainid()
+        if (validUntil > 0) {
+            require(validUntil >= validAfter, "SessionKeyValidator: invalid validation duration");
         }
     }
 }

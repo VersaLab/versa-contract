@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { universalSingletonFactoryAddress as singletonFactoryAddress} from "./config"
+import { universalSingletonFactoryAddress as singletonFactoryAddress } from "./config";
 
 export interface VersaAccountFactoryData {
     versaSingleton: string;
@@ -23,7 +23,7 @@ export async function deployVersaAccountFactory(data: VersaAccountFactoryData, s
     tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("VersaAccountFactory deployed to:", address);
     }
@@ -41,7 +41,7 @@ export async function deployVersaSingleton(entryPoint: string, salt: string) {
     tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("VersaSingleton deployed to:", address);
     }
@@ -58,12 +58,11 @@ export async function deployVersaVerifyingPaymaster(entryPoint: string, verifyin
     tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("VersaSingleton deployed to:", address);
     }
     return await ethers.getContractAt("VersaVerifyingPaymaster", address);
-
 }
 
 export async function deployCompatibilityFallbackHandler(salt: string) {
@@ -77,7 +76,7 @@ export async function deployCompatibilityFallbackHandler(salt: string) {
     tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("CompatibilityFallbackHandler deployed to:", address);
     }
@@ -95,7 +94,7 @@ export async function deploySpendingLimitHooks(salt: string) {
     tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("SpendingLimitHooks deployed to:", address);
     }
@@ -114,7 +113,7 @@ export async function deployECDSAValidator(salt: string) {
     await tx.wait();
 
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("ECDSAValidator deployed to:", address);
     }
@@ -133,7 +132,7 @@ export async function deployMultiSigValidator(salt: string) {
     await tx.wait();
 
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("MultiSigValidator deployed to:", address);
     }
@@ -152,7 +151,7 @@ export async function deploySessionKeyValidator(salt: string) {
     await tx.wait();
 
     if (address == ethers.constants.AddressZero) {
-        console.log("Deploy failed, this contract with this salt should have been already deployed")
+        console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
         console.log("SessionKeyValidator deployed to:", address);
     }

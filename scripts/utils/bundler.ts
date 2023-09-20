@@ -185,9 +185,7 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
     let maxFeePerGas;
     let maxPriorityFeePerGas;
     let userOpHash = getUserOpHash(userOp, entryPoint, chainId);
-    let finalHash = keccak256(
-        abiCoder.encode(["bytes32", "address"], [userOpHash, validator])
-    );
+    let finalHash = keccak256(abiCoder.encode(["bytes32", "address"], [userOpHash, validator]));
     if (scheduled == true) {
         let now = Math.floor(new Date().getTime() / 1000);
         validUntil = 0;

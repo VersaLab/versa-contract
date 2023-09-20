@@ -7,10 +7,12 @@ import { generateWalletInitCode } from "../test/utils";
 import { AddressOne } from "../@safe-contracts/src";
 import { estimateGasAndSendUserOpAndGetReceipt, generateUserOp, sleep } from "./utils/bundler";
 import * as config from "./utils/config";
+import * as constants from "../deploy/helper/config";
 
 const bundlerURL = config.mumbaiBundlerURL;
 const paymasterURL = config.mumbaiPaymasterURL;
-const entryPointAddress = mumbaiAddresses.entryPoint;
+const entryPointAddress = constants.deployConfig.entryPointAddress;
+
 const paymasterAddress = mumbaiAddresses.versaVerifyingPaymaster;
 const spendingLimitAddress = mumbaiAddresses.spendingLimitHooks;
 const versaAccountFactoryAddress = mumbaiAddresses.versaAccountFactory;
@@ -67,7 +69,7 @@ async function integration_test() {
     });
     const wallet = await ethers.getContractAt("VersaWallet", walletAddress);
 
-    // console.log("============deploy new wallet=================")
+    console.log("============deploy new wallet=================");
     let calldata = wallet.interface.encodeFunctionData("normalExecute", [
         signer2.address,
         parseEther("0.0001"),
@@ -106,10 +108,6 @@ async function integration_test() {
     ]);
     batchData.push([walletAddress, 0, enableMultisigValidator, 0]);
 
-    // toggle ecdsa validator to normal
-    let toggleEcdsa = wallet.interface.encodeFunctionData("toggleValidatorType", [multisigValidator, ecdsaValidator]);
-    batchData.push([walletAddress, 0, toggleEcdsa, 0]);
-
     let to = [];
     let value = [];
     let data = [];
@@ -138,26 +136,8 @@ async function integration_test() {
 
     let validatorType1 = await wallet.getValidatorType(ecdsaValidator);
     let validatorType2 = await wallet.getValidatorType(multisigValidator);
-    if (validatorType1 !== 2 || validatorType2 !== 1) {
+    if (validatorType1 !== 1 || validatorType2 !== 1) {
         throw new Error("Set validator type failed");
-    }
-
-    console.log("===============disable validator=============");
-    // Validate through multisig validator and disable ecdsa validator
-    let disableData = wallet.interface.encodeFunctionData("disableValidator", [AddressOne, ecdsaValidator]);
-    calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, disableData, 0]);
-    userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
-    // test scheduled transaction here
-    await estimateGasAndSendUserOpAndGetReceipt({
-        bundlerURL,
-        userOp,
-        entryPoint: entryPointAddress,
-        validator: multisigValidator,
-        signers: [signer1, signer2],
-    });
-    validatorType1 = await wallet.getValidatorType(ecdsaValidator);
-    if (validatorType1 !== 0) {
-        throw new Error("Disable validator failed");
     }
 
     console.log("===============scheduled transaction=============");
@@ -167,8 +147,8 @@ async function integration_test() {
         bundlerURL,
         userOp,
         entryPoint: entryPointAddress,
-        validator: multisigValidator,
-        signers: [signer1, signer2],
+        validator: ecdsaValidator,
+        signers: [signer2],
         scheduled: true,
     });
 
@@ -190,8 +170,8 @@ async function integration_test() {
         bundlerURL,
         userOp,
         entryPoint: entryPointAddress,
-        validator: multisigValidator,
-        signers: [signer1, signer2],
+        validator: ecdsaValidator,
+        signers: [signer2],
         paymasterURL: paymasterURL,
         gasToken: targetERC20,
     });
@@ -222,8 +202,8 @@ async function integration_test() {
         bundlerURL,
         userOp,
         entryPoint: entryPointAddress,
-        validator: multisigValidator,
-        signers: [signer1, signer2],
+        validator: ecdsaValidator,
+        signers: [signer2],
     });
 
     console.log("===============diable spending limit=============");
@@ -243,9 +223,27 @@ async function integration_test() {
         bundlerURL,
         userOp,
         entryPoint: entryPointAddress,
-        validator: multisigValidator,
-        signers: [signer1, signer2],
+        validator: ecdsaValidator,
+        signers: [signer2],
     });
+
+    console.log("===============disable validator=============");
+    // Validate through ecdsa validator and disable multisig validator
+    let disableData = wallet.interface.encodeFunctionData("disableValidator", [ecdsaValidator, multisigValidator]);
+    calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, disableData, 0]);
+    userOp = await generateUserOp({ signer: signer1, walletAddress, callData: calldata });
+    // test scheduled transaction here
+    await estimateGasAndSendUserOpAndGetReceipt({
+        bundlerURL,
+        userOp,
+        entryPoint: entryPointAddress,
+        validator: ecdsaValidator,
+        signers: [signer2],
+    });
+    const multisigValidatorType = await wallet.getValidatorType(multisigValidator);
+    if (multisigValidatorType !== 0) {
+        throw new Error("Disable validator failed");
+    }
 }
 
 integration_test()

@@ -5,40 +5,37 @@ import mumbaiAddresses from "./addresses/polygonMumbai.json";
 import scrollSepoliaAddresses from "./addresses/scrollSepolia.json";
 import fs from "fs";
 import { deployConfig } from "./helper/config";
-import * as readline from "readline-sync"
+import * as readline from "readline-sync";
 
 async function deployWithAddresses(addresses: any, config: any) {
-    const deployCompatibilityFallbackHandler =
-        readline.keyInYN("Do you need to deploy compatibilityFallbackHandler?")
+    const deployCompatibilityFallbackHandler = readline.keyInYN("Do you need to deploy compatibilityFallbackHandler?");
     if (deployCompatibilityFallbackHandler) {
         const compatibilityFallbackHandler = await deployer.deployCompatibilityFallbackHandler(config.salt);
         addresses.compatibilityFallbackHandler = compatibilityFallbackHandler.address;
     }
 
-    const deployVersaSingleton =
-        readline.keyInYN("Do you need to deploy versa singleton and versa factory?")
+    const deployVersaSingleton = readline.keyInYN("Do you need to deploy versa singleton and versa factory?");
     if (deployVersaSingleton) {
-        const versaSingleton = await deployer.deployVersaSingleton(config.entryPointAddress, config.salt)
-        addresses.versaSingleton = versaSingleton.address
+        const versaSingleton = await deployer.deployVersaSingleton(config.entryPointAddress, config.salt);
+        addresses.versaSingleton = versaSingleton.address;
 
         const versaAccountFactoryData: VersaAccountFactoryData = {
             versaSingleton: addresses.versaSingleton,
             defaultFallbackHandler: addresses.compatibilityFallbackHandler,
         };
-        const versaFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData, config.salt)
-        addresses.versaAccountFactory = versaFactory.address
+        const versaFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData, config.salt);
+        addresses.versaAccountFactory = versaFactory.address;
     }
 
-    const deployPaymaster = readline.keyInYN("Do you need to deploy paymaster?")
+    const deployPaymaster = readline.keyInYN("Do you need to deploy paymaster?");
     if (deployPaymaster) {
-
     }
 
-    const deloyPlugins =  readline.keyInYN("Do you need to deploy plugins?")
+    const deloyPlugins = readline.keyInYN("Do you need to deploy plugins?");
     if (deloyPlugins) {
         const ecdsaValidator = await deployer.deployECDSAValidator(config.salt);
         addresses.ecdsaValidator = ecdsaValidator.address;
-        
+
         const multisigValidator = await deployer.deployMultiSigValidator(config.salt);
         addresses.multisigValidator = multisigValidator.address;
 

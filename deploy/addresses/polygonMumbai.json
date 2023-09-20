@@ -1,12 +1,12 @@
 {
 	"entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-	"paymaster": "0xf9dcDD7113Fa9dC7176501631E3Ef9fb483dE02b",
-	"versaAccountFactory": "0x770A46D9ff4538CFa94b2B079B0F6Ded7ce67240",
-	"versaSingleton": "0xcc320D7612B5b491fF981EEfcCCC948Df5AfA74A",
-	"compatibilityFallbackHandler": "0x34Cd11043Cb216EBA656F261A657B87331F32b79",
-	"spendingLimitHooks": "0xfBe5e0C105F817B9967DFB8555462f6C80A8F2Fb",
-	"ecdsaValidator": "0xAEce0898Fd8ee9cC6B0124De7D58e7b188642a95",
-	"multisigValidator": "0x4DfBc86Ca1c8264708a34f0a95CB2F70b8DFB6a0",
-	"ellipticCurve": "0x",
-	"sessionKeyValdiator": "0x81164702f89883e6EAae3180357F4D49012Bc922"
+	"verifyingPaymasterOwner": "0x43370254AAAce51006cf368eb7734DB43Ddf9880",
+	"compatibilityFallbackHandler": "0xD4567c3E94Cda21F4c2bfB4a6744841751798b12",
+	"ecdsaValidator": "0xC7eD0c07C3f1405E69c1Cd003ED1B32E9f59CA7D",
+	"multisigValidator": "0x03F85f750d1b5e083d54aA2283242E75A7947Fac",
+	"sessionKeyValidator": "0x522a57119896ABF096db8827ef7D44a825D99553",
+	"spendingLimitHooks": "0x2fCB3B5507b84A7dEF4E3Bc8b0bb590275A2F913",
+	"versaVerifyingPaymaster": "0x0BD56827DbDEcb9c28e168a077Ea779d2b082550",
+	"versaSingleton": "0xa4b7407163D3B7B0d49cd3d6330D0EEe935B24D2",
+	"versaAccountFactory": "0x994FbB9f1117bA37A9020B4398bb2B6cc76dd8Cd"
 }

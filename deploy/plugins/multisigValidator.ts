@@ -7,7 +7,7 @@ import fs from "fs";
 import { salt } from "../helper/config";
 
 async function deployWithAddresses(addresses: any) {
-    const multisigValidator = await deployer.deployMultisigValidator(salt);
+    const multisigValidator = await deployer.deployMultiSigValidator(salt);
     addresses.multisigValidator = multisigValidator.address;
     return addresses;
 }

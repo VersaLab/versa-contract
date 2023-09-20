@@ -1,10 +1,4 @@
 {
 	"entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
-	"versaSingleton": "0x073BEd4DD9Ddfc5E7daaFEcC48956F0958D255b7",
-	"compatibilityFallbackHandler": "0x09Fd627b8691dE3Cec0cd915267481a1BfC8E4A3",
-	"versaAccountFactory": "0xC7a15c6a00fD27b4bA0C337045C2291fDC297A7c",
-	"ecdsaValidator": "0xAa9393B535FD5AFA3045d0ed34f116708dB00031",
-	"multisigValidator": "0xf66F77bA767C1ee093EAd0F0009a4a7D46906F8D",
-	"sessionKeyValdiator": "0x6c5D350ce3c17EAA19E7ad757687CEC30460dB36",
-	"spendingLimitHooks": "0xb37E2c2B06C7F23f3e8A258114bfD9a3218A3468"
+	"verifyingPaymasterOwner": "0x43370254AAAce51006cf368eb7734DB43Ddf9880"
 }

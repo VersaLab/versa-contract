@@ -2,33 +2,31 @@ import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
 import { hexlify, hexConcat, arrayify, parseEther, parseUnits } from "ethers/lib/utils";
 import mumbaiAddresses from "../deploy/addresses/polygonMumbai.json";
-import scrollTestnetAddresses from "../deploy/addresses/scrollTestnet.json";
+import scrollSepoliaAddresses from "../deploy/addresses/scrollSepolia.json";
 import { generateWalletInitCode } from "../test/utils";
 import { AddressOne } from "../@safe-contracts/src";
 import { estimateGasAndSendUserOpAndGetReceipt, generateUserOp, sleep } from "./utils/bundler";
 import * as config from "./utils/config";
 
-// const bundlerURL = config.mumbaiBundlerURL;
-// const paymasterURL = config.mumbaiPaymasterURL;
-// const entryPointAddress = mumbaiAddresses.entryPoint;
-// const paymasterAddress = config.mumbaiPaymasterAddress;
-// const spendingLimitAddress = mumbaiAddresses.spendingLimitHooks;
-// const versaAccountFactoryAddress = mumbaiAddresses.versaAccountFactory;
-// const ecdsaValidator = mumbaiAddresses.ecdsaValidator;
-// const multisigValidator = mumbaiAddresses.multisigValidator;
-// const targetERC20 = config.mumbaiUSDTAddress;
-// const testNFTAddress = config.mumbaiTestNFTAddress;
+const bundlerURL = config.mumbaiBundlerURL;
+const paymasterURL = config.mumbaiPaymasterURL;
+const entryPointAddress = mumbaiAddresses.entryPoint;
+const paymasterAddress = mumbaiAddresses.versaVerifyingPaymaster;
+const spendingLimitAddress = mumbaiAddresses.spendingLimitHooks;
+const versaAccountFactoryAddress = mumbaiAddresses.versaAccountFactory;
+const ecdsaValidator = mumbaiAddresses.ecdsaValidator;
+const multisigValidator = mumbaiAddresses.multisigValidator;
+const targetERC20 = config.mumbaiUSDTAddress;
 
-const bundlerURL = config.scrollTestnetBundlerURL;
-const paymasterURL = config.scrollTestnetPaymasterURL;
-const entryPointAddress = scrollTestnetAddresses.entryPoint;
-const paymasterAddress = config.scrollTestnetPaymasterAddress;
-const versaAccountFactoryAddress = scrollTestnetAddresses.versaAccountFactory;
-const spendingLimitAddress = scrollTestnetAddresses.spendingLimitHooks;
-const ecdsaValidator = scrollTestnetAddresses.ecdsaValidator;
-const multisigValidator = scrollTestnetAddresses.multisigValidator;
-const targetERC20 = config.scrollTestnetUSDTAddress;
-const testNFTAddress = config.scrollTestnetTestNFTAddress;
+// const bundlerURL = config.scrollSepoliaBundlerURL;
+// const paymasterURL = config.scrollSepoliaPaymasterURL;
+// const entryPointAddress = scrollSepoliaAddresses.entryPoint;
+// const paymasterAddress = scrollSepoliaAddresses.versaVerifyingPaymaster;
+// const versaAccountFactoryAddress = scrollSepoliaAddresses.versaAccountFactory;
+// const spendingLimitAddress = scrollSepoliaAddresses.spendingLimitHooks;
+// const ecdsaValidator = scrollSepoliaAddresses.ecdsaValidator;
+// const multisigValidator = scrollSepoliaAddresses.multisigValidator;
+// const targetERC20 = config.scrollSepoliaUSDTAddress;
 
 const salt = config.salt;
 
@@ -36,7 +34,7 @@ const salt = config.salt;
  * 1. Base functions:
  *      - create a new wallet
  *      - test native tokens sending
- *      - test native token and ERC721 receiving(CompabilityFallbackHandler)
+ *      - test native tokens receiving(CompabilityFallbackHandler)
  *      - normal/sudo execute, signle/batch execute
  *      - scheduled transaction
  *      - Transaction using paymaster
@@ -86,13 +84,6 @@ async function integration_test() {
     });
 
     console.log("============fallback functions and enable validator=============");
-    const testNFTAbi = [
-        // Some details about the token
-        "function mint()",
-    ];
-
-    let testNFT = await ethers.getContractAt(testNFTAbi, testNFTAddress);
-    let mintData = testNFT.interface.encodeFunctionData("mint");
     let batchData = [];
 
     // test NativeTokenSending
@@ -100,9 +91,6 @@ async function integration_test() {
 
     // test NativeTokenReceive
     batchData.push([walletAddress, parseEther("0.0001"), "0x", 0]);
-
-    // test ERC721 Receiving
-    batchData.push([testNFTAddress, 0, mintData, 0]);
 
     // set new ecdsa signer
     let ECDSA = await ethers.getContractAt("ECDSAValidator", ecdsaValidator);

@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
 import { hexlify, hexConcat, arrayify, parseEther, parseUnits, RLP, keccak256 } from "ethers/lib/utils";
 import mumbaiAddresses from "../deploy/addresses/polygonMumbai.json";
-import scrollTestnetAddresses from "../deploy/addresses/scrollTestnet.json";
+import scrollSepoliaAddresses from "../deploy/addresses/scrollSepolia.json";
 import { generateWalletInitCode } from "../test/utils";
 import { AddressOne } from "../@safe-contracts/src";
 import { estimateGas, estimateGasAndSendUserOpAndGetReceipt, generateUserOp, sendUserOp, sleep } from "./utils/bundler";

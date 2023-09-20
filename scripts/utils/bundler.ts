@@ -10,7 +10,7 @@ import { BigNumber } from "ethers";
 
 const abiCoder = new AbiCoder();
 const fakePaymasterAndData =
-    "0xd394abc2d89da13bc1ae3065136ed0311cfd0dff8478643d27dbe81d199f74f654e4b0e41d867de301000064a5048e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000aaf28079a75fe3bac32199b0c355bad9bdd4c3710b95b8d93a40e8fa09fe420915a2a5ca95db566daa111b729b58540bf526597e1d47a95376e12b4cf52d3ca98a8541b";
+    "0x41003d1852d67045aacce9e996b1bda482633331f2719572e4e9369cdc061ef602d0f20f8a42234d01000064cb75e60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006d52e8705345e54062e3f4cf5d6492158d4581237bb7b451d6bc417a1aa5bd6421fb2259258d956aae8161cc19fa2548f10beee3e07af0224196c87bbe9067b316ef56df1b";
 const fakeSignature =
     "0x59c044382c5418739ef913865b05f60050f8e587041548215aa595816dfbe77b26408ebd368bc51be61008aaef7b9b87479c91f9c297caf1e33e8c3b2de69a3b1c";
 
@@ -44,9 +44,9 @@ export async function generateUserOp(options: {
         nonce: hexlify(nonce),
         initCode,
         callData,
-        callGasLimit: hexlify(2000000),
-        verificationGasLimit: hexlify(2000000),
-        preVerificationGas: hexlify(2000000),
+        callGasLimit: hexlify(1000000),
+        verificationGasLimit: hexlify(1000000),
+        preVerificationGas: hexlify(1000000),
         maxFeePerGas: gasPrice.toHexString(),
         maxPriorityFeePerGas: gasPrice.toHexString(),
         paymasterAndData: "0x",
@@ -155,17 +155,10 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
                 });
                 break;
             }
-            case 534353: {
-                tx = await signer.sendTransaction({
-                    to: userOp.sender,
-                    value: parseEther("0.002"),
-                });
-                break;
-            }
             case 534351: {
                 tx = await signer.sendTransaction({
                     to: userOp.sender,
-                    value: parseEther("0.05"),
+                    value: parseEther("0.002"),
                 });
                 break;
             }
@@ -183,7 +176,7 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
     // }
     userOp.callGasLimit = hexlify(gas.callGasLimit);
     userOp.verificationGasLimit = hexlify(gas.verificationGas);
-    userOp.preVerificationGas = hexlify(gas.preVerificationGas + 10000);
+    userOp.preVerificationGas = hexlify(gas.preVerificationGas);
     console.log("through paymaster?", paymasterURL !== "");
     if (paymasterURL !== "") {
         let [paymasterAndData] = await getPaymasterAndData(paymasterURL, userOp, gasToken);

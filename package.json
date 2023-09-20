@@ -1,6 +1,6 @@
 {
   "name": "versa-contracts",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",

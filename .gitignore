@@ -11,3 +11,4 @@ package-lock.json
 typechain-types
 coverage
 coverage.json
+deploy/addresses

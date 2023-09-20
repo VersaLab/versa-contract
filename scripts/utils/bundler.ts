@@ -171,9 +171,6 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
     userOp.signature = hexConcat([validator, "0x00", fakeSignature]);
     let [gas, error] = await estimateGas(bundlerURL, userOp, entryPoint);
     console.log("estimate gas:", gas);
-    // if (error != undefined) {
-    //     return error;
-    // }
     userOp.callGasLimit = hexlify(gas.callGasLimit);
     userOp.verificationGasLimit = hexlify(gas.verificationGas);
     userOp.preVerificationGas = hexlify(gas.preVerificationGas);
@@ -188,7 +185,9 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
     let maxFeePerGas;
     let maxPriorityFeePerGas;
     let userOpHash = getUserOpHash(userOp, entryPoint, chainId);
-    let finalHash = userOpHash;
+    let finalHash = keccak256(
+        abiCoder.encode(["bytes32", "address"], [userOpHash, validator])
+    );
     if (scheduled == true) {
         let now = Math.floor(new Date().getTime() / 1000);
         validUntil = 0;
@@ -200,7 +199,7 @@ export async function estimateGasAndSendUserOpAndGetReceipt(options: {
             [validUntil, validAfter, maxFeePerGas, maxPriorityFeePerGas]
         );
         userOpHash = getScheduledUserOpHash(userOp, entryPoint, chainId);
-        finalHash = keccak256(abiCoder.encode(["bytes32", "bytes"], [userOpHash, extraData]));
+        finalHash = keccak256(abiCoder.encode(["bytes32", "address", "bytes"], [userOpHash, validator, extraData]));
     }
     let userOpSigs = "0x";
     signers.sort((a, b) => {

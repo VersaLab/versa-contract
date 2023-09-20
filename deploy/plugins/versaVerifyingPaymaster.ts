@@ -3,13 +3,13 @@ import * as deployer from "../helper/deployer";
 import mumbaiAddresses from "../addresses/polygonMumbai.json";
 import scrollSepoliaAddresses from "../addresses/scrollSepolia.json";
 import fs from "fs";
-import { salt } from "../helper/config";
+import { deployConfig } from "../helper/config";
 
 async function deployWithAddresses(addresses: any) {
     const versaVerifyingPaymaster = await deployer.deployVersaVerifyingPaymaster(
         addresses.entryPoint,
-        addresses.verifyingPaymasterOwner,
-        salt
+        deployConfig.verifyingPaymasterOwner,
+        deployConfig.salt
     );
     addresses.versaVerifyingPaymaster = versaVerifyingPaymaster.address;
     return addresses;

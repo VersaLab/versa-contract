@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 import "../../common/SelfAuthorized.sol";
 import "./BaseValidator.sol";
-import "../../common/AllowanceCalldata.sol";
+import "../../library/AllowanceCalldata.sol";
 import "../../VersaWallet.sol";
 import "../../base/ValidatorManager.sol";
 

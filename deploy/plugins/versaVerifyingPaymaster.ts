@@ -1,18 +1,17 @@
 import { ethers } from "hardhat";
-import * as deployer from "./helper/deployer";
-import { VersaAccountFactoryData } from "./helper/deployer";
-import mumbaiAddresses from "./addresses/polygonMumbai.json";
-import scrollSepoliaAddresses from "./addresses/scrollSepolia.json";
+import * as deployer from "../helper/deployer";
+import mumbaiAddresses from "../addresses/polygonMumbai.json";
+import scrollSepoliaAddresses from "../addresses/scrollSepolia.json";
 import fs from "fs";
-import { deployConfig } from "./helper/config";
+import { deployConfig } from "../helper/config";
 
-async function deployWithAddresses(addresses: any, config: any) {
-    const versaAccountFactoryData: VersaAccountFactoryData = {
-        versaSingleton: addresses.versaSingleton,
-        defaultFallbackHandler: addresses.compatibilityFallbackHandler,
-    };
-    const versaAccountFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData, config.salt);
-    addresses.versaAccountFactory = versaAccountFactory.address;
+async function deployWithAddresses(addresses: any) {
+    const versaVerifyingPaymaster = await deployer.deployVersaVerifyingPaymaster(
+        addresses.entryPoint,
+        deployConfig.verifyingPaymasterOwner,
+        deployConfig.salt
+    );
+    addresses.versaVerifyingPaymaster = versaVerifyingPaymaster.address;
     return addresses;
 }
 
@@ -22,13 +21,13 @@ async function main() {
 
     switch (network?.chainId) {
         case 80001: {
-            const result = await deployWithAddresses(mumbaiAddresses, deployConfig);
+            const result = await deployWithAddresses(mumbaiAddresses);
             console.log("writing changed address to output file 'deploy/addresses/polygonMumbai.json'");
             fs.writeFileSync("deploy/addresses/polygonMumbai.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
         case 534351: {
-            const result = await deployWithAddresses(scrollSepoliaAddresses, deployConfig);
+            const result = await deployWithAddresses(scrollSepoliaAddresses);
             console.log("writing changed address to output file 'deploy/addresses/scrollSepolia.json'");
             fs.writeFileSync("deploy/addresses/scrollSepolia.json", JSON.stringify(result, null, "\t"), "utf8");
             break;

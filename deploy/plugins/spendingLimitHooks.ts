@@ -1,11 +1,13 @@
 import { ethers } from "hardhat";
 import * as deployer from "../helper/deployer";
 import mumbaiAddresses from "../addresses/polygonMumbai.json";
-import scrollTestnetAddresses from "../addresses/scrollTestnet.json";
-import fs from "fs";
+import scrollSepoliaAddresses from "../addresses/scrollSepolia.json";
 
-async function deployWithAddresses(addresses: any) {
-    const spendingLimitHooks = await deployer.deploySpendingLimitHooks();
+import fs from "fs";
+import { deployConfig } from "../helper/config";
+
+async function deployWithAddresses(addresses: any, config: any) {
+    const spendingLimitHooks = await deployer.deploySpendingLimitHooks(config.salt);
     addresses.spendingLimitHooks = spendingLimitHooks.address;
     return addresses;
 }
@@ -16,15 +18,15 @@ async function main() {
 
     switch (network?.chainId) {
         case 80001: {
-            const result = await deployWithAddresses(mumbaiAddresses);
+            const result = await deployWithAddresses(mumbaiAddresses, deployConfig);
             console.log("writing changed address to output file 'deploy/addresses/polygonMumbai.json'");
             fs.writeFileSync("deploy/addresses/polygonMumbai.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
-        case 534353: {
-            const result = await deployWithAddresses(scrollTestnetAddresses);
-            console.log("writing changed address to output file 'deploy/addresses/scrollTestnet.json'");
-            fs.writeFileSync("deploy/addresses/scrollTestnet.json", JSON.stringify(result, null, "\t"), "utf8");
+        case 534351: {
+            const result = await deployWithAddresses(scrollSepoliaAddresses, deployConfig);
+            console.log("writing changed address to output file 'deploy/addresses/scrollSepolia.json'");
+            fs.writeFileSync("deploy/addresses/scrollSepolia.json", JSON.stringify(result, null, "\t"), "utf8");
             break;
         }
         default: {

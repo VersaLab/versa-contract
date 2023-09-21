@@ -6,7 +6,7 @@ import "hardhat-contract-sizer";
 
 const POLYGON_MUMBAI_RPC = process.env.POLYGON_MUMBAI_RPC || "https://polygon-testnet.public.blastapi.io";
 
-const SCROLL_TESTNET_RPC = process.env.SCROLL_TESTNET_RPC || "https://scroll-alphanet.public.blastapi.io";
+const SCROLL_SEPOLIA_RPC = process.env.SCROLL_SEPOLIA_RPC || "https://scroll-sepolia.public.blastapi.io";
 
 const DEPLOYER_PRIVATE_KEY_1 =
     process.env.DEPLOYER_PRIVATE_KEY_1 || "0000000000000000000000000000000000000000000000000000000000000001";
@@ -21,6 +21,8 @@ const DEPLOYER_PRIVATE_KEY_4 =
     process.env.DEPLOYER_PRIVATE_KEY_4 || "0000000000000000000000000000000000000000000000000000000000000004";
 
 const POLYGON_MUMBAI_SCAN_KEY = process.env.POLYGON_MUMBAI_SCAN_KEY;
+
+const SCROLL_SEPOLIA_SCAN_KEY = process.env.SCROLL_SEPOLIA_SCAN_KEY;
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -37,7 +39,7 @@ const config: HardhatUserConfig = {
         ],
     },
     networks: {
-        mumbai: {
+        polygonMumbai: {
             url: `${POLYGON_MUMBAI_RPC}`,
             accounts: [
                 `${DEPLOYER_PRIVATE_KEY_1}`,
@@ -46,8 +48,8 @@ const config: HardhatUserConfig = {
                 `${DEPLOYER_PRIVATE_KEY_4}`,
             ],
         },
-        scrollTestnet: {
-            url: `${SCROLL_TESTNET_RPC}`,
+        scrollSepolia: {
+            url: `${SCROLL_SEPOLIA_RPC}`,
             accounts: [
                 `${DEPLOYER_PRIVATE_KEY_1}`,
                 `${DEPLOYER_PRIVATE_KEY_2}`,
@@ -59,7 +61,18 @@ const config: HardhatUserConfig = {
     etherscan: {
         apiKey: {
             polygonMumbai: `${POLYGON_MUMBAI_SCAN_KEY}`,
+            scrollSepolia: `${SCROLL_SEPOLIA_SCAN_KEY}`,
         },
+        customChains: [
+            {
+                network: "scrollSepolia",
+                chainId: 534351,
+                urls: {
+                    apiURL: "https://api-sepolia.scrollscan.dev/api",
+                    browserURL: "https://sepolia.scrollscan.dev",
+                },
+            },
+        ],
     },
 };
 

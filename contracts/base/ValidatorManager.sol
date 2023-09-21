@@ -32,12 +32,11 @@ abstract contract ValidatorManager is SelfAuthorized {
     /**
      * @notice Enables the validator `validator` for the Versa Wallet with the specified `validatorType`.
      * @dev This can only be done via a Versa Wallet transaction.
-     * @param validator The validator to be enabled.
-     * @param validatorType The type of the validator (Sudo or Normal).
-     * @param initData Initialization data for the validator contract.
+     * @param validatorData The first 20 bytes is the address of the validator,
+     * the next 1 bytes is the validator type, and the rest is the initialization data for the validator contract.
      */
-    function enableValidator(address validator, ValidatorType validatorType, bytes memory initData) public authorized {
-        _enableValidator(validator, validatorType, initData);
+    function enableValidator(bytes calldata validatorData) public authorized {
+        _enableValidator(validatorData);
     }
 
     /**
@@ -115,11 +114,14 @@ abstract contract ValidatorManager is SelfAuthorized {
 
     /**
      * @notice Internal function to enable a validator with the specified type and initialization data.
-     * @param validator The validator to be enabled.
-     * @param validatorType The type of the validator (Sudo or Normal).
-     * @param initData Initialization data for the validator contract.
+     * @param validatorData The first 20 bytes is the address of the validator, the next 1 bytes is the validator type,
+     * and the rest is the initialization data for the validator contract.
      */
-    function _enableValidator(address validator, ValidatorType validatorType, bytes memory initData) internal {
+    function _enableValidator(bytes calldata validatorData) internal {
+        require(validatorData.length >= 21, "Validator data length < 21");
+        address validator = address(bytes20(validatorData[0:20]));
+        ValidatorType validatorType = ValidatorType(uint8(validatorData[20]));
+        bytes calldata initData = validatorData[21:];
         require(
             validatorType != ValidatorType.Disabled &&
                 IValidator(validator).supportsInterface(type(IValidator).interfaceId),

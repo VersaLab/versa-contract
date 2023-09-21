@@ -2,13 +2,13 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
-import "@safe-contracts/contracts/proxies/SafeProxyFactory.sol";
+import "./proxies/VersaProxyFactory.sol";
 import "./VersaWallet.sol";
 
 /**
  * A wrapper factory contract to deploy Versa account proxy.
  */
-contract VersaAccountFactory is SafeProxyFactory {
+contract VersaAccountFactory is VersaProxyFactory {
     address public immutable versaSingleton;
     address public immutable defaultFallbackHandler;
 
@@ -18,23 +18,15 @@ contract VersaAccountFactory is SafeProxyFactory {
     }
 
     function createAccount(
-        address[] memory validators,
-        bytes[] memory validatorInitData,
-        VersaWallet.ValidatorType[] memory validatorType,
-        address[] memory hooks,
-        bytes[] memory hooksInitData,
-        address[] memory modules,
-        bytes[] memory moduleInitData,
+        bytes[] calldata validatorData,
+        bytes[] calldata hookData,
+        bytes[] calldata moduleData,
         uint256 salt
     ) public returns (address) {
         address addr = getAddress(
-            validators,
-            validatorInitData,
-            validatorType,
-            hooks,
-            hooksInitData,
-            modules,
-            moduleInitData,
+            validatorData,
+            hookData,
+            moduleData,
             salt
         );
         if (addr.code.length > 0) {
@@ -45,13 +37,9 @@ contract VersaAccountFactory is SafeProxyFactory {
                 createProxyWithNonce(
                     versaSingleton,
                     getInitializer(
-                        validators,
-                        validatorInitData,
-                        validatorType,
-                        hooks,
-                        hooksInitData,
-                        modules,
-                        moduleInitData
+                        validatorData,
+                        hookData,
+                        moduleData
                     ),
                     salt
                 )
@@ -59,26 +47,18 @@ contract VersaAccountFactory is SafeProxyFactory {
     }
 
     function getInitializer(
-        address[] memory validators,
-        bytes[] memory validatorInitData,
-        VersaWallet.ValidatorType[] memory validatorType,
-        address[] memory hooks,
-        bytes[] memory hooksInitData,
-        address[] memory modules,
-        bytes[] memory moduleInitData
+        bytes[] calldata validatorData,
+        bytes[] calldata hookData,
+        bytes[] calldata moduleData
     ) internal view returns (bytes memory) {
         return
             abi.encodeCall(
                 VersaWallet.initialize,
                 (
                     defaultFallbackHandler,
-                    validators,
-                    validatorInitData,
-                    validatorType,
-                    hooks,
-                    hooksInitData,
-                    modules,
-                    moduleInitData
+                    validatorData,
+                    hookData,
+                    moduleData
                 )
             );
     }
@@ -88,23 +68,15 @@ contract VersaAccountFactory is SafeProxyFactory {
      * (uses the same "create2 signature" used by SafeProxyFactory.createProxyWithNonce)
      */
     function getAddress(
-        address[] memory validators,
-        bytes[] memory validatorInitData,
-        VersaWallet.ValidatorType[] memory validatorType,
-        address[] memory hooks,
-        bytes[] memory hooksInitData,
-        address[] memory modules,
-        bytes[] memory moduleInitData,
+        bytes[] calldata validatorData,
+        bytes[] calldata hookData,
+        bytes[] calldata moduleData,
         uint256 salt
     ) public view returns (address) {
         bytes memory initializer = getInitializer(
-            validators,
-            validatorInitData,
-            validatorType,
-            hooks,
-            hooksInitData,
-            modules,
-            moduleInitData
+            validatorData,
+            hookData,
+            moduleData
         );
         bytes32 salt2 = keccak256(abi.encodePacked(keccak256(initializer), salt));
         bytes memory deploymentData = abi.encodePacked(proxyCreationCode(), uint256(uint160(versaSingleton)));

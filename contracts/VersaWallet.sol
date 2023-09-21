@@ -55,49 +55,25 @@ contract VersaWallet is
     /**
      * @dev Initializes the VersaWallet contract.
      * @param fallbackHandler The address of the fallback handler contract.
-     * @param validators The addresses of the validators.
-     * @param validatorInitData The initialization data for each validator.
-     * @param validatorType The types of the validators.
-     * @param hooks The addresses of the hooks.
-     * @param hooksInitData The initialization data for each hook.
-     * @param modules The addresses of the modules.
-     * @param moduleInitData The initialization data for each module.
      */
     function initialize(
         address fallbackHandler,
-        address[] memory validators,
-        bytes[] memory validatorInitData,
-        ValidatorType[] memory validatorType,
-        address[] memory hooks,
-        bytes[] memory hooksInitData,
-        address[] memory modules,
-        bytes[] memory moduleInitData
+        bytes[] calldata validatorData,
+        bytes[] calldata hookData,
+        bytes[] calldata moduleData
     ) external initializer {
-        _checkInitializationDataLength(
-            validators.length,
-            validatorInitData.length,
-            validatorType.length,
-            hooks.length,
-            hooksInitData.length,
-            modules.length,
-            moduleInitData.length
-        );
         internalSetFallbackHandler(fallbackHandler);
-
-        uint256 i;
-        bool hasSudoValidator;
-        for (i = 0; i < validators.length; ++i) {
-            _enableValidator(validators[i], validatorType[i], validatorInitData[i]);
-            if (validatorType[i] == ValidatorType.Sudo) {
-                hasSudoValidator = true;
+        unchecked {
+            uint256 i;
+            for (i = 0; i < validatorData.length; ++i) {
+                _enableValidator(validatorData[i]);
             }
-        }
-        require(hasSudoValidator, "Must set up the initial sudo validator");
-        for (i = 0; i < hooks.length; ++i) {
-            _enableHooks(hooks[i], hooksInitData[i]);
-        }
-        for (i = 0; i < modules.length; ++i) {
-            _enableModule(modules[i], moduleInitData[i]);
+            for(i = 0; i < hookData.length; ++i) {
+                _enableHooks(hookData[i]);
+            }
+            for(i = 0; i < moduleData.length; ++i) {
+                _enableModule(moduleData[i]);
+            }
         }
     }
 
@@ -215,23 +191,6 @@ contract VersaWallet is
     }
 
     /**
-     * @dev Sends the missing funds for this transaction to the entry point (msg.sender).
-     * Subclasses may override this method for better funds management
-     * (e.g., send more than the minimum required to the entry point so that in future transactions
-     * it will not be required to send again).
-     * @param missingAccountFunds The minimum value this method should send to the entry point.
-     * This value may be zero in case there is enough deposit or the userOp has a paymaster.
-     */
-    function _payPrefund(uint256 missingAccountFunds) internal {
-        if (missingAccountFunds > 0) {
-            // Note: May pay more than the minimum to deposit for future transactions
-            (bool success, ) = payable(entryPoint()).call{ value: missingAccountFunds, gas: type(uint256).max }("");
-            (success);
-            // Ignore failure (it's EntryPoint's job to verify, not the account)
-        }
-    }
-
-    /**
      * @dev Extracts the validator address from the first 20 bytes of the signature.
      * @param signature The signature from which to extract the validator address.
      * @return The extracted validator address.
@@ -282,26 +241,5 @@ contract VersaWallet is
         uint256 operationLen
     ) internal pure {
         require(toLen == valueLen && dataLen == operationLen && toLen == dataLen, "Versa: invalid batch data");
-    }
-
-    /**
-     * @dev Check the length of the initialization data arrays
-     */
-    function _checkInitializationDataLength(
-        uint256 validatorsLen,
-        uint256 validatorInitLen,
-        uint256 validatorTypeLen,
-        uint256 hooksLen,
-        uint256 hooksInitDataLen,
-        uint256 modulesLen,
-        uint256 moduleInitLen
-    ) internal pure {
-        require(
-            validatorsLen == validatorInitLen &&
-                validatorInitLen == validatorTypeLen &&
-                hooksLen == hooksInitDataLen &&
-                modulesLen == moduleInitLen,
-            "Data length doesn't match"
-        );
     }
 }

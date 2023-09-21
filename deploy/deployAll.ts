@@ -6,25 +6,43 @@ import scrollSepoliaAddresses from "./addresses/scrollSepolia.json";
 import fs from "fs";
 import { deployConfig } from "./helper/config";
 import * as readline from "readline-sync";
+import { parseEther } from "ethers/lib/utils";
 
 async function deployWithAddresses(addresses: any, config: any) {
     const deployCompatibilityFallbackHandler = readline.keyInYN("Do you need to deploy compatibilityFallbackHandler?");
     if (deployCompatibilityFallbackHandler) {
         const compatibilityFallbackHandler = await deployer.deployCompatibilityFallbackHandler(config.salt);
-        addresses.compatibilityFallbackHandler = compatibilityFallbackHandler.address;
+        if (compatibilityFallbackHandler.address != ethers.constants.AddressZero) {
+            addresses.compatibilityFallbackHandler = compatibilityFallbackHandler.address;
+        }
     }
 
     const deployVersaSingleton = readline.keyInYN("Do you need to deploy versa singleton and versa factory?");
     if (deployVersaSingleton) {
         const versaSingleton = await deployer.deployVersaSingleton(config.entryPointAddress, config.salt);
-        addresses.versaSingleton = versaSingleton.address;
+        if (versaSingleton.address != ethers.constants.AddressZero) {
+            addresses.versaSingleton = versaSingleton.address;
+        }
 
         const versaAccountFactoryData: VersaAccountFactoryData = {
             versaSingleton: addresses.versaSingleton,
             defaultFallbackHandler: addresses.compatibilityFallbackHandler,
+            entryPoint: config.entryPointAddress,
+            owner: config.factoryOwner,
         };
+        
         const versaFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData, config.salt);
-        addresses.versaAccountFactory = versaFactory.address;
+        if (versaFactory.address != ethers.constants.AddressZero) {
+            addresses.versaAccountFactory = versaFactory.address;
+        }
+        const stakeAmount = readline.question("Please enter stake amount(in 1e18): ")
+        const unstakeDelaySec = readline.question("Please enter the unstake delay(in seconds): ")
+        if (parseEther(stakeAmount.toString()).gt(0)) {
+            let tx = await versaFactory.addStake(unstakeDelaySec, {value: parseEther(stakeAmount.toString())})
+            await tx.wait()
+            console.log("Staked success!")
+        }
+
     }
 
     const deployPaymaster = readline.keyInYN("Do you need to deploy paymaster?");
@@ -34,16 +52,24 @@ async function deployWithAddresses(addresses: any, config: any) {
     const deloyPlugins = readline.keyInYN("Do you need to deploy plugins?");
     if (deloyPlugins) {
         const ecdsaValidator = await deployer.deployECDSAValidator(config.salt);
-        addresses.ecdsaValidator = ecdsaValidator.address;
+        if (ecdsaValidator.address != ethers.constants.AddressZero) {
+            addresses.ecdsaValidator = ecdsaValidator.address;
+        }
 
         const multisigValidator = await deployer.deployMultiSigValidator(config.salt);
-        addresses.multisigValidator = multisigValidator.address;
+        if (multisigValidator.address != ethers.constants.AddressZero) {
+            addresses.multisigValidator = multisigValidator.address;
+        }
 
-        const sessionKeyValdiator = await deployer.deploySessionKeyValidator(config.salt);
-        addresses.sessionKeyValdiator = sessionKeyValdiator.address;
-
+        const sessionKeyValidator = await deployer.deploySessionKeyValidator(config.salt);
+        if (sessionKeyValidator.address != ethers.constants.AddressZero) {
+            addresses.sessionKeyValidator = sessionKeyValidator.address;
+        }
+        
         const spendingLimitHooks = await deployer.deploySpendingLimitHooks(config.salt);
-        addresses.spendingLimitHooks = spendingLimitHooks.address;
+        if (spendingLimitHooks.address != ethers.constants.AddressZero) {
+            addresses.spendingLimitHooks = spendingLimitHooks.address;
+        }
     }
     return addresses;
 }

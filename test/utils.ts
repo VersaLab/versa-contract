@@ -44,7 +44,10 @@ export async function deployVersaWallet(options: {
             ? (await new MockValidator__factory(signer).deploy()).address
             : sudoValidatorAddr;
 
-    const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [sudoValidatorAddr, 1, "0x"]);
+    const validatorCreationData = ethers.utils.solidityPack(
+        ["address", "uint8", "bytes"],
+        [sudoValidatorAddr, 1, "0x"]
+    );
     let tx = await versaFactory.createAccount([validatorCreationData], [], [], 0);
     await tx.wait();
 
@@ -74,23 +77,28 @@ export function getCreationData(options: {
     } = options;
 
     let validatorCreationData = [];
-    let hookCreationData = []
-    let moduleCreationData = []
+    let hookCreationData = [];
+    let moduleCreationData = [];
     for (let i = 0; i < validators.length; i++) {
-        validatorCreationData.push(ethers.utils.solidityPack(["address", "uint8", "bytes"], [validators[i], validatorType[i], validatorInitData[i]]))
+        validatorCreationData.push(
+            ethers.utils.solidityPack(
+                ["address", "uint8", "bytes"],
+                [validators[i], validatorType[i], validatorInitData[i]]
+            )
+        );
     }
     for (let i = 0; i < hooks.length; i++) {
-        hookCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [hooks[i], hooksInitData[i]]))
+        hookCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [hooks[i], hooksInitData[i]]));
     }
     for (let i = 0; i < modules.length; i++) {
-        moduleCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [modules[i], moduleInitData[i]]))
+        moduleCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [modules[i], moduleInitData[i]]));
     }
     return {
         validatorCreationData,
         hookCreationData,
         moduleCreationData,
-        salt
-    }
+        salt,
+    };
 }
 
 export async function generateWalletInitCode(options: {
@@ -115,16 +123,17 @@ export async function generateWalletInitCode(options: {
     } = options;
     const versaFactory = await ethers.getContractAt("VersaAccountFactory", versaFacotryAddr);
 
-    const validatorCreationData = [ethers.utils.solidityPack(["address", "uint8", "bytes"], [sudoValidator, 1, sudoValidatorInitData])];
-    let hooksCreationData = []
-    let moduleCreationData = []
+    const validatorCreationData = [
+        ethers.utils.solidityPack(["address", "uint8", "bytes"], [sudoValidator, 1, sudoValidatorInitData]),
+    ];
+    let hooksCreationData = [];
+    let moduleCreationData = [];
     for (let i = 0; i < hooks.length; i++) {
-        hooksCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [hooks[i], hooksInitData[i]]))
+        hooksCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [hooks[i], hooksInitData[i]]));
     }
     for (let i = 0; i < modules.length; i++) {
-        moduleCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [modules[i], moduleInitData[i]]))
+        moduleCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [modules[i], moduleInitData[i]]));
     }
-
 
     let tx = await versaFactory.populateTransaction.createAccount(
         validatorCreationData,
@@ -253,7 +262,7 @@ export async function getFinalSalt(
         fallbackHandler,
         validatorCreationData,
         hookCreationData,
-        moduleCreationData
+        moduleCreationData,
     ]);
     return keccak256(ethers.utils.solidityPack(["bytes32", "uint256"], [keccak256(finalSalt), salt]));
 }

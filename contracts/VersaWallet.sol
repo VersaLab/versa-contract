@@ -68,10 +68,10 @@ contract VersaWallet is
             for (i = 0; i < validatorData.length; ++i) {
                 _enableValidator(validatorData[i]);
             }
-            for(i = 0; i < hookData.length; ++i) {
+            for (i = 0; i < hookData.length; ++i) {
                 _enableHooks(hookData[i]);
             }
-            for(i = 0; i < moduleData.length; ++i) {
+            for (i = 0; i < moduleData.length; ++i) {
                 _enableModule(moduleData[i]);
             }
         }

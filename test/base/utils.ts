@@ -39,17 +39,27 @@ export async function enablePlugin(options: {
 
     let data;
     if (isHooksManager(executor)) {
-        data = executor.interface.encodeFunctionData("enableHooks", [ethers.utils.solidityPack(["address", "bytes"], [plugin, initData])]);
+        data = executor.interface.encodeFunctionData("enableHooks", [
+            ethers.utils.solidityPack(["address", "bytes"], [plugin, initData]),
+        ]);
     } else if (isModuleManager(executor)) {
-        data = executor.interface.encodeFunctionData("enableModule", [ethers.utils.solidityPack(["address", "bytes"], [plugin, initData])]);
+        data = executor.interface.encodeFunctionData("enableModule", [
+            ethers.utils.solidityPack(["address", "bytes"], [plugin, initData]),
+        ]);
     } else if (isValidatorManger(executor)) {
-        data = executor.interface.encodeFunctionData("enableValidator", [ethers.utils.solidityPack(["address", "uint8", "bytes"], [plugin, type, initData])]);
+        data = executor.interface.encodeFunctionData("enableValidator", [
+            ethers.utils.solidityPack(["address", "uint8", "bytes"], [plugin, type, initData]),
+        ]);
     }
     if (isVersaWallet(executor)) {
         if (selector == "enableValidator") {
-            data = executor.interface.encodeFunctionData("enableValidator",  [ethers.utils.solidityPack(["address", "uint8", "bytes"], [plugin, type, initData])]);
+            data = executor.interface.encodeFunctionData("enableValidator", [
+                ethers.utils.solidityPack(["address", "uint8", "bytes"], [plugin, type, initData]),
+            ]);
         } else {
-            data = executor.interface.encodeFunctionData(selector, [ethers.utils.solidityPack(["address", "bytes"], [plugin, initData])]);
+            data = executor.interface.encodeFunctionData(selector, [
+                ethers.utils.solidityPack(["address", "bytes"], [plugin, initData]),
+            ]);
         }
     }
     return await execute({ executor, data });

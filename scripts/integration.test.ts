@@ -102,10 +102,7 @@ async function integration_test() {
     // add multi-sig validator
     let enableMultisigInitData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], 2]);
     let enableMultisigValidator = wallet.interface.encodeFunctionData("enableValidator", [
-        ethers.utils.solidityPack(
-            ["address", "uint8", "bytes"],
-            [multisigValidator, 1, enableMultisigInitData]
-        )
+        ethers.utils.solidityPack(["address", "uint8", "bytes"], [multisigValidator, 1, enableMultisigInitData]),
     ]);
     batchData.push([walletAddress, 0, enableMultisigValidator, 0]);
 
@@ -192,7 +189,10 @@ async function integration_test() {
         ],
         [configs]
     );
-    let enableData = wallet.interface.encodeFunctionData("enableHooks", solidityPack(["address", "bytes"],[spendingLimitAddress, spendingLimitInitData]));
+    let enableData = wallet.interface.encodeFunctionData(
+        "enableHooks",
+        solidityPack(["address", "bytes"], [spendingLimitAddress, spendingLimitInitData])
+    );
     calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, enableData, 0]);
     userOp = await generateUserOp({
         signer: signer1,

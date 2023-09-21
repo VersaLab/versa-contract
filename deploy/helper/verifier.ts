@@ -1,4 +1,4 @@
-import hre, {ethers} from "hardhat";
+import hre, { ethers } from "hardhat";
 import mumbaiAddresses from "../addresses/polygonMumbai.json";
 import scrollSepoliaAddresses from "../addresses/scrollSepolia.json";
 import { deployConfig } from "./config";

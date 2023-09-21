@@ -30,19 +30,18 @@ async function deployWithAddresses(addresses: any, config: any) {
             entryPoint: config.entryPointAddress,
             owner: config.factoryOwner,
         };
-        
+
         const versaFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData, config.salt);
         if (versaFactory.address != ethers.constants.AddressZero) {
             addresses.versaAccountFactory = versaFactory.address;
         }
-        const stakeAmount = readline.question("Please enter stake amount(in 1e18): ")
-        const unstakeDelaySec = readline.question("Please enter the unstake delay(in seconds): ")
+        const stakeAmount = readline.question("Please enter stake amount(in 1e18): ");
+        const unstakeDelaySec = readline.question("Please enter the unstake delay(in seconds): ");
         if (parseEther(stakeAmount.toString()).gt(0)) {
-            let tx = await versaFactory.addStake(unstakeDelaySec, {value: parseEther(stakeAmount.toString())})
-            await tx.wait()
-            console.log("Staked success!")
+            let tx = await versaFactory.addStake(unstakeDelaySec, { value: parseEther(stakeAmount.toString()) });
+            await tx.wait();
+            console.log("Staked success!");
         }
-
     }
 
     const deployPaymaster = readline.keyInYN("Do you need to deploy paymaster?");
@@ -65,7 +64,7 @@ async function deployWithAddresses(addresses: any, config: any) {
         if (sessionKeyValidator.address != ethers.constants.AddressZero) {
             addresses.sessionKeyValidator = sessionKeyValidator.address;
         }
-        
+
         const spendingLimitHooks = await deployer.deploySpendingLimitHooks(config.salt);
         if (spendingLimitHooks.address != ethers.constants.AddressZero) {
             addresses.spendingLimitHooks = spendingLimitHooks.address;

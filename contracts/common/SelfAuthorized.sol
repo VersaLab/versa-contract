@@ -7,7 +7,7 @@ pragma solidity >=0.7.0 <0.9.0;
  */
 abstract contract SelfAuthorized {
     function requireSelfCall() private view {
-        require(msg.sender == address(this), "GS031");
+        require(msg.sender == address(this), "Unauthorized call");
     }
 
     modifier authorized() {

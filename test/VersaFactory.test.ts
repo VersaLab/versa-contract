@@ -24,7 +24,7 @@ describe("VersaFactory", () => {
     let module: MockModule;
     let hooks: MockHooks;
     let owner: SignerWithAddress;
-    let abiCoder = new AbiCoder
+    let abiCoder = new AbiCoder();
 
     beforeEach(async () => {
         [owner] = await ethers.getSigners();
@@ -49,16 +49,14 @@ describe("VersaFactory", () => {
     });
 
     it("should deploy and initialize versa wallet", async () => {
-        const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [validator.address, 1, "0x"])
-        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"])
-        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"])
-
-        await versaFactory.createAccount(
-            [validatorCreationData],
-            [hookCreationData],
-            [moduleCreationData],
-            0
+        const validatorCreationData = ethers.utils.solidityPack(
+            ["address", "uint8", "bytes"],
+            [validator.address, 1, "0x"]
         );
+        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"]);
+        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"]);
+
+        await versaFactory.createAccount([validatorCreationData], [hookCreationData], [moduleCreationData], 0);
 
         let walletAddress = await versaFactory.getAddress(
             [validatorCreationData],
@@ -81,10 +79,13 @@ describe("VersaFactory", () => {
     });
 
     it("should calculate wallet address off-chain", async () => {
-        const salt = BigNumber.from(0)
-        const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [validator.address, 1, "0x"])
-        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"])
-        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"])
+        const salt = BigNumber.from(0);
+        const validatorCreationData = ethers.utils.solidityPack(
+            ["address", "uint8", "bytes"],
+            [validator.address, 1, "0x"]
+        );
+        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"]);
+        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"]);
 
         let walletAddress = await versaFactory.getAddress(
             [validatorCreationData],
@@ -109,15 +110,13 @@ describe("VersaFactory", () => {
     });
 
     it("should return wallet address if already created", async () => {
-        const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [validator.address, 1, "0x"])
-        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"])
-        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"])
-        await versaFactory.createAccount(
-            [validatorCreationData],
-            [hookCreationData],
-            [moduleCreationData],
-            0
+        const validatorCreationData = ethers.utils.solidityPack(
+            ["address", "uint8", "bytes"],
+            [validator.address, 1, "0x"]
         );
+        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"]);
+        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"]);
+        await versaFactory.createAccount([validatorCreationData], [hookCreationData], [moduleCreationData], 0);
 
         expect(
             await versaFactory.callStatic.createAccount(
@@ -127,12 +126,7 @@ describe("VersaFactory", () => {
                 0
             )
         ).to.be.equal(
-            await versaFactory.getAddress(
-                [validatorCreationData],
-                [hookCreationData],
-                [moduleCreationData],
-                0
-            )
+            await versaFactory.getAddress([validatorCreationData], [hookCreationData], [moduleCreationData], 0)
         );
     });
 });

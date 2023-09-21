@@ -28,27 +28,11 @@ contract VersaAccountFactory is VersaProxyFactory, Ownable {
         bytes[] calldata moduleData,
         uint256 salt
     ) public returns (address) {
-        address addr = getAddress(
-            validatorData,
-            hookData,
-            moduleData,
-            salt
-        );
+        address addr = getAddress(validatorData, hookData, moduleData, salt);
         if (addr.code.length > 0) {
             return addr;
         }
-        return
-            address(
-                createProxyWithNonce(
-                    versaSingleton,
-                    getInitializer(
-                        validatorData,
-                        hookData,
-                        moduleData
-                    ),
-                    salt
-                )
-            );
+        return address(createProxyWithNonce(versaSingleton, getInitializer(validatorData, hookData, moduleData), salt));
     }
 
     function getInitializer(
@@ -56,16 +40,7 @@ contract VersaAccountFactory is VersaProxyFactory, Ownable {
         bytes[] calldata hookData,
         bytes[] calldata moduleData
     ) internal view returns (bytes memory) {
-        return
-            abi.encodeCall(
-                VersaWallet.initialize,
-                (
-                    defaultFallbackHandler,
-                    validatorData,
-                    hookData,
-                    moduleData
-                )
-            );
+        return abi.encodeCall(VersaWallet.initialize, (defaultFallbackHandler, validatorData, hookData, moduleData));
     }
 
     /**
@@ -78,18 +53,14 @@ contract VersaAccountFactory is VersaProxyFactory, Ownable {
         bytes[] calldata moduleData,
         uint256 salt
     ) public view returns (address) {
-        bytes memory initializer = getInitializer(
-            validatorData,
-            hookData,
-            moduleData
-        );
+        bytes memory initializer = getInitializer(validatorData, hookData, moduleData);
         bytes32 salt2 = keccak256(abi.encodePacked(keccak256(initializer), salt));
         bytes memory deploymentData = abi.encodePacked(proxyCreationCode(), uint256(uint160(versaSingleton)));
         return Create2.computeAddress(bytes32(salt2), keccak256(deploymentData), address(this));
     }
 
     function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
-        entryPoint.addStake{value: msg.value}(unstakeDelaySec);
+        entryPoint.addStake{ value: msg.value }(unstakeDelaySec);
     }
 
     function unlockStake() external onlyOwner {

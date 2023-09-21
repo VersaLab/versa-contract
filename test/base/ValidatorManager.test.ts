@@ -122,7 +122,9 @@ describe("ValidatorManager", () => {
             .to.emit(validatorManager, "DisabledValidator")
             .withArgs(mockValidator_1.address);
 
-        await expect(validatorManager.disableValidator(SENTINEL, mockValidator_1.address)).to.be.revertedWith("Unauthorized call");
+        await expect(validatorManager.disableValidator(SENTINEL, mockValidator_1.address)).to.be.revertedWith(
+            "Unauthorized call"
+        );
 
         await expect(
             validatorManager.execute(

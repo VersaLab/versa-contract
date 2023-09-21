@@ -11,7 +11,7 @@ async function deployWithAddresses(addresses: any, config: any) {
         versaSingleton: addresses.versaSingleton,
         defaultFallbackHandler: addresses.compatibilityFallbackHandler,
         entryPoint: deployConfig.entryPointAddress,
-        owner: deployConfig.factoryOwner
+        owner: deployConfig.factoryOwner,
     };
     const versaAccountFactory = await deployer.deployVersaAccountFactory(versaAccountFactoryData, config.salt);
     addresses.versaAccountFactory = versaAccountFactory.address;

@@ -18,7 +18,11 @@ contract VersaProxyFactory {
      * @param salt Create2 salt to use for calculating the address of the new proxy contract.
      * @return proxy Address of the new proxy contract.
      */
-    function deployProxy(address _singleton, bytes memory initializer, bytes32 salt) internal returns (VersaProxy proxy) {
+    function deployProxy(
+        address _singleton,
+        bytes memory initializer,
+        bytes32 salt
+    ) internal returns (VersaProxy proxy) {
         require(isContract(_singleton), "Singleton contract not deployed");
 
         bytes memory deploymentData = abi.encodePacked(type(VersaProxy).creationCode, uint256(uint160(_singleton)));
@@ -44,7 +48,11 @@ contract VersaProxyFactory {
      * @param initializer Payload for a message call to be sent to a new proxy contract.
      * @param saltNonce Nonce that will be used to generate the salt to calculate the address of the new proxy contract.
      */
-    function createProxyWithNonce(address _singleton, bytes memory initializer, uint256 saltNonce) public returns (VersaProxy proxy) {
+    function createProxyWithNonce(
+        address _singleton,
+        bytes memory initializer,
+        uint256 saltNonce
+    ) public returns (VersaProxy proxy) {
         // If the initializer changes the proxy address should change too. Hashing the initializer data is cheaper than just concatinating it
         bytes32 salt = keccak256(abi.encodePacked(keccak256(initializer), saltNonce));
         proxy = deployProxy(_singleton, initializer, salt);

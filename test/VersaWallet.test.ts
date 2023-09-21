@@ -19,7 +19,7 @@ import {
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "ethers/lib/utils";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
-import { getCreationData } from "./utils"
+import { getCreationData } from "./utils";
 
 describe("VersaWallet", () => {
     let versaFactory: VersaAccountFactory;
@@ -34,7 +34,7 @@ describe("VersaWallet", () => {
     let wallet: VersaWallet;
     let fallbackHandler: CompatibilityFallbackHandler;
 
-    let creationData: any
+    let creationData: any;
 
     beforeEach(async () => {
         [entryPoint, owner] = await ethers.getSigners();
@@ -58,7 +58,6 @@ describe("VersaWallet", () => {
         hooks = await new MockHooks__factory(owner).deploy();
         module = await new MockModule__factory(owner).deploy();
 
-
         creationData = getCreationData({
             salt: 0,
             validators: [sudoValidator.address, normalValidator.address],
@@ -67,8 +66,8 @@ describe("VersaWallet", () => {
             hooks: [hooks.address],
             hooksInitData: ["0x"],
             modules: [module.address],
-            moduleInitData: ["0x"]
-        })
+            moduleInitData: ["0x"],
+        });
 
         await versaFactory.createAccount(
             creationData.validatorCreationData,

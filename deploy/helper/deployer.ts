@@ -17,7 +17,12 @@ async function getSingletonFactory() {
 export async function deployVersaAccountFactory(data: VersaAccountFactoryData, salt: string) {
     const singletonFactory = await getSingletonFactory();
     const VersaAccountFactory = await ethers.getContractFactory("VersaAccountFactory");
-    const initCode = VersaAccountFactory.getDeployTransaction(data.versaSingleton, data.defaultFallbackHandler, data.entryPoint, data.owner).data!;
+    const initCode = VersaAccountFactory.getDeployTransaction(
+        data.versaSingleton,
+        data.defaultFallbackHandler,
+        data.entryPoint,
+        data.owner
+    ).data!;
     const address = await singletonFactory.callStatic.deploy(initCode, salt);
 
     let tx;

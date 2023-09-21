@@ -61,7 +61,9 @@ describe("ModuleManager", () => {
             .withArgs(MODULE_1);
         expect(await moduleManager.isModuleEnabled(MODULE_1)).to.be.false;
 
-        await expect(moduleManager.connect(owner).disableModule(SENTINEL, MODULE_1)).to.revertedWith("Unauthorized call");
+        await expect(moduleManager.connect(owner).disableModule(SENTINEL, MODULE_1)).to.revertedWith(
+            "Unauthorized call"
+        );
     });
 
     it("should return the correct module array", async () => {

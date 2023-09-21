@@ -37,7 +37,7 @@ contract VersaWallet is
         Normal
     }
 
-    string public constant VERSA_VERSION = "1.0.0";
+    string public constant VERSA_VERSION = "1.0.1";
 
     // `sudoExecute` function selector
     bytes4 internal constant SUDO_EXECUTE = this.sudoExecute.selector;

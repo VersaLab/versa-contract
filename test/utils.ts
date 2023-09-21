@@ -8,6 +8,7 @@ import {
     CompatibilityFallbackHandler__factory,
 } from "../typechain-types";
 import { BigNumber } from "ethers";
+import { validator } from "../typechain-types/contracts/plugin";
 
 export const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
@@ -33,7 +34,9 @@ export async function deployVersaWallet(options: {
     // Deploy VersaAccountFactory
     let versaFactory = await new VersaAccountFactory__factory(signer).deploy(
         versaWalletSingleton.address,
-        fallbackHandler.address
+        fallbackHandler.address,
+        entryPoint,
+        signer.address
     );
 
     sudoValidatorAddr =
@@ -41,11 +44,53 @@ export async function deployVersaWallet(options: {
             ? (await new MockValidator__factory(signer).deploy()).address
             : sudoValidatorAddr;
 
-    let tx = await versaFactory.createAccount([sudoValidatorAddr], ["0x"], [1], [], [], [], [], 0);
+    const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [sudoValidatorAddr, 1, "0x"]);
+    let tx = await versaFactory.createAccount([validatorCreationData], [], [], 0);
     await tx.wait();
 
-    let walletAddress = await versaFactory.getAddress([sudoValidatorAddr], ["0x"], [1], [], [], [], [], 0);
+    let walletAddress = await versaFactory.getAddress([validatorCreationData], [], [], 0);
     return VersaWallet__factory.connect(walletAddress, signer);
+}
+
+export function getCreationData(options: {
+    salt: number;
+    validators?: string[];
+    validatorType?: number[];
+    validatorInitData?: string[];
+    hooks?: string[];
+    hooksInitData?: string[];
+    modules?: string[];
+    moduleInitData?: string[];
+}) {
+    const {
+        salt,
+        validators = [],
+        validatorType = [],
+        validatorInitData = [],
+        hooks = [],
+        hooksInitData = [],
+        modules = [],
+        moduleInitData = [],
+    } = options;
+
+    let validatorCreationData = [];
+    let hookCreationData = []
+    let moduleCreationData = []
+    for (let i = 0; i < validators.length; i++) {
+        validatorCreationData.push(ethers.utils.solidityPack(["address", "uint8", "bytes"], [validators[i], validatorType[i], validatorInitData[i]]))
+    }
+    for (let i = 0; i < hooks.length; i++) {
+        hookCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [hooks[i], hooksInitData[i]]))
+    }
+    for (let i = 0; i < modules.length; i++) {
+        moduleCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [modules[i], moduleInitData[i]]))
+    }
+    return {
+        validatorCreationData,
+        hookCreationData,
+        moduleCreationData,
+        salt
+    }
 }
 
 export async function generateWalletInitCode(options: {
@@ -70,26 +115,29 @@ export async function generateWalletInitCode(options: {
     } = options;
     const versaFactory = await ethers.getContractAt("VersaAccountFactory", versaFacotryAddr);
 
+    const validatorCreationData = [ethers.utils.solidityPack(["address", "uint8", "bytes"], [sudoValidator, 1, sudoValidatorInitData])];
+    let hooksCreationData = []
+    let moduleCreationData = []
+    for (let i = 0; i < hooks.length; i++) {
+        hooksCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [hooks[i], hooksInitData[i]]))
+    }
+    for (let i = 0; i < modules.length; i++) {
+        moduleCreationData.push(ethers.utils.solidityPack(["address", "bytes"], [modules[i], moduleInitData[i]]))
+    }
+
+
     let tx = await versaFactory.populateTransaction.createAccount(
-        [sudoValidator],
-        [sudoValidatorInitData],
-        [1],
-        hooks,
-        hooksInitData,
-        modules,
-        moduleInitData,
+        validatorCreationData,
+        hooksCreationData,
+        moduleCreationData,
         salt
     );
 
     let initCode = hexConcat([versaFacotryAddr, tx.data!]);
     let walletAddress = await versaFactory.getAddress(
-        [sudoValidator],
-        [sudoValidatorInitData],
-        [1],
-        hooks,
-        hooksInitData,
-        modules,
-        moduleInitData,
+        validatorCreationData,
+        hooksCreationData,
+        moduleCreationData,
         salt
     );
 
@@ -163,13 +211,9 @@ export function getScheduledUserOpHash(op: userOp, entryPoint: string, chainId: 
 
 export async function computeWalletAddress(
     fallbackHandler: string,
-    validators: string[],
-    validatorInitData: string[],
-    validatorType: number[],
-    hooks: string[],
-    hooksInitData: string[],
-    modules: string[],
-    moduleInitData: string[],
+    validatorCreationData: string[],
+    hookCreationData: string[],
+    moduleCreationData: string[],
     creationCode: string,
     singletonAddress: string,
     versaFactory: string,
@@ -177,13 +221,9 @@ export async function computeWalletAddress(
 ) {
     const finalSalt = await getFinalSalt(
         fallbackHandler,
-        validators,
-        validatorInitData,
-        validatorType,
-        hooks,
-        hooksInitData,
-        modules,
-        moduleInitData,
+        validatorCreationData,
+        hookCreationData,
+        moduleCreationData,
         salt
     );
     const initCodeHash = getInitcodeHash(creationCode, singletonAddress);
@@ -203,25 +243,17 @@ export function getInitcodeHash(creationCode: string, singletonAddress: string) 
 
 export async function getFinalSalt(
     fallbackHandler: string,
-    validators: string[],
-    validatorInitData: string[],
-    validatorType: number[],
-    hooks: string[],
-    hooksInitData: string[],
-    modules: string[],
-    moduleInitData: string[],
+    validatorCreationData: string[],
+    hookCreationData: string[],
+    moduleCreationData: string[],
     salt: BigNumber
 ) {
     const versaSingleton = await ethers.getContractAt("VersaWallet", ethers.constants.AddressZero);
     const finalSalt = versaSingleton.interface.encodeFunctionData("initialize", [
         fallbackHandler,
-        validators,
-        validatorInitData,
-        validatorType,
-        hooks,
-        hooksInitData,
-        modules,
-        moduleInitData,
+        validatorCreationData,
+        hookCreationData,
+        moduleCreationData
     ]);
     return keccak256(ethers.utils.solidityPack(["bytes32", "uint256"], [keccak256(finalSalt), salt]));
 }

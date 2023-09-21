@@ -15,6 +15,7 @@ import {
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { computeWalletAddress } from "./utils";
 import { BigNumber } from "ethers";
+import { AbiCoder } from "ethers/lib/utils";
 
 describe("VersaFactory", () => {
     let versaFactory: VersaAccountFactory;
@@ -23,6 +24,7 @@ describe("VersaFactory", () => {
     let module: MockModule;
     let hooks: MockHooks;
     let owner: SignerWithAddress;
+    let abiCoder = new AbiCoder
 
     beforeEach(async () => {
         [owner] = await ethers.getSigners();
@@ -36,7 +38,9 @@ describe("VersaFactory", () => {
         // Deploy VersaAccountFactory
         versaFactory = await new VersaAccountFactory__factory(owner).deploy(
             versaWalletSingleton.address,
-            fallbackHandler
+            fallbackHandler,
+            entryPoint,
+            owner.address
         );
 
         validator = await new MockValidator__factory(owner).deploy();
@@ -45,25 +49,21 @@ describe("VersaFactory", () => {
     });
 
     it("should deploy and initialize versa wallet", async () => {
+        const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [validator.address, 1, "0x"])
+        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"])
+        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"])
+
         await versaFactory.createAccount(
-            [validator.address],
-            ["0x"],
-            [1],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
+            [validatorCreationData],
+            [hookCreationData],
+            [moduleCreationData],
             0
         );
 
         let walletAddress = await versaFactory.getAddress(
-            [validator.address],
-            ["0x"],
-            [1],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
+            [validatorCreationData],
+            [hookCreationData],
+            [moduleCreationData],
             0
         );
 
@@ -81,15 +81,15 @@ describe("VersaFactory", () => {
     });
 
     it("should calculate wallet address off-chain", async () => {
-        const salt = BigNumber.from(0);
+        const salt = BigNumber.from(0)
+        const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [validator.address, 1, "0x"])
+        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"])
+        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"])
+
         let walletAddress = await versaFactory.getAddress(
-            [validator.address],
-            ["0x"],
-            [1],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
+            [validatorCreationData],
+            [hookCreationData],
+            [moduleCreationData],
             salt
         );
         let fallbackHandler = ethers.constants.AddressZero;
@@ -97,13 +97,9 @@ describe("VersaFactory", () => {
 
         let computedAddress = await computeWalletAddress(
             fallbackHandler,
-            [validator.address],
-            ["0x"],
-            [1],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
+            [validatorCreationData],
+            [hookCreationData],
+            [moduleCreationData],
             versaProxyCreationCode,
             versaWalletSingleton.address,
             versaFactory.address,
@@ -113,37 +109,28 @@ describe("VersaFactory", () => {
     });
 
     it("should return wallet address if already created", async () => {
+        const validatorCreationData = ethers.utils.solidityPack(["address", "uint8", "bytes"], [validator.address, 1, "0x"])
+        const hookCreationData = ethers.utils.solidityPack(["address", "bytes"], [hooks.address, "0x"])
+        const moduleCreationData = ethers.utils.solidityPack(["address", "bytes"], [module.address, "0x"])
         await versaFactory.createAccount(
-            [validator.address],
-            ["0x"],
-            [1],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
+            [validatorCreationData],
+            [hookCreationData],
+            [moduleCreationData],
             0
         );
 
         expect(
             await versaFactory.callStatic.createAccount(
-                [validator.address],
-                ["0x"],
-                [1],
-                [hooks.address],
-                ["0x"],
-                [module.address],
-                ["0x"],
+                [validatorCreationData],
+                [hookCreationData],
+                [moduleCreationData],
                 0
             )
         ).to.be.equal(
             await versaFactory.getAddress(
-                [validator.address],
-                ["0x"],
-                [1],
-                [hooks.address],
-                ["0x"],
-                [module.address],
-                ["0x"],
+                [validatorCreationData],
+                [hookCreationData],
+                [moduleCreationData],
                 0
             )
         );

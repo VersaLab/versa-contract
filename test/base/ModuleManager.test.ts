@@ -44,7 +44,7 @@ describe("ModuleManager", () => {
         // await moduleManager.enableModule(MODULE_2, '0x');
         expect(await moduleManager.isModuleEnabled(MODULE_2)).to.be.true;
 
-        await expect(moduleManager.connect(owner).enableModule(MODULE_1, "0x")).to.revertedWith("GS031");
+        await expect(moduleManager.connect(owner).enableModule("0x")).to.revertedWith("Unauthorized call");
 
         await expect(enablePlugin({ executor: moduleManager, plugin: owner.address })).to.reverted;
 
@@ -61,7 +61,7 @@ describe("ModuleManager", () => {
             .withArgs(MODULE_1);
         expect(await moduleManager.isModuleEnabled(MODULE_1)).to.be.false;
 
-        await expect(moduleManager.connect(owner).disableModule(SENTINEL, MODULE_1)).to.revertedWith("GS031");
+        await expect(moduleManager.connect(owner).disableModule(SENTINEL, MODULE_1)).to.revertedWith("Unauthorized call");
     });
 
     it("should return the correct module array", async () => {

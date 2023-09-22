@@ -2,19 +2,24 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/utils/Create2.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@safe-contracts/contracts/proxies/SafeProxyFactory.sol";
+import "@aa-template/contracts/interfaces/IEntryPoint.sol";
 import "./VersaWallet.sol";
 
 /**
  * A wrapper factory contract to deploy Versa account proxy.
  */
-contract VersaAccountFactory is SafeProxyFactory {
+contract VersaAccountFactory is SafeProxyFactory, Ownable {
     address public immutable versaSingleton;
     address public immutable defaultFallbackHandler;
+    IEntryPoint public immutable entryPoint;
 
-    constructor(address _versaSingleton, address _fallbackHandler) {
+    constructor(address _versaSingleton, address _fallbackHandler, address _entryPoint, address _owner) {
         versaSingleton = _versaSingleton;
         defaultFallbackHandler = _fallbackHandler;
+        entryPoint = IEntryPoint(_entryPoint);
+        transferOwnership(_owner);
     }
 
     function createAccount(
@@ -109,5 +114,17 @@ contract VersaAccountFactory is SafeProxyFactory {
         bytes32 salt2 = keccak256(abi.encodePacked(keccak256(initializer), salt));
         bytes memory deploymentData = abi.encodePacked(proxyCreationCode(), uint256(uint160(versaSingleton)));
         return Create2.computeAddress(bytes32(salt2), keccak256(deploymentData), address(this));
+    }
+
+    function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
+        entryPoint.addStake{ value: msg.value }(unstakeDelaySec);
+    }
+
+    function unlockStake() external onlyOwner {
+        entryPoint.unlockStake();
+    }
+
+    function withdrawStake(address payable withdrawAddress) external onlyOwner {
+        entryPoint.withdrawStake(withdrawAddress);
     }
 }

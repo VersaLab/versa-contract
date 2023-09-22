@@ -6,7 +6,7 @@ import fs from "fs";
 import { deployConfig } from "./helper/config";
 
 async function deployWithAddresses(addresses: any, config: any) {
-    const versaSingleton = await deployer.deployVersaSingleton(config.entryPoint, config.salt);
+    const versaSingleton = await deployer.deployVersaSingleton(config.entryPointAddress, config.salt);
     addresses.versaSingleton = versaSingleton.address;
     return addresses;
 }

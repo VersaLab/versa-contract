@@ -33,7 +33,9 @@ export async function deployVersaWallet(options: {
     // Deploy VersaAccountFactory
     let versaFactory = await new VersaAccountFactory__factory(signer).deploy(
         versaWalletSingleton.address,
-        fallbackHandler.address
+        fallbackHandler.address,
+        entryPoint,
+        signer.address
     );
 
     sudoValidatorAddr =

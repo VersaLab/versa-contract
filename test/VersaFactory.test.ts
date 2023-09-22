@@ -36,7 +36,9 @@ describe("VersaFactory", () => {
         // Deploy VersaAccountFactory
         versaFactory = await new VersaAccountFactory__factory(owner).deploy(
             versaWalletSingleton.address,
-            fallbackHandler
+            fallbackHandler,
+            entryPoint,
+            owner.address
         );
 
         validator = await new MockValidator__factory(owner).deploy();

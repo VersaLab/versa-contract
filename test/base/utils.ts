@@ -1,7 +1,8 @@
 import { BigNumber } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { hexConcat, parseEther } from "ethers/lib/utils";
 import { Buffer } from "buffer";
 import { MockHooksManager, MockModuleManager, MockValidatorManager, VersaWallet } from "../../typechain-types";
+import { ethers } from "hardhat";
 
 export function numberToFixedHex(value: number, length: number): string {
     return "0x" + value.toString(16).padStart(length * 2, "0");
@@ -38,17 +39,27 @@ export async function enablePlugin(options: {
 
     let data;
     if (isHooksManager(executor)) {
-        data = executor.interface.encodeFunctionData("enableHooks", [plugin, initData]);
+        data = executor.interface.encodeFunctionData("enableHooks", [
+            ethers.utils.solidityPack(["address", "bytes"], [plugin, initData]),
+        ]);
     } else if (isModuleManager(executor)) {
-        data = executor.interface.encodeFunctionData("enableModule", [plugin, initData]);
+        data = executor.interface.encodeFunctionData("enableModule", [
+            ethers.utils.solidityPack(["address", "bytes"], [plugin, initData]),
+        ]);
     } else if (isValidatorManger(executor)) {
-        data = executor.interface.encodeFunctionData("enableValidator", [plugin, type, initData]);
+        data = executor.interface.encodeFunctionData("enableValidator", [
+            ethers.utils.solidityPack(["address", "uint8", "bytes"], [plugin, type, initData]),
+        ]);
     }
     if (isVersaWallet(executor)) {
         if (selector == "enableValidator") {
-            data = executor.interface.encodeFunctionData("enableValidator", [plugin, type, initData]);
+            data = executor.interface.encodeFunctionData("enableValidator", [
+                ethers.utils.solidityPack(["address", "uint8", "bytes"], [plugin, type, initData]),
+            ]);
         } else {
-            data = executor.interface.encodeFunctionData(selector, [plugin, initData]);
+            data = executor.interface.encodeFunctionData(selector, [
+                ethers.utils.solidityPack(["address", "bytes"], [plugin, initData]),
+            ]);
         }
     }
     return await execute({ executor, data });

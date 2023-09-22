@@ -7,8 +7,8 @@ import fs from "fs";
 import { deployConfig } from "../helper/config";
 
 async function deployWithAddresses(addresses: any, config: any) {
-    const sessionKeyValdiator = await deployer.deploySessionKeyValidator(deployConfig.salt);
-    addresses.sessionKeyValdiator = sessionKeyValdiator.address;
+    const sessionKeyValidator = await deployer.deploySessionKeyValidator(deployConfig.salt);
+    addresses.sessionKeyValidator = sessionKeyValidator.address;
     return addresses;
 }
 

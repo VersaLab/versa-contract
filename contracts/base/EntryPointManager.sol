@@ -41,4 +41,21 @@ abstract contract EntryPointManager is SelfAuthorized {
     function entryPoint() public view returns (address) {
         return _entryPoint;
     }
+
+    /**
+     * @dev Sends the missing funds for this transaction to the entry point (msg.sender).
+     * Subclasses may override this method for better funds management
+     * (e.g., send more than the minimum required to the entry point so that in future transactions
+     * it will not be required to send again).
+     * @param missingAccountFunds The minimum value this method should send to the entry point.
+     * This value may be zero in case there is enough deposit or the userOp has a paymaster.
+     */
+    function _payPrefund(uint256 missingAccountFunds) internal {
+        if (missingAccountFunds > 0) {
+            // Note: May pay more than the minimum to deposit for future transactions
+            (bool success, ) = payable(entryPoint()).call{ value: missingAccountFunds, gas: type(uint256).max }("");
+            (success);
+            // Ignore failure (it's EntryPoint's job to verify, not the account)
+        }
+    }
 }

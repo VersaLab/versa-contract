@@ -29,11 +29,10 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
     /**
      * @notice Enables the module `module` for the Versa Wallet.
      * @dev This can only be done via a Versa Wallet transaction.
-     * @param module The module to be enabled.
-     * @param initData Initialization data for the module.
+     * @param moduleData The module address and initialization data.
      */
-    function enableModule(address module, bytes memory initData) public authorized {
-        _enableModule(module, initData);
+    function enableModule(bytes calldata moduleData) public authorized {
+        _enableModule(moduleData);
     }
 
     /**
@@ -111,11 +110,13 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
 
     /**
      * @dev Internal function to enable a module for the Versa Wallet.
-     * @param module The module to be enabled.
-     * @param initData Initialization data for the module.
+     * @param moduleData The module address and initdata.
      */
-    function _enableModule(address module, bytes memory initData) internal {
+    function _enableModule(bytes calldata moduleData) internal {
+        require(moduleData.length >= 20, "Module data length < 20");
+        address module = address(bytes20(moduleData[0:20]));
         require(IModule(module).supportsInterface(type(IModule).interfaceId), "Not a module");
+        bytes calldata initData = moduleData[20:];
         modules.add(module);
         IModule(module).initWalletConfig(initData);
         emit EnabledModule(module);

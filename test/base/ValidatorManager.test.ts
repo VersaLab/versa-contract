@@ -63,7 +63,7 @@ describe("ValidatorManager", () => {
             })
         ).to.revertedWith("Validator has already been added");
 
-        await expect(validatorManager.enableValidator(mockValidator_1.address, 1, "0x")).to.be.revertedWith("GS031");
+        await expect(validatorManager.enableValidator("0x")).to.be.revertedWith("Unauthorized call");
 
         await expect(
             enablePlugin({
@@ -122,7 +122,9 @@ describe("ValidatorManager", () => {
             .to.emit(validatorManager, "DisabledValidator")
             .withArgs(mockValidator_1.address);
 
-        await expect(validatorManager.disableValidator(SENTINEL, mockValidator_1.address)).to.be.revertedWith("GS031");
+        await expect(validatorManager.disableValidator(SENTINEL, mockValidator_1.address)).to.be.revertedWith(
+            "Unauthorized call"
+        );
 
         await expect(
             validatorManager.execute(
@@ -153,7 +155,7 @@ describe("ValidatorManager", () => {
         );
 
         await expect(validatorManager.toggleValidatorType(SENTINEL, mockValidator_1.address)).to.be.revertedWith(
-            "GS031"
+            "Unauthorized call"
         );
 
         // Enable the validator as a normal validator

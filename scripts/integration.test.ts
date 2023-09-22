@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { BigNumber } from "ethers";
-import { hexlify, hexConcat, arrayify, parseEther, parseUnits } from "ethers/lib/utils";
+import { hexlify, hexConcat, arrayify, parseEther, parseUnits, solidityPack } from "ethers/lib/utils";
 import mumbaiAddresses from "../deploy/addresses/polygonMumbai.json";
 import scrollSepoliaAddresses from "../deploy/addresses/scrollSepolia.json";
 import { generateWalletInitCode } from "../test/utils";
@@ -102,9 +102,7 @@ async function integration_test() {
     // add multi-sig validator
     let enableMultisigInitData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], 2]);
     let enableMultisigValidator = wallet.interface.encodeFunctionData("enableValidator", [
-        multisigValidator,
-        1,
-        enableMultisigInitData,
+        ethers.utils.solidityPack(["address", "uint8", "bytes"], [multisigValidator, 1, enableMultisigInitData]),
     ]);
     batchData.push([walletAddress, 0, enableMultisigValidator, 0]);
 
@@ -191,7 +189,10 @@ async function integration_test() {
         ],
         [configs]
     );
-    let enableData = wallet.interface.encodeFunctionData("enableHooks", [spendingLimitAddress, spendingLimitInitData]);
+    let enableData = wallet.interface.encodeFunctionData(
+        "enableHooks",
+        solidityPack(["address", "bytes"], [spendingLimitAddress, spendingLimitInitData])
+    );
     calldata = wallet.interface.encodeFunctionData("sudoExecute", [walletAddress, 0, enableData, 0]);
     userOp = await generateUserOp({
         signer: signer1,

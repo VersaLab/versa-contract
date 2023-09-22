@@ -25,11 +25,10 @@ abstract contract HooksManager is SelfAuthorized {
 
     /**
      * @dev Enable hooks for a versa wallet.
-     * @param hooks The address of the `hooks` contract.
-     * @param initData Initialization data for the `hooks` contract.
+     * @param hookData The address and initialization data of the hook contract.
      */
-    function enableHooks(address hooks, bytes memory initData) public authorized {
-        _enableHooks(hooks, initData);
+    function enableHooks(bytes calldata hookData) public authorized {
+        _enableHooks(hookData);
     }
 
     /**
@@ -85,13 +84,15 @@ abstract contract HooksManager is SelfAuthorized {
 
     /**
      * @dev Internal function to enable hooks for a versa wallet.
-     * @param hooks The address of the hooks contract.
-     * @param initData Initialization data for the hooks contract.
-     * @notice Hooks contracts are not supposed to change `hasHooks` behevior after deployment.
+     * @param hookData The address and initialization data of the hook contract.
+     * @notice Hook contracts are not supposed to change `hasHooks` behevior after deployment.
      */
-    function _enableHooks(address hooks, bytes memory initData) internal {
-        // Add hooks to linked list
+    function _enableHooks(bytes calldata hookData) internal {
+        require(hookData.length >= 20, "Hook data length < 20");
+        address hooks = address(bytes20(hookData[0:20]));
         require(IHooks(hooks).supportsInterface(type(IHooks).interfaceId), "Not a valid hooks contract");
+        bytes calldata initData = hookData[20:];
+        // Add hooks to linked list
         uint256 hasHooks = IHooks(hooks).hasHooks();
         if ((hasHooks >> 128) & 1 == 1) {
             beforeTxHooks.add(hooks);

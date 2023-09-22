@@ -19,6 +19,7 @@ import {
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { parseEther } from "ethers/lib/utils";
 import * as helpers from "@nomicfoundation/hardhat-network-helpers";
+import { getCreationData } from "./utils";
 
 describe("VersaWallet", () => {
     let versaFactory: VersaAccountFactory;
@@ -33,6 +34,8 @@ describe("VersaWallet", () => {
     let wallet: VersaWallet;
     let fallbackHandler: CompatibilityFallbackHandler;
 
+    let creationData: any;
+
     beforeEach(async () => {
         [entryPoint, owner] = await ethers.getSigners();
 
@@ -45,7 +48,9 @@ describe("VersaWallet", () => {
         // Deploy VersaAccountFactory
         versaFactory = await new VersaAccountFactory__factory(owner).deploy(
             versaWalletSingleton.address,
-            fallbackHandler.address
+            fallbackHandler.address,
+            entryPoint.address,
+            owner.address
         );
 
         sudoValidator = await new MockValidator__factory(owner).deploy();
@@ -53,112 +58,42 @@ describe("VersaWallet", () => {
         hooks = await new MockHooks__factory(owner).deploy();
         module = await new MockModule__factory(owner).deploy();
 
+        creationData = getCreationData({
+            salt: 0,
+            validators: [sudoValidator.address, normalValidator.address],
+            validatorType: [1, 2],
+            validatorInitData: ["0x", "0x"],
+            hooks: [hooks.address],
+            hooksInitData: ["0x"],
+            modules: [module.address],
+            moduleInitData: ["0x"],
+        });
+
         await versaFactory.createAccount(
-            [sudoValidator.address, normalValidator.address],
-            ["0x", "0x"],
-            [1, 2],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
-            0
+            creationData.validatorCreationData,
+            creationData.hookCreationData,
+            creationData.moduleCreationData,
+            creationData.salt
         );
 
         let walletAddress = await versaFactory.getAddress(
-            [sudoValidator.address, normalValidator.address],
-            ["0x", "0x"],
-            [1, 2],
-            [hooks.address],
-            ["0x"],
-            [module.address],
-            ["0x"],
-            0
+            creationData.validatorCreationData,
+            creationData.hookCreationData,
+            creationData.moduleCreationData,
+            creationData.salt
         );
 
         wallet = VersaWallet__factory.connect(walletAddress, owner);
         expect(await wallet.VERSA_VERSION()).to.not.be.equal(null);
     });
 
-    it("should prevent mismatch initialization data", async () => {
-        await expect(
-            versaFactory.createAccount(
-                [sudoValidator.address, normalValidator.address],
-                ["0x"],
-                [1, 2],
-                [hooks.address],
-                ["0x"],
-                [module.address],
-                ["0x"],
-                0
-            )
-        ).to.be.reverted;
-
-        await expect(
-            versaFactory.createAccount(
-                [sudoValidator.address, normalValidator.address],
-                ["0x", "0x"],
-                [1],
-                [hooks.address],
-                ["0x"],
-                [module.address],
-                ["0x"],
-                0
-            )
-        ).to.be.reverted;
-
-        await expect(
-            versaFactory.createAccount(
-                [sudoValidator.address, normalValidator.address],
-                ["0x", "0x"],
-                [1, 2],
-                [hooks.address],
-                ["0x", "0x"],
-                [module.address],
-                ["0x"],
-                0
-            )
-        ).to.be.reverted;
-
-        await expect(
-            versaFactory.createAccount(
-                [sudoValidator.address, normalValidator.address],
-                ["0x", "0x"],
-                [1, 2],
-                [hooks.address],
-                ["0x"],
-                [module.address],
-                ["0x", "0x"],
-                0
-            )
-        ).to.be.reverted;
-    });
-
-    it("should set up at least one sudo validator", async () => {
-        await expect(
-            versaFactory.createAccount(
-                [sudoValidator.address],
-                ["0x"],
-                [2],
-                [hooks.address],
-                ["0x"],
-                [module.address],
-                ["0x"],
-                1
-            )
-        ).to.be.reverted;
-    });
-
     it("should not initialize twice", async () => {
         await expect(
             wallet.initialize(
                 fallbackHandler.address,
-                [sudoValidator.address, normalValidator.address],
-                ["0x", "0x"],
-                [2, 2],
-                [hooks.address],
-                ["0x"],
-                [module.address],
-                ["0x"]
+                creationData.validatorCreationData,
+                creationData.hookCreationData,
+                creationData.moduleCreationData
             )
         ).to.be.revertedWith("Initializable: contract is already initialized");
     });

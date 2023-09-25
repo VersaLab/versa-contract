@@ -88,9 +88,9 @@ abstract contract HooksManager is SelfAuthorized {
      * @notice Hook contracts are not supposed to change `hasHooks` behevior after deployment.
      */
     function _enableHooks(bytes calldata hookData) internal {
-        require(hookData.length >= 20, "Hook data length < 20");
+        require(hookData.length >= 20, "E301");
         address hooks = address(bytes20(hookData[0:20]));
-        require(IHooks(hooks).supportsInterface(type(IHooks).interfaceId), "Not a valid hooks contract");
+        require(IHooks(hooks).supportsInterface(type(IHooks).interfaceId), "E302");
         bytes calldata initData = hookData[20:];
         // Add hooks to linked list
         uint256 hasHooks = IHooks(hooks).hasHooks();

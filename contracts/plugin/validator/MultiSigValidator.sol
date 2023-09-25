@@ -42,7 +42,7 @@ contract MultiSigValidator is BaseValidator {
      */
     function _init(bytes memory data) internal override {
         (address[] memory guardians, uint256 newThreshold) = abi.decode(data, (address[], uint256));
-        require(guardians.length > 0 && newThreshold <= guardians.length, "Invalid initdata");
+        require(guardians.length > 0 && newThreshold <= guardians.length, "E000");
         for (uint256 i = 0; i < guardians.length; i++) {
             _addGuardian(msg.sender, guardians[i]);
         }
@@ -93,7 +93,7 @@ contract MultiSigValidator is BaseValidator {
      * @param newThreshold The new threshold that will be set after execution of revokation.
      */
     function revokeGuardian(address guardian, uint256 newThreshold) external onlyEnabledValidator {
-        require(_guardiansCount(msg.sender) >= 2, "Must have at least one guardian");
+        require(_guardiansCount(msg.sender) >= 2, "E502");
         _revokeGuardian(msg.sender, guardian);
         _changeThreshold(msg.sender, newThreshold);
     }
@@ -117,10 +117,7 @@ contract MultiSigValidator is BaseValidator {
         address[] calldata newGuardians
     ) external onlyEnabledValidator {
         // Make sure the wallet has at least one guardian
-        require(
-            _guardiansCount(msg.sender) + newGuardians.length > oldGuardians.length,
-            "Must have at least one guardian"
-        );
+        require(_guardiansCount(msg.sender) + newGuardians.length > oldGuardians.length, "E502");
         for (uint256 i = 0; i < oldGuardians.length; i++) {
             _revokeGuardian(msg.sender, oldGuardians[i]);
         }
@@ -135,7 +132,7 @@ contract MultiSigValidator is BaseValidator {
      * @param hash The hash to be approved.
      */
     function approveHash(bytes32 hash) external onlyEnabledValidator {
-        require(!_isHashApproved(msg.sender, hash), "Hash already approved");
+        require(!_isHashApproved(msg.sender, hash), "E503");
         _approvedHashes[hash][msg.sender] = true;
         emit ApproveHash(hash);
     }
@@ -145,7 +142,7 @@ contract MultiSigValidator is BaseValidator {
      * @param hash The hash to be revoked.
      */
     function revokeHash(bytes32 hash) external onlyEnabledValidator {
-        require(_isHashApproved(msg.sender, hash), "Hash is not approved");
+        require(_isHashApproved(msg.sender, hash), "E504");
         _approvedHashes[hash][msg.sender] = false;
         emit RevokeHash(hash);
     }
@@ -156,8 +153,8 @@ contract MultiSigValidator is BaseValidator {
      * @param guardian The guardian to add.
      */
     function _addGuardian(address wallet, address guardian) internal {
-        require(!_isGuardian(wallet, guardian), "Guardian is already added");
-        require(guardian != wallet && guardian != address(0), "Invalid guardian address");
+        require(!_isGuardian(wallet, guardian), "E505");
+        require(guardian != wallet && guardian != address(0), "E506");
         WalletInfo storage info = _walletInfo[wallet];
         info.guardianCount++;
         _guardians[guardian][wallet] = true;
@@ -170,7 +167,7 @@ contract MultiSigValidator is BaseValidator {
      * @param guardian The guardian to revoke.
      */
     function _revokeGuardian(address wallet, address guardian) internal {
-        require(_isGuardian(wallet, guardian), "Not a valid guardian");
+        require(_isGuardian(wallet, guardian), "E507");
         WalletInfo storage info = _walletInfo[wallet];
         _guardians[guardian][wallet] = false;
         info.guardianCount--;
@@ -184,9 +181,9 @@ contract MultiSigValidator is BaseValidator {
      */
     function _changeThreshold(address wallet, uint256 newThreshold) internal {
         WalletInfo storage info = _walletInfo[wallet];
-        require(newThreshold > 0, "Threshold cannot be 0");
+        require(newThreshold > 0, "E508");
         // Validate that threshold is smaller than or equal to number of guardians.
-        require(newThreshold <= info.guardianCount, "Threshold must be lower or equal to guardians count");
+        require(newThreshold <= info.guardianCount, "E509");
         info.threshold = uint128(newThreshold);
         emit ChangeThreshold(wallet, newThreshold);
     }
@@ -203,10 +200,7 @@ contract MultiSigValidator is BaseValidator {
         uint256 currentThreshold = _threshold(userOp.sender);
         // Check that the provided signature data is not too short
         // 20 bytes validator address + 1 byte sig type + required signatures(no less than threshold * 65)
-        require(
-            currentThreshold != 0 && userOp.signature.length >= 20 + 1 + currentThreshold * 65,
-            "Invalid signature length"
-        );
+        require(currentThreshold != 0 && userOp.signature.length >= 20 + 1 + currentThreshold * 65, "E203");
         SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(userOp, userOpHash);
         bytes32 ethSignedMessageHash = splitedSig.hash.toEthSignedMessageHash();
         // Check if signatures are valid, return `SIG_VALIDATION_FAILED` if error occurs
@@ -226,7 +220,7 @@ contract MultiSigValidator is BaseValidator {
     function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
         // If signature is empty, the hash must be previously approved
         if (signature.length == 0) {
-            require(_isHashApproved(wallet, hash), "Hash not approved");
+            require(_isHashApproved(wallet, hash), "E504");
             // If check if enough valid guardians's signature collected
         } else {
             bytes32 ethSignedMessageHash = hash.toEthSignedMessageHash();
@@ -287,7 +281,7 @@ contract MultiSigValidator is BaseValidator {
         uint256 requiredSignatures
     ) public view {
         // Check that the provided signature data is not too short
-        require(signatures.length >= requiredSignatures * 65, "Signatures data too short");
+        require(signatures.length >= requiredSignatures * 65, "E203");
         // There cannot be an guardian with address 0.
         address lastGuardian = address(0);
         address currentGuardian;
@@ -306,10 +300,10 @@ contract MultiSigValidator is BaseValidator {
                 // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
                 // This check is not completely accurate, since it is possible that more signatures than the threshold are send.
                 // Here we only check that the pointer is not pointing inside the part that is being processed
-                require(uint256(s) >= requiredSignatures * 65, "Inside static part");
+                require(uint256(s) >= requiredSignatures * 65, "E206");
 
                 // Check that signature data pointer (s) is in bounds (points to the length of data -> 32 bytes)
-                require(uint256(s) + (32) <= signatures.length, "Contract signatures out of bounds");
+                require(uint256(s) + (32) <= signatures.length, "E207");
 
                 // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
                 uint256 contractSignatureLen;
@@ -317,7 +311,7 @@ contract MultiSigValidator is BaseValidator {
                 assembly {
                     contractSignatureLen := mload(add(add(signatures, s), 0x20))
                 }
-                require(uint256(s) + 32 + contractSignatureLen <= signatures.length, "Contract signature wrong offset");
+                require(uint256(s) + 32 + contractSignatureLen <= signatures.length, "E208");
 
                 // Check signature
                 bytes memory contractSignature;
@@ -328,13 +322,13 @@ contract MultiSigValidator is BaseValidator {
                 }
                 require(
                     SignatureChecker.isValidERC1271SignatureNow(currentGuardian, dataHash, contractSignature),
-                    "Contract signature invalid"
+                    "E209"
                 );
             } else {
                 // eip712 recovery
                 currentGuardian = ECDSA.recover(dataHash, v, r, s);
             }
-            require(currentGuardian > lastGuardian && isGuardian(wallet, currentGuardian), "Invalid guardian");
+            require(currentGuardian > lastGuardian && isGuardian(wallet, currentGuardian), "E210");
             lastGuardian = currentGuardian;
         }
     }

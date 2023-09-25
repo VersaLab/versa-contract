@@ -29,7 +29,7 @@ contract ECDSAValidator is BaseValidator {
      * @param wallet The address of the wallet.
      */
     function _setSigner(address newSigner, address wallet) internal {
-        require(newSigner != address(0), "Invalid signer address");
+        _checkSigner(newSigner);
         address oldSigner = _signers[wallet];
         _signers[wallet] = newSigner;
         emit SignerSet(wallet, oldSigner, newSigner);
@@ -83,7 +83,7 @@ contract ECDSAValidator is BaseValidator {
             (splitedSig.signatureType == SignatureHandler.INSTANT_TRANSACTION && sigLength != 86) ||
             (splitedSig.signatureType == SignatureHandler.SCHEDULE_TRANSACTION && sigLength != 162)
         ) {
-            revert("Invalid signature length");
+            revert("E203");
         }
         validationData = _validateSignature(
             _signers[_userOp.sender],
@@ -147,6 +147,6 @@ contract ECDSAValidator is BaseValidator {
     }
 
     function _checkSigner(address signer) internal pure {
-        require(signer != address(0), "Invalid signer of the wallet");
+        require(signer != address(0), "E501");
     }
 }

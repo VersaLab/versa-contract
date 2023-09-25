@@ -23,14 +23,14 @@ contract VersaProxyFactory {
         bytes memory initializer,
         bytes32 salt
     ) internal returns (VersaProxy proxy) {
-        require(isContract(_singleton), "Singleton contract not deployed");
+        require(isContract(_singleton), "E701");
 
         bytes memory deploymentData = abi.encodePacked(type(VersaProxy).creationCode, uint256(uint160(_singleton)));
         // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
         }
-        require(address(proxy) != address(0), "Create2 call failed");
+        require(address(proxy) != address(0), "E702");
 
         if (initializer.length > 0) {
             // solhint-disable-next-line no-inline-assembly

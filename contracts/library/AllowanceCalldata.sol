@@ -30,9 +30,9 @@ library AllowanceCalldata {
     function isAllowedCalldata(bytes memory allowed, bytes memory data, uint256 value) internal view returns (bool) {
         RLPReader.RLPItem[] memory allowedArguments = allowed.toRlpItem().toList();
         RLPReader.RLPItem[] memory arguments = data.toRlpItem().toList();
-        require(allowedArguments.length == arguments.length, "Invalid arguments length");
+        require(allowedArguments.length == arguments.length, "E522");
         if (value != RLPReader.toUint(arguments[0])) {
-            revert("msg.value not corresponding to parsed value");
+            revert("E523");
         }
         return _validateArguments(allowedArguments, arguments, false);
     }
@@ -99,7 +99,7 @@ library AllowanceCalldata {
                 RLPReader.RLPItem[] memory subAllowance = prefixAndArg[1].toList();
                 canPass = _validateArguments(subAllowance, _fillArray(arguments, i, subAllowance.length), false);
             } else {
-                revert("Invalid calldata prefix");
+                revert("E524");
             }
 
             if (!isOr && !canPass) break;

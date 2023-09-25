@@ -103,7 +103,7 @@ abstract contract ValidatorManager is SelfAuthorized {
         uint256 pageSize,
         ValidatorType validatorType
     ) external view returns (address[] memory array) {
-        require(validatorType != ValidatorType.Disabled, "Only valid validators");
+        require(validatorType != ValidatorType.Disabled, "E306");
 
         if (validatorType == ValidatorType.Sudo) {
             return sudoValidators.list(start, pageSize);
@@ -118,19 +118,16 @@ abstract contract ValidatorManager is SelfAuthorized {
      * and the rest is the initialization data for the validator contract.
      */
     function _enableValidator(bytes calldata validatorData) internal {
-        require(validatorData.length >= 21, "Validator data length < 21");
+        require(validatorData.length >= 21, "E307");
         address validator = address(bytes20(validatorData[0:20]));
         ValidatorType validatorType = ValidatorType(uint8(validatorData[20]));
         bytes calldata initData = validatorData[21:];
         require(
             validatorType != ValidatorType.Disabled &&
                 IValidator(validator).supportsInterface(type(IValidator).interfaceId),
-            "Only valid validator allowed"
+            "E308"
         );
-        require(
-            !sudoValidators.isExist(validator) && !normalValidators.isExist(validator),
-            "Validator has already been added"
-        );
+        require(!sudoValidators.isExist(validator) && !normalValidators.isExist(validator), "E309");
 
         if (validatorType == ValidatorType.Sudo) {
             sudoValidators.add(validator);
@@ -161,7 +158,7 @@ abstract contract ValidatorManager is SelfAuthorized {
         } else if (normalValidators.isExist(validator)) {
             normalValidators.remove(prevValidator, validator);
         } else {
-            revert("Validator doesn't exist");
+            revert("E310");
         }
     }
 
@@ -179,7 +176,7 @@ abstract contract ValidatorManager is SelfAuthorized {
             _checkRemovingSudoValidator();
             normalValidators.add(validator);
         } else {
-            revert("Validator doesn't exist");
+            revert("E310");
         }
     }
 
@@ -188,6 +185,6 @@ abstract contract ValidatorManager is SelfAuthorized {
      * @dev Throws an error if there are no remaining sudo validators.
      */
     function _checkRemovingSudoValidator() internal view {
-        require(!sudoValidators.isEmpty(), "Cannot remove the last remaining sudoValidator");
+        require(!sudoValidators.isEmpty(), "E311");
     }
 }

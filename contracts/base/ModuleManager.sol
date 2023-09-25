@@ -60,7 +60,7 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
         bytes memory data,
         Enum.Operation operation
     ) public virtual returns (bool success) {
-        require(_isModuleEnabled(msg.sender), "Only enabled module");
+        require(_isModuleEnabled(msg.sender), "E303");
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, type(uint256).max);
         if (success) emit ExecutionFromModuleSuccess(msg.sender);
@@ -113,9 +113,9 @@ abstract contract ModuleManager is Executor, SelfAuthorized {
      * @param moduleData The module address and initdata.
      */
     function _enableModule(bytes calldata moduleData) internal {
-        require(moduleData.length >= 20, "Module data length < 20");
+        require(moduleData.length >= 20, "E304");
         address module = address(bytes20(moduleData[0:20]));
-        require(IModule(module).supportsInterface(type(IModule).interfaceId), "Not a module");
+        require(IModule(module).supportsInterface(type(IModule).interfaceId), "E305");
         bytes calldata initData = moduleData[20:];
         modules.add(module);
         IModule(module).initWalletConfig(initData);

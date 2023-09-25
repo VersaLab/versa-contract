@@ -56,7 +56,7 @@ describe("CompatibilityFallbackHandler", () => {
         let hash = formatBytes32String("0x");
         let signature = validator.padEnd(128, "0");
 
-        await expect(validatorManager.isValidSignature(hash, signature)).to.be.revertedWith("Only sudo validator");
+        await expect(validatorManager.isValidSignature(hash, signature)).to.be.revertedWith("E200");
     });
 
     it("should return EIP1271 magic value if signature is valid", async () => {

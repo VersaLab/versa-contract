@@ -44,7 +44,7 @@ describe("ModuleManager", () => {
         // await moduleManager.enableModule(MODULE_2, '0x');
         expect(await moduleManager.isModuleEnabled(MODULE_2)).to.be.true;
 
-        await expect(moduleManager.connect(owner).enableModule("0x")).to.revertedWith("Unauthorized call");
+        await expect(moduleManager.connect(owner).enableModule("0x")).to.revertedWith("E101");
 
         await expect(enablePlugin({ executor: moduleManager, plugin: owner.address })).to.reverted;
 
@@ -61,9 +61,7 @@ describe("ModuleManager", () => {
             .withArgs(MODULE_1);
         expect(await moduleManager.isModuleEnabled(MODULE_1)).to.be.false;
 
-        await expect(moduleManager.connect(owner).disableModule(SENTINEL, MODULE_1)).to.revertedWith(
-            "Unauthorized call"
-        );
+        await expect(moduleManager.connect(owner).disableModule(SENTINEL, MODULE_1)).to.revertedWith("E101");
     });
 
     it("should return the correct module array", async () => {
@@ -118,7 +116,7 @@ describe("ModuleManager", () => {
         // Execute transaction from plugin
         await expect(
             moduleManager.execTransactionFromModule(moduleManager.address, parseEther("1"), "0x", 0)
-        ).to.be.revertedWith("Only enabled module");
+        ).to.be.revertedWith("E303");
     });
 
     it("should correctly return error message", async () => {

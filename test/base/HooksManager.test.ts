@@ -48,7 +48,7 @@ describe("HooksManager", () => {
         await enablePlugin({ executor: hooksManager, plugin: mockHooks_2.address });
         expect(await hooksManager.isHooksEnabled(mockHooks_2.address)).to.be.true;
 
-        await expect(hooksManager.connect(owner).enableHooks("0x")).to.be.revertedWith("Unauthorized call");
+        await expect(hooksManager.connect(owner).enableHooks("0x")).to.be.revertedWith("E101");
     });
 
     it("should disable hooks", async () => {
@@ -81,7 +81,7 @@ describe("HooksManager", () => {
 
         await expect(
             hooksManager.connect(owner).disableHooks(SENTINEL, SENTINEL, mockHooks.address)
-        ).to.be.revertedWith("Unauthorized call");
+        ).to.be.revertedWith("E101");
     });
 
     it("should not enable invalid hooks contract", async () => {

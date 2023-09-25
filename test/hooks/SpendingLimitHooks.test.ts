@@ -52,7 +52,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("Hooks: this hooks is not enabled");
+        await expect(tx).to.be.revertedWith("E400");
     });
 
     it("check initWalletConfig", async () => {
@@ -63,7 +63,7 @@ describe("SpendingLimitHooks", () => {
             initData: initData,
             selector: "enableHooks",
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: parse error");
+        await expect(tx).to.be.revertedWith("E403");
 
         let configs = [
             {
@@ -247,7 +247,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: not allow delegatecall");
+        await expect(tx).to.be.revertedWith("E402");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             owner.address,
@@ -260,7 +260,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
+        await expect(tx).to.be.revertedWith("E401");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             owner.address,
@@ -290,7 +290,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
+        await expect(tx).to.be.revertedWith("E401");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,
@@ -306,7 +306,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
+        await expect(tx).to.be.revertedWith("E401");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,
@@ -322,7 +322,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
+        await expect(tx).to.be.revertedWith("E401");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,
@@ -414,7 +414,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: token overspending");
+        await expect(tx).to.be.revertedWith("E401");
 
         data = spendingLimitHooks.interface.encodeFunctionData("beforeTransaction", [
             token.address,
@@ -470,7 +470,7 @@ describe("SpendingLimitHooks", () => {
             to: spendingLimitHooks.address,
             data: data,
         });
-        await expect(tx).to.be.revertedWith("SpendingLimitHooks: afterTransaction hook is not allowed");
+        await expect(tx).to.be.revertedWith("E407");
     });
 
     it("check resetSpendingLimit", async () => {

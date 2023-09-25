@@ -43,7 +43,7 @@ describe("EntryPointManager", () => {
         // Call a function on the entry point manager from an account other than the entrypoint
         await expect(
             entryPointManager.connect((await ethers.getSigners())[1]).checkFromEntryPoint()
-        ).to.be.revertedWith("account: not from EntryPoint");
+        ).to.be.revertedWith("E100");
 
         // Call a function on the entry point manager from the entrypoint
         await expect(entryPointManager.getNonce(key)).to.not.be.reverted;

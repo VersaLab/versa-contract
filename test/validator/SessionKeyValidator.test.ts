@@ -174,7 +174,7 @@ describe("SessionKeyValidator", function () {
                     RLP.encode([]),
                     parseEther("1")
                 )
-            ).to.revertedWith("Invalid arguments length");
+            ).to.revertedWith("E522");
         });
 
         it("should reject invalid prefix", async function () {
@@ -184,7 +184,7 @@ describe("SessionKeyValidator", function () {
                     RLP.encode([abiCoder.encode(["uint256"], [parseEther("1")])]),
                     parseEther("1")
                 )
-            ).to.be.revertedWith("Invalid calldata prefix");
+            ).to.be.revertedWith("E524");
         });
 
         it("should validate value", async function () {
@@ -204,7 +204,7 @@ describe("SessionKeyValidator", function () {
                     RLP.encode([allowedArgument.abiItem]),
                     0
                 )
-            ).to.revertedWith("msg.value not corresponding to parsed value");
+            ).to.revertedWith("E523");
         });
 
         it("should validate EQ", async function () {
@@ -662,7 +662,7 @@ describe("SessionKeyValidator", function () {
             paymaster = wallet.address;
             actualPaymaster = operator.address;
             await expect(sessionKeyValidator.testValidatePaymaster(paymaster, actualPaymaster)).to.be.revertedWith(
-                "SessionKeyValidator: invalid paymaster"
+                "E519"
             );
 
             paymaster = wallet.address;
@@ -693,7 +693,7 @@ describe("SessionKeyValidator", function () {
 
             await expect(
                 sessionKeyValidator.testCheckArguments(session, ethers.constants.AddressZero, data, 0, rlpCalldata)
-            ).to.be.revertedWith("SessionKeyValidator: invalid to");
+            ).to.be.revertedWith("E516");
         });
 
         it("validate arguments: should reject invalid rlpCalldata", async function () {
@@ -719,7 +719,7 @@ describe("SessionKeyValidator", function () {
 
             await expect(
                 sessionKeyValidator.testCheckArguments(session, mockERC20.address, data, 0, rlpCalldata)
-            ).to.be.revertedWith("SessionKeyValidator: rlpCalldata is not equally encoded from execution data");
+            ).to.be.revertedWith("E515");
         });
 
         it("validate arguments: should reject invalid function selector", async function () {
@@ -745,7 +745,7 @@ describe("SessionKeyValidator", function () {
 
             await expect(
                 sessionKeyValidator.testCheckArguments(session, mockERC20.address, data, 0, rlpCalldata)
-            ).to.be.revertedWith("SessionKeyValidator: invalid selector");
+            ).to.be.revertedWith("E517");
         });
 
         it("should check operator gas usage", async function () {
@@ -791,7 +791,7 @@ describe("SessionKeyValidator", function () {
             expect(remainingGas).to.be.equal(0);
 
             await expect(sessionKeyValidator.testValidateOperatorGasUsage(operator.address, userOp)).to.be.revertedWith(
-                "SessionKeyValidator: gas fee exceeds remaining gas"
+                "E512"
             );
         });
 
@@ -803,7 +803,7 @@ describe("SessionKeyValidator", function () {
 
             await expect(
                 sessionKeyValidator.testGetValidationIntersection(validUntil1, validUntil2, validAfter1, validAfter2)
-            ).to.revertedWith("SessionKeyValidator: invalid validation duration");
+            ).to.revertedWith("E521");
 
             validUntil1 = 100;
             validUntil2 = 200;
@@ -840,7 +840,7 @@ describe("SessionKeyValidator", function () {
 
             await expect(
                 sessionKeyValidator.testGetValidationIntersection(validUntil1, validUntil2, validAfter1, validAfter2)
-            ).to.be.revertedWith("SessionKeyValidator: invalid validation duration");
+            ).to.be.revertedWith("E521");
 
             validUntil1 = 0;
             validUntil2 = 0;
@@ -1091,7 +1091,7 @@ describe("SessionKeyValidator", function () {
 
             const userOpHash = getUserOpHash(op, entryPoint.address, 1);
             await expect(wallet.connect(entryPoint).callStatic.validateUserOp(op, userOpHash, 0)).to.be.revertedWith(
-                "SessionKeyValidator: invalid wallet operation"
+                "E510"
             );
         });
     });

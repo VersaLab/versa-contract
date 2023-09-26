@@ -173,47 +173,6 @@ describe("SpendingLimitHooks", () => {
         expect(spendingLimitInfos[1].resetTimeIntervalMinutes).to.equal(erc20TokenConfig.resetTimeIntervalMinutes);
     });
 
-    it("check simulateSpendingLimitTransaction", async () => {
-        await enablePlugin({
-            executor: wallet,
-            plugin: spendingLimitHooks.address,
-            selector: "enableHooks",
-        });
-        let nativeTokenConfig = {
-            tokenAddress: nativeTokenAddress,
-            allowanceAmount: parseEther("200"),
-            resetBaseTimeMinutes: Math.floor((await helper.time.latest()) / 60) - 16,
-            resetTimeIntervalMinutes: 15,
-        };
-        let erc20TokenConfig = {
-            tokenAddress: erc20TokenAddress,
-            allowanceAmount: BigNumber.from(200).mul(BigNumber.from(10).pow(erc20TokenDecimal)),
-            resetBaseTimeMinutes: nativeTokenConfig.resetBaseTimeMinutes,
-            resetTimeIntervalMinutes: nativeTokenConfig.resetTimeIntervalMinutes,
-        };
-        data = spendingLimitHooks.interface.encodeFunctionData("batchSetSpendingLimit", [
-            [nativeTokenConfig, erc20TokenConfig],
-        ]);
-        await execute({
-            executor: wallet,
-            to: spendingLimitHooks.address,
-            data: data,
-        });
-
-        await expect(
-            spendingLimitHooks.simulateSpendingLimitTransaction(wallet.address, owner.address, 1, "0x", 0)
-        ).to.be.revertedWithCustomError(spendingLimitHooks, "SpendingLimitSimulate");
-        await expect(
-            spendingLimitHooks.simulateSpendingLimitTransaction(
-                wallet.address,
-                token.address,
-                0,
-                token.interface.encodeFunctionData("transfer", [owner.address, 1]),
-                0
-            )
-        ).to.be.revertedWithCustomError(spendingLimitHooks, "SpendingLimitSimulate");
-    });
-
     it("check beforeTransaction hook", async () => {
         await enablePlugin({
             executor: wallet,

@@ -401,24 +401,4 @@ contract SpendingLimitHooks is BaseHooks {
         (_to, _value, _data, _operation);
         revert("E407");
     }
-
-    /**
-     * @dev Simulates a limited transaction by checking the spending limit for the specified wallet.
-     * @param _wallet The wallet address to simulate the transaction for.
-     * @param _to The destination address of the transaction.
-     * @param _value The value (amount) of the transaction.
-     * @param _data The additional data for the transaction.
-     * @param _operation The operation type of the transaction.
-     */
-    function simulateSpendingLimitTransaction(
-        address _wallet,
-        address _to,
-        uint256 _value,
-        bytes calldata _data,
-        Enum.Operation _operation
-    ) external {
-        require(VersaWallet(payable(_wallet)).isHooksEnabled(address(this)), "E400");
-        _checkSpendingLimit(_wallet, _to, _value, _data, _operation);
-        revert SpendingLimitSimulate();
-    }
 }

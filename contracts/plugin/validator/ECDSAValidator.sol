@@ -108,6 +108,11 @@ contract ECDSAValidator is BaseValidator {
     function isValidSignature(bytes32 hash, bytes calldata signature, address wallet) external view returns (bool) {
         address signer = _signers[wallet];
         _checkSigner(signer);
+        // Normal ecrecover flow, EIP-712 signature should be in this case
+        if (signer == hash.recover(signature)) {
+            return true;
+        }
+        // `eth_sign` flow
         bytes32 messageHash = hash.toEthSignedMessageHash();
         if (signer == messageHash.recover(signature)) {
             return true;

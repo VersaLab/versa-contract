@@ -208,9 +208,8 @@ contract MultiSigValidator is BaseValidator {
             "Invalid signature length"
         );
         SignatureHandler.SplitedSignature memory splitedSig = SignatureHandler.splitUserOpSignature(userOp, userOpHash);
-        bytes32 ethSignedMessageHash = splitedSig.hash.toEthSignedMessageHash();
         // Check if signatures are valid, return `SIG_VALIDATION_FAILED` if error occurs
-        try this.checkNSignatures(userOp.sender, ethSignedMessageHash, splitedSig.signature, currentThreshold) {
+        try this.checkNSignatures(userOp.sender, splitedSig.hash, splitedSig.signature, currentThreshold) {
             return _packValidationData(0, splitedSig.validUntil, splitedSig.validAfter);
         } catch {
             return SIG_VALIDATION_FAILED;
@@ -229,8 +228,7 @@ contract MultiSigValidator is BaseValidator {
             require(_isHashApproved(wallet, hash), "Hash not approved");
             // If check if enough valid guardians's signature collected
         } else {
-            bytes32 ethSignedMessageHash = hash.toEthSignedMessageHash();
-            checkNSignatures(wallet, ethSignedMessageHash, signature, _threshold(wallet));
+            checkNSignatures(wallet, hash, signature, _threshold(wallet));
         }
         return true;
     }
@@ -330,9 +328,13 @@ contract MultiSigValidator is BaseValidator {
                     SignatureChecker.isValidERC1271SignatureNow(currentGuardian, dataHash, contractSignature),
                     "Contract signature invalid"
                 );
+            } else if (v > 30) {
+                // Ecrecover flow, EIP-712 signature should be in this case
+                currentGuardian = ECDSA.recover(dataHash, v - 4, r, s);
             } else {
-                // eip712 recovery
-                currentGuardian = ECDSA.recover(dataHash, v, r, s);
+                // Default is the eth_sign flow with the provided data hash
+                bytes32 ethSignedMessageHash = dataHash.toEthSignedMessageHash();
+                currentGuardian = ECDSA.recover(ethSignedMessageHash, v, r, s);
             }
             require(currentGuardian > lastGuardian && isGuardian(wallet, currentGuardian), "Invalid guardian");
             lastGuardian = currentGuardian;

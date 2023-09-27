@@ -541,4 +541,62 @@ describe("ECDSAValidator", () => {
         const validationData = await ecdsaValidator.isValidSignature(messageHash, signature, wallet.address);
         expect(validationData).to.equal(false);
     });
+
+    it("should be able to verify typed data signature", async () => {
+        let initData = abiCoder.encode(["address"], [signer1.address]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: ecdsaValidator.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        const domain = {
+            name: "My App",
+            version: "1",
+            chainId: 1,
+            verifyingContract: "0x1111111111111111111111111111111111111111",
+        };
+
+        const types = {
+            Mail: [
+                { name: "from", type: "Person" },
+                { name: "to", type: "Person" },
+                { name: "content", type: "string" },
+            ],
+            Person: [
+                { name: "name", type: "string" },
+                { name: "wallet", type: "address" },
+            ],
+        };
+
+        const mail = {
+            from: {
+                name: "Alice",
+                wallet: "0x2111111111111111111111111111111111111111",
+            },
+            to: {
+                name: "Bob",
+                wallet: "0x3111111111111111111111111111111111111111",
+            },
+            content: "Hello!",
+        };
+
+        const signature = await signer1._signTypedData(domain, types, mail);
+
+        const expectedsSigner = ethers.utils.verifyTypedData(domain, types, mail, signature);
+        expect(expectedsSigner).to.equal(signer1.address);
+
+        const typedHash = ethers.utils._TypedDataEncoder.hash(domain, types, mail);
+
+        const validationData = await ecdsaValidator.isValidSignature(typedHash, signature, wallet.address);
+        expect(validationData).to.equal(true);
+
+        // should reject invalid typed data signature
+        const signature2 = await signer2._signTypedData(domain, types, mail);
+        const typedHash2 = ethers.utils._TypedDataEncoder.hash(domain, types, mail);
+
+        const validationData2 = await ecdsaValidator.isValidSignature(typedHash2, signature2, wallet.address);
+        expect(validationData2).to.equal(false);
+    });
 });

@@ -676,6 +676,85 @@ describe("MultiSigValidator", () => {
         );
     });
 
+    it("should validate typed data signature correctly", async () => {
+        let sudoValidator = multisigValidator;
+        let threshold = 2;
+        let initData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], threshold]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: sudoValidator.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        const domain = {
+            name: "My App",
+            version: "1",
+            chainId: 1,
+            verifyingContract: "0x1111111111111111111111111111111111111111",
+        };
+
+        const types = {
+            Mail: [
+                { name: "from", type: "Person" },
+                { name: "to", type: "Person" },
+                { name: "content", type: "string" },
+            ],
+            Person: [
+                { name: "name", type: "string" },
+                { name: "wallet", type: "address" },
+            ],
+        };
+
+        const mail = {
+            from: {
+                name: "Alice",
+                wallet: "0x2111111111111111111111111111111111111111",
+            },
+            to: {
+                name: "Bob",
+                wallet: "0x3111111111111111111111111111111111111111",
+            },
+            content: "Hello!",
+        };
+
+        let sign1 = await signer1._signTypedData(domain, types, mail);
+        let sign2 = await signer2._signTypedData(domain, types, mail);
+
+        const splitSig1 = ethers.utils.splitSignature(sign1);
+        const splitSig2 = ethers.utils.splitSignature(sign2);
+
+        sign1 = ethers.utils.solidityPack(["bytes32", "bytes32", "uint8"], [splitSig1.r, splitSig1.s, splitSig1.v + 4]);
+        sign2 = ethers.utils.solidityPack(["bytes32", "bytes32", "uint8"], [splitSig2.r, splitSig2.s, splitSig2.v + 4]);
+
+        const messageHash = ethers.utils._TypedDataEncoder.hash(domain, types, mail);
+
+        // The first 20 bytes of signature is validator's address
+        // The 21th byte is the sig type
+        let sign = signer1 < signer2 ? hexConcat([sign1, sign2]) : hexConcat([sign2, sign1]);
+
+        let result = await multisigValidator.isValidSignature(messageHash, sign, wallet.address);
+        expect(result).to.equal(true);
+
+        let sign3 = await signer3._signTypedData(domain, types, mail);
+        const splitSig3 = ethers.utils.splitSignature(sign3);
+        sign3 = ethers.utils.solidityPack(["bytes32", "bytes32", "uint8"], [splitSig3.r, splitSig3.s, splitSig3.v + 4]);
+        sign = signer3 < signer1 ? hexConcat([sign3, sign1]) : hexConcat([sign1, sign3]);
+
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
+            "Invalid guardian"
+        );
+
+        sign = sign1;
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
+            "Signatures data too short"
+        );
+
+        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith(
+            "Hash not approved"
+        );
+    });
+
     it("should check contract signature", async () => {
         let sudoValidator = multisigValidator;
         let threshold = 1;

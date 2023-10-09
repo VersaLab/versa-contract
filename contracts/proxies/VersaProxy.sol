@@ -15,7 +15,7 @@ contract VersaProxy {
      * @param _singleton Singleton address.
      */
     constructor(address _singleton) {
-        require(_singleton != address(0), "Invalid singleton address provided");
+        require(_singleton != address(0), "E700");
         singleton = _singleton;
     }
 

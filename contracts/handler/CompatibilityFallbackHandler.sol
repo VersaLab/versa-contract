@@ -25,7 +25,7 @@ contract CompatibilityFallbackHandler is TokenCallbackHandler, IERC1271 {
         address validator = address(bytes20(_signature[0:20]));
         require(
             ValidatorManager(msg.sender).getValidatorType(validator) == ValidatorManager.ValidatorType.Sudo,
-            "Only sudo validator"
+            "E200"
         );
         bool isValid = IValidator(validator).isValidSignature(_hash, _signature[20:], msg.sender);
         return isValid ? EIP1271_MAGIC_VALUE : bytes4(0xffffffff);

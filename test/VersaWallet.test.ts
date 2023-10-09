@@ -127,9 +127,7 @@ describe("VersaWallet", () => {
             signature: sudoValidator.address,
         };
         let opHash = await opHasher.getUserOpHash(op);
-        await expect(wallet.callStatic.validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith(
-            "account: not from EntryPoint"
-        );
+        await expect(wallet.callStatic.validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith("E100");
         await wallet.connect(entryPoint).validateUserOp(op, opHash, parseEther("0.1"));
         expect(await owner.provider?.getBalance(wallet.address)).to.be.equal(parseEther("0.9"));
     });
@@ -157,7 +155,7 @@ describe("VersaWallet", () => {
         };
         let opHash = await opHasher.getUserOpHash(op);
         await expect(wallet.connect(entryPoint).validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith(
-            "Versa: invalid validator"
+            "E104"
         );
     });
 
@@ -225,13 +223,13 @@ describe("VersaWallet", () => {
     it("should have right batch data length", async function () {
         await expect(
             wallet.connect(entryPoint).batchSudoExecute([owner.address, ethers.constants.AddressZero], [0], ["0x"], [0])
-        ).to.be.revertedWith("Versa: invalid batch data");
+        ).to.be.revertedWith("E105");
         await expect(
             wallet.connect(entryPoint).batchSudoExecute([owner.address], [0], ["0x", "0x"], [0])
-        ).to.be.revertedWith("Versa: invalid batch data");
+        ).to.be.revertedWith("E105");
         await expect(
             wallet.connect(entryPoint).batchSudoExecute([owner.address], [0], ["0x"], [0, 0])
-        ).to.be.revertedWith("Versa: invalid batch data");
+        ).to.be.revertedWith("E105");
     });
 
     it("should revert if validator and selector don't match", async () => {
@@ -257,7 +255,7 @@ describe("VersaWallet", () => {
         };
         let opHash = await opHasher.getUserOpHash(op);
         await expect(wallet.connect(entryPoint).validateUserOp(op, opHash, parseEther("0.1"))).to.be.revertedWith(
-            "Versa: selector doesn't match validator"
+            "E102"
         );
     });
 
@@ -275,26 +273,26 @@ describe("VersaWallet", () => {
         // Perform a self call
         await expect(
             wallet.connect(entryPoint).normalExecute(wallet.address, parseEther("0.1"), "0xaaaaaaaa", 0)
-        ).to.be.revertedWith("Versa: operation is not allowed");
+        ).to.be.revertedWith("E103");
 
         // Use delegatecall
         await expect(
             wallet.connect(entryPoint).normalExecute(ethers.constants.AddressZero, parseEther("0.1"), "0x", 1)
-        ).to.be.revertedWith("Versa: operation is not allowed");
+        ).to.be.revertedWith("E103");
 
         // Call to enabled plugin
         await expect(
             wallet.connect(entryPoint).normalExecute(module.address, parseEther("0.1"), "0x", 1)
-        ).to.be.revertedWith("Versa: operation is not allowed");
+        ).to.be.revertedWith("E103");
 
         // Call to enabled plugin
         await expect(
             wallet.connect(entryPoint).normalExecute(sudoValidator.address, parseEther("0.1"), "0x", 1)
-        ).to.be.revertedWith("Versa: operation is not allowed");
+        ).to.be.revertedWith("E103");
 
         // Call to enabled plugin
         await expect(
             wallet.connect(entryPoint).normalExecute(hooks.address, parseEther("0.1"), "0x", 1)
-        ).to.be.revertedWith("Versa: operation is not allowed");
+        ).to.be.revertedWith("E103");
     });
 });

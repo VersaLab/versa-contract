@@ -206,9 +206,9 @@ contract VersaWallet is
      */
     function _validateValidatorAndSelector(address _validator, bytes4 _selector) internal view {
         ValidatorType validatorType = getValidatorType(_validator);
-        require(validatorType != ValidatorType.Disabled, "Versa: invalid validator");
+        require(validatorType != ValidatorType.Disabled, "E104");
         if (_selector == SUDO_EXECUTE || _selector == BATCH_SUDO_EXECUTE) {
-            require(validatorType == ValidatorType.Sudo, "Versa: selector doesn't match validator");
+            require(validatorType == ValidatorType.Sudo, "E102");
         }
     }
 
@@ -227,7 +227,7 @@ contract VersaWallet is
                 !isHooksEnabled(to) &&
                 !isModuleEnabled(to) &&
                 _operation == Enum.Operation.Call,
-            "Versa: operation is not allowed"
+            "E103"
         );
     }
 
@@ -240,6 +240,6 @@ contract VersaWallet is
         uint256 dataLen,
         uint256 operationLen
     ) internal pure {
-        require(toLen == valueLen && dataLen == operationLen && toLen == dataLen, "Versa: invalid batch data");
+        require(toLen == valueLen && dataLen == operationLen && toLen == dataLen, "E105");
     }
 }

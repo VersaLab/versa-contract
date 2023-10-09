@@ -52,7 +52,7 @@ describe("ValidatorManager", () => {
                 plugin: mockValidator_1.address,
                 type: sudo,
             })
-        ).to.revertedWith("Validator has already been added");
+        ).to.revertedWith("E309");
 
         // should not enable enabled valdiator
         await expect(
@@ -61,9 +61,9 @@ describe("ValidatorManager", () => {
                 plugin: mockValidator_1.address,
                 type: normal,
             })
-        ).to.revertedWith("Validator has already been added");
+        ).to.revertedWith("E309");
 
-        await expect(validatorManager.enableValidator("0x")).to.be.revertedWith("Unauthorized call");
+        await expect(validatorManager.enableValidator("0x")).to.be.revertedWith("E101");
 
         await expect(
             enablePlugin({
@@ -79,7 +79,7 @@ describe("ValidatorManager", () => {
                 plugin: mockValidator_2.address,
                 type: 0,
             })
-        ).to.be.revertedWith("Only valid validator allowed");
+        ).to.be.revertedWith("E308");
 
         // Verify if the validator is enabled
         const validatorType = await validatorManager.getValidatorType(mockValidator_1.address);
@@ -122,9 +122,7 @@ describe("ValidatorManager", () => {
             .to.emit(validatorManager, "DisabledValidator")
             .withArgs(mockValidator_1.address);
 
-        await expect(validatorManager.disableValidator(SENTINEL, mockValidator_1.address)).to.be.revertedWith(
-            "Unauthorized call"
-        );
+        await expect(validatorManager.disableValidator(SENTINEL, mockValidator_1.address)).to.be.revertedWith("E101");
 
         await expect(
             validatorManager.execute(
@@ -133,7 +131,7 @@ describe("ValidatorManager", () => {
                 validatorManager.interface.encodeFunctionData("disableValidator", [SENTINEL, mockValidator_1.address]),
                 0
             )
-        ).to.revertedWith("Validator doesn't exist");
+        ).to.revertedWith("E310");
 
         // Verify if the validator is disabled
         validatorType = await validatorManager.getValidatorType(mockValidator_1.address);
@@ -150,12 +148,10 @@ describe("ValidatorManager", () => {
             type: sudo,
         });
 
-        await expect(toggleValidator(validatorManager, mockValidator_1.address)).to.be.revertedWith(
-            "Cannot remove the last remaining sudoValidator"
-        );
+        await expect(toggleValidator(validatorManager, mockValidator_1.address)).to.be.revertedWith("E311");
 
         await expect(validatorManager.toggleValidatorType(SENTINEL, mockValidator_1.address)).to.be.revertedWith(
-            "Unauthorized call"
+            "E101"
         );
 
         // Enable the validator as a normal validator
@@ -184,7 +180,7 @@ describe("ValidatorManager", () => {
                 validatorManager.interface.encodeFunctionData("toggleValidatorType", [SENTINEL, owner.address]),
                 0
             )
-        ).to.revertedWith("Validator doesn't exist");
+        ).to.revertedWith("E310");
     });
 
     it("should get the type of a validator", async () => {
@@ -241,7 +237,7 @@ describe("ValidatorManager", () => {
             type: sudo,
         });
 
-        await expect(validatorManager.getValidatorsPaginated(SENTINEL, 5, 0)).to.revertedWith("Only valid validators");
+        await expect(validatorManager.getValidatorsPaginated(SENTINEL, 5, 0)).to.revertedWith("E306");
 
         validators = await validatorManager.getValidatorsPaginated(SENTINEL, 2, sudo);
         expect(validators[0]).to.equal(mockValidator_2.address);

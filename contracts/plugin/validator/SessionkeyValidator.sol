@@ -112,7 +112,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         } else if (selector == VersaWallet.batchNormalExecute.selector) {
             validationData = _validateBatchExecute(userOp, userOpHash);
         } else {
-            revert("SessionKeyValidator: invalid wallet operation");
+            revert("E510");
         }
     }
 
@@ -203,7 +203,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Function for EIP-1271 support, this valdiator does not support it
      */
     function isValidSignature(bytes32, bytes calldata, address) external pure returns (bool) {
-        revert("SessionKeyValidator: unsupported");
+        revert("E511");
     }
 
     /**
@@ -224,7 +224,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     function _validateOperatorGasUsage(address operator, UserOperation memory userOp) internal {
         uint256 gasFee = _computeGasFee(userOp);
         uint256 remainingGas = _getRemainingGas(userOp.sender, operator);
-        require(remainingGas >= gasFee, "SessionKeyValidator: gas fee exceeds remaining gas");
+        require(remainingGas >= gasFee, "E512");
         _setRemainingGas(userOp.sender, operator, remainingGas - gasFee);
     }
 
@@ -275,7 +275,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
     ) internal returns (uint48 validUntil, uint48 validAfter) {
         require(
             to.length == rlpCalldata.length && rlpCalldata.length == session.length && session.length == proof.length,
-            "SessionKeyValidator: invalid batch length"
+            "E513"
         );
         address paymaster = _parsePaymaster(userOp.paymasterAndData);
         for (uint256 i = 0; i < data.length; i++) {
@@ -309,7 +309,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         Session memory session
     ) internal {
         uint256 timesUsed = _getSessionUsage(userOp.sender, sessionHash) + 1;
-        require(timesUsed <= session.timesLimit, "SessionKeyValidator: exceed usage");
+        require(timesUsed <= session.timesLimit, "E514");
         _setSessionUsage(userOp.sender, sessionHash, timesUsed);
     }
 
@@ -330,15 +330,12 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
             require(
                 keccak256(data.slice(4, data.length - 4)) ==
                     keccak256(callDataWithValue.slice(32, callDataWithValue.length - 32)),
-                "SessionKeyValidator: rlpCalldata is not equally encoded from execution data"
+                "E515"
             );
         }
-        require(session.to == to, "SessionKeyValidator: invalid to");
-        require(session.selector == bytes4(data), "SessionKeyValidator: invalid selector");
-        require(
-            session.allowedArguments.isAllowedCalldata(rlpCalldata, value),
-            "SessionKeyValidator: invalid arguments"
-        );
+        require(session.to == to, "E516");
+        require(session.selector == bytes4(data), "E517");
+        require(session.allowedArguments.isAllowedCalldata(rlpCalldata, value), "E518");
     }
 
     /**
@@ -379,7 +376,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      */
     function _validatePaymaster(address sessionPaymaster, address actualPaymaster) internal pure {
         if (sessionPaymaster != address(0)) {
-            require(sessionPaymaster == actualPaymaster, "SessionKeyValidator: invalid paymaster");
+            require(sessionPaymaster == actualPaymaster, "E519");
         }
     }
 
@@ -419,10 +416,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
      * @dev Internal function to validate if a session is in the given merkle tree.
      */
     function _validateSessionRoot(bytes32[] memory proof, bytes32 root, bytes32 sessionHash) internal pure {
-        require(
-            MerkleProof.verify(proof, root, keccak256(bytes.concat(sessionHash))),
-            "SessionKeyValidator: invalid session root"
-        );
+        require(MerkleProof.verify(proof, root, keccak256(bytes.concat(sessionHash))), "E520");
     }
 
     function _parsePaymaster(bytes memory paymasterAndData) internal pure returns (address paymaster) {
@@ -454,7 +448,7 @@ contract SessionKeyValidator is BaseValidator, SelfAuthorized {
         }
         validAfter = validAfter1 > validAfter2 ? validAfter1 : validAfter2;
         if (validUntil > 0) {
-            require(validUntil >= validAfter, "SessionKeyValidator: invalid validation duration");
+            require(validUntil >= validAfter, "E521");
         }
     }
 }

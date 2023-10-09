@@ -6,12 +6,12 @@ library AddressLinkedList {
     uint160 internal constant SENTINEL_UINT = 1;
 
     modifier onlyAddress(address addr) {
-        require(uint160(addr) > SENTINEL_UINT, "invalid address");
+        require(uint160(addr) > SENTINEL_UINT, "E800");
         _;
     }
 
     function add(mapping(address => address) storage self, address addr) internal onlyAddress(addr) {
-        require(self[addr] == address(0), "address already exists");
+        require(self[addr] == address(0), "E801");
         address _prev = self[SENTINEL_ADDRESS];
         if (_prev == address(0)) {
             self[SENTINEL_ADDRESS] = addr;
@@ -27,8 +27,8 @@ library AddressLinkedList {
         address oldAddr,
         address newAddr
     ) internal onlyAddress(newAddr) {
-        require(isExist(self, oldAddr), "address not exists");
-        require(!isExist(self, newAddr), "new address already exists");
+        require(isExist(self, oldAddr), "E802");
+        require(!isExist(self, newAddr), "E803");
 
         address cursor = SENTINEL_ADDRESS;
         while (true) {
@@ -45,8 +45,8 @@ library AddressLinkedList {
     }
 
     function remove(mapping(address => address) storage self, address prevAddr, address addr) internal {
-        require(isExist(self, addr), "Adddress not exists");
-        require(self[prevAddr] == addr, "Invalid prev address");
+        require(isExist(self, addr), "E802");
+        require(self[prevAddr] == addr, "E804");
         self[prevAddr] = self[addr];
         self[addr] = address(0);
     }

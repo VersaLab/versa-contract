@@ -25,7 +25,7 @@ abstract contract EntryPointManager is SelfAuthorized {
      * ensure the request comes from the known entrypoint.
      */
     function _requireFromEntryPoint() internal view virtual {
-        require(msg.sender == _entryPoint, "account: not from EntryPoint");
+        require(msg.sender == _entryPoint, "E100");
     }
 
     /**

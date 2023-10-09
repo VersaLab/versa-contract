@@ -83,10 +83,7 @@ contract SpendingLimitHooks is BaseHooks {
      */
     function _checkAmountAndUpdate(address _token, SpendingLimitInfo memory _spendingLimitInfo) internal {
         // Ensure that the spent amount does not exceed the allowance amount
-        require(
-            _spendingLimitInfo.spentAmount <= _spendingLimitInfo.allowanceAmount,
-            "SpendingLimitHooks: token overspending"
-        );
+        require(_spendingLimitInfo.spentAmount <= _spendingLimitInfo.allowanceAmount, "E401");
         _updateSpendingLimitInfo(_token, _spendingLimitInfo);
     }
 
@@ -105,7 +102,7 @@ contract SpendingLimitHooks is BaseHooks {
         bytes calldata _data,
         Enum.Operation _operation
     ) internal {
-        require(_operation != Enum.Operation.DelegateCall, "SpendingLimitHooks: not allow delegatecall");
+        require(_operation != Enum.Operation.DelegateCall, "E402");
 
         // Check spending limit for native token
         if (_value > 0) {
@@ -181,8 +178,16 @@ contract SpendingLimitHooks is BaseHooks {
         bytes memory _data
     ) internal pure returns (SpendingLimitSetConfig[] memory) {
         SpendingLimitSetConfig[] memory spendingLimitSetConfigs = abi.decode(_data, (SpendingLimitSetConfig[]));
-        require(spendingLimitSetConfigs.length > 0, "SpendingLimitHooks: parse error");
+        require(spendingLimitSetConfigs.length > 0, "E403");
         return spendingLimitSetConfigs;
+    }
+
+    /**
+     * @dev Check if the data length > 0.
+     * @param _length The data length to check.
+     */
+    function _checkDataLength(uint256 _length) internal pure {
+        require(_length > 0, "E406");
     }
 
     /**
@@ -195,11 +200,8 @@ contract SpendingLimitHooks is BaseHooks {
         SpendingLimitInfo memory spendingLimitInfo = getSpendingLimitInfo(msg.sender, _config.tokenAddress);
         uint32 currentTimeMinutes = uint32(block.timestamp / 60);
         if (_config.resetBaseTimeMinutes > 0) {
-            require(_config.resetTimeIntervalMinutes > 0, "SpendingLimitHooks: invalid reset time interval");
-            require(
-                _config.resetBaseTimeMinutes <= currentTimeMinutes,
-                "SpendingLimitHooks: resetBaseTimeMinutes can not greater than currentTimeMinutes"
-            );
+            require(_config.resetTimeIntervalMinutes > 0, "E404");
+            require(_config.resetBaseTimeMinutes <= currentTimeMinutes, "E405");
             spendingLimitInfo.lastResetTimeMinutes =
                 currentTimeMinutes -
                 ((currentTimeMinutes - _config.resetBaseTimeMinutes) % _config.resetTimeIntervalMinutes);
@@ -229,7 +231,7 @@ contract SpendingLimitHooks is BaseHooks {
      */
     function _batchSetSpendingLimit(SpendingLimitSetConfig[] memory _configs) internal {
         uint dataLength = _configs.length;
-        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
+        _checkDataLength(dataLength);
         for (uint i = 0; i < dataLength; i++) {
             _setSpendingLimit(_configs[i]);
         }
@@ -278,7 +280,7 @@ contract SpendingLimitHooks is BaseHooks {
      */
     function batchResetSpendingLimit(address[] memory _tokens) external onlyEnabledHooks {
         uint dataLength = _tokens.length;
-        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
+        _checkDataLength(dataLength);
         for (uint i = 0; i < dataLength; i++) {
             _resetSpendingLimit(_tokens[i]);
         }
@@ -309,7 +311,7 @@ contract SpendingLimitHooks is BaseHooks {
      */
     function batchDeleteSpendingLimit(address[] memory _tokens) external onlyEnabledHooks {
         uint dataLength = _tokens.length;
-        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
+        _checkDataLength(dataLength);
         for (uint i = 0; i < dataLength; i++) {
             _deleteSpendingLimit(_tokens[i]);
         }
@@ -351,7 +353,7 @@ contract SpendingLimitHooks is BaseHooks {
         address[] memory _tokens
     ) public view returns (SpendingLimitInfo[] memory) {
         uint dataLength = _tokens.length;
-        require(dataLength > 0, "SpendingLimitHooks: dataLength should greater than zero");
+        _checkDataLength(dataLength);
         SpendingLimitInfo[] memory batchSpendingLimitInfo = new SpendingLimitInfo[](dataLength);
         for (uint i = 0; i < dataLength; i++) {
             batchSpendingLimitInfo[i] = getSpendingLimitInfo(_wallet, _tokens[i]);
@@ -397,29 +399,6 @@ contract SpendingLimitHooks is BaseHooks {
         Enum.Operation _operation
     ) external view override onlyEnabledHooks {
         (_to, _value, _data, _operation);
-        revert("SpendingLimitHooks: afterTransaction hook is not allowed");
-    }
-
-    /**
-     * @dev Simulates a limited transaction by checking the spending limit for the specified wallet.
-     * @param _wallet The wallet address to simulate the transaction for.
-     * @param _to The destination address of the transaction.
-     * @param _value The value (amount) of the transaction.
-     * @param _data The additional data for the transaction.
-     * @param _operation The operation type of the transaction.
-     */
-    function simulateSpendingLimitTransaction(
-        address _wallet,
-        address _to,
-        uint256 _value,
-        bytes calldata _data,
-        Enum.Operation _operation
-    ) external {
-        require(
-            VersaWallet(payable(_wallet)).isHooksEnabled(address(this)),
-            "SpendingLimitHooks: this hooks is not enabled"
-        );
-        _checkSpendingLimit(_wallet, _to, _value, _data, _operation);
-        revert SpendingLimitSimulate();
+        revert("E407");
     }
 }

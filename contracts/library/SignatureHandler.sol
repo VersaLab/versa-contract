@@ -89,11 +89,11 @@ library SignatureHandler {
             require(
                 userOp.maxFeePerGas <= splitedSig.maxFeePerGas &&
                     userOp.maxPriorityFeePerGas <= splitedSig.maxPriorityFeePerGas,
-                "SignatureHandler: Invalid scheduled transaction gas fee"
+                "E201"
             );
             splitedSig.hash = keccak256(abi.encode(getScheduledOpHash(userOp), validator, extraData));
         } else {
-            revert("SignatureHandler: invalid signature type");
+            revert("E202");
         }
     }
 

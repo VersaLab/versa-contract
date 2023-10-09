@@ -18,7 +18,7 @@ abstract contract BaseValidator is IValidator {
      * @dev Modifier to check if the validator is enabled for the caller wallet.
      */
     modifier onlyEnabledValidator() {
-        require(VersaWallet(payable(msg.sender)).isValidatorEnabled(address(this)), "Validator is not enabled");
+        require(VersaWallet(payable(msg.sender)).isValidatorEnabled(address(this)), "E500");
         _;
     }
 

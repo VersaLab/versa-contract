@@ -33,7 +33,7 @@ abstract contract FallbackManager is NativeCurrencyPaymentFallback, SelfAuthoriz
             where the first 3 bytes of the previous calldata + the first byte of the address make up a valid function signature. The subsequent call would result in unsanctioned access to Safe's internal protected methods.
             For some reason, solidity matches the first 4 bytes of the calldata to a function signature, regardless if more data follow these 4 bytes.
         */
-        require(handler != address(this), "GS400");
+        require(handler != address(this), "E300");
 
         bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly

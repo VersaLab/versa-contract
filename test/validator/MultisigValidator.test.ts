@@ -71,7 +71,7 @@ describe("MultiSigValidator", () => {
                 initData,
                 selector: "enableValidator",
             })
-        ).to.be.revertedWith("Invalid initdata");
+        ).to.be.revertedWith("E000");
 
         initData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], 3]);
         await expect(
@@ -81,7 +81,7 @@ describe("MultiSigValidator", () => {
                 initData,
                 selector: "enableValidator",
             })
-        ).to.be.revertedWith("Invalid initdata");
+        ).to.be.revertedWith("E000");
     });
 
     it("should add guardian correctly", async () => {
@@ -110,7 +110,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Validator is not enabled");
+        ).to.revertedWith("E500");
     });
 
     it("should add guardians correctly", async () => {
@@ -143,7 +143,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Validator is not enabled");
+        ).to.revertedWith("E500");
     });
 
     it("should revoke guardians correctly", async () => {
@@ -164,7 +164,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Not a valid guardian");
+        ).to.revertedWith("E507");
 
         // revoke signer1
         data = multisigValidator.interface.encodeFunctionData("revokeGuardian", [signer1.address, threshold]);
@@ -184,7 +184,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Must have at least one guardian");
+        ).to.revertedWith("E502");
 
         await expect(
             execute({
@@ -192,7 +192,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Validator is not enabled");
+        ).to.revertedWith("E500");
     });
 
     it("should not add invalid guardian", async () => {
@@ -213,7 +213,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.rejectedWith("Guardian is already added");
+        ).to.be.rejectedWith("E505");
 
         data = multisigValidator.interface.encodeFunctionData("addGuardian", [ethers.constants.AddressZero, threshold]);
         await expect(
@@ -222,7 +222,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.rejectedWith("Invalid guardian address");
+        ).to.be.rejectedWith("E506");
     });
 
     it("should change threshold correctly", async () => {
@@ -255,7 +255,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Validator is not enabled");
+        ).to.revertedWith("E500");
     });
 
     it("should reset guardian correctly", async () => {
@@ -289,7 +289,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Validator is not enabled");
+        ).to.revertedWith("E500");
     });
 
     it("should not set invalid threshold or guardians", async () => {
@@ -312,7 +312,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.revertedWith("Threshold must be lower or equal to guardians count");
+        ).to.be.revertedWith("E509");
 
         newThreshold = 0;
         // revoke signer1
@@ -323,7 +323,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.revertedWith("Threshold cannot be 0");
+        ).to.be.revertedWith("E508");
 
         newThreshold = 1;
         data = multisigValidator.interface.encodeFunctionData("resetGuardians", [
@@ -337,7 +337,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.be.revertedWith("Must have at least one guardian");
+        ).to.be.revertedWith("E502");
     });
 
     it("should approve and revoke hash", async () => {
@@ -369,7 +369,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Hash already approved");
+        ).to.revertedWith("E503");
 
         expect(await multisigValidator.isHashApproved(wallet.address, hash)).to.be.equal(true);
         await expect(
@@ -378,7 +378,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Validator is not enabled");
+        ).to.revertedWith("E500");
 
         data = multisigValidator.interface.encodeFunctionData("revokeHash", [hash]);
         await expect(
@@ -399,7 +399,7 @@ describe("MultiSigValidator", () => {
                 to: multisigValidator.address,
                 data,
             })
-        ).to.revertedWith("Validator is not enabled");
+        ).to.revertedWith("E500");
     });
 
     it("should validate userOp signature correctly", async () => {
@@ -600,9 +600,7 @@ describe("MultiSigValidator", () => {
         sign = hexConcat([multisigValidator.address, "0x03", combinedSignature]);
         op.signature = sign;
 
-        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
-            "SignatureHandler: invalid signature type"
-        );
+        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith("E202");
 
         // signature must be ordered
         combinedSignature = hexConcat([sign1, sign2]);
@@ -623,16 +621,12 @@ describe("MultiSigValidator", () => {
         // Signatures data too short
         sign = hexConcat([multisigValidator.address, "0x00", sign1]);
         op.signature = sign;
-        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
-            "Invalid signature length"
-        );
+        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith("E203");
 
         // non-enabled wallet
         op.sender = wallet_2.address;
         sign = hexConcat([multisigValidator.address, "0x00"]);
-        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
-            "Invalid signature length"
-        );
+        await expect(multisigValidator.validateSignature(op, userOpHash)).to.be.revertedWith("E203");
     });
 
     it("should validate EIP-1271 signature correctly", async () => {
@@ -662,18 +656,12 @@ describe("MultiSigValidator", () => {
         let sign3 = await signer3.signMessage(arrayify(messageHash));
         sign = signer3 < signer1 ? hexConcat([sign3, sign1]) : hexConcat([sign1, sign3]);
 
-        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
-            "Invalid guardian"
-        );
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith("E210");
 
         sign = sign1;
-        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
-            "Signatures data too short"
-        );
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith("E203");
 
-        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith(
-            "Hash not approved"
-        );
+        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith("E504");
     });
 
     it("should check contract signature", async () => {
@@ -771,7 +759,7 @@ describe("MultiSigValidator", () => {
             "0000000000000000000000000000000000000000000000000000000000000000"; // Some data to read
 
         await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
-            "Inside static part"
+            "E206"
         );
 
         signature =
@@ -782,7 +770,7 @@ describe("MultiSigValidator", () => {
             "00"; // r, s, v
 
         await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
-            "Contract signatures out of bounds"
+            "E207"
         );
 
         signature =
@@ -794,7 +782,7 @@ describe("MultiSigValidator", () => {
             "0000000000000000000000000000000000000000000000000000000000000020"; // length
 
         await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
-            "Contract signature wrong offset"
+            "E208"
         );
 
         signature =
@@ -807,7 +795,7 @@ describe("MultiSigValidator", () => {
 
         signature = hexConcat([signature, sign]);
         await expect(multisigValidator.checkNSignatures(wallet.address, userOpHash, signature, 1)).to.be.revertedWith(
-            "Contract signature invalid"
+            "E209"
         );
     });
 
@@ -837,8 +825,6 @@ describe("MultiSigValidator", () => {
 
         message = "hello world!";
         messageHash = keccak256(toUtf8Bytes(message));
-        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith(
-            "Hash not approved"
-        );
+        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith("E504");
     });
 });

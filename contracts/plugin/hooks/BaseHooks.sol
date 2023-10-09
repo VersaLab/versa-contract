@@ -19,7 +19,7 @@ abstract contract BaseHooks is IHooks {
      * @dev Modifier to check if the hooks is enabled for the caller wallet.
      */
     modifier onlyEnabledHooks() {
-        require(VersaWallet(payable(msg.sender)).isHooksEnabled(address(this)), "Hooks: this hooks is not enabled");
+        require(VersaWallet(payable(msg.sender)).isHooksEnabled(address(this)), "E400");
         _;
     }
 

@@ -73,7 +73,7 @@ describe("ECDSAValidator", () => {
                     ecdsaValidator.interface.encodeFunctionData("initWalletConfig", [owner.address]),
                     0
                 )
-        ).to.be.revertedWith("Validator is not enabled");
+        ).to.be.revertedWith("E500");
 
         await expect(
             wallet_2
@@ -84,7 +84,7 @@ describe("ECDSAValidator", () => {
                     ecdsaValidator.interface.encodeFunctionData("clearWalletConfig"),
                     0
                 )
-        ).to.be.revertedWith("Validator is not enabled");
+        ).to.be.revertedWith("E500");
 
         await wallet
             .connect(owner)
@@ -137,7 +137,7 @@ describe("ECDSAValidator", () => {
                 initData,
                 selector: "enableValidator",
             })
-        ).to.be.revertedWith("Invalid signer address");
+        ).to.be.revertedWith("E501");
     });
 
     it("should fail when validator is an EOA", async () => {
@@ -153,7 +153,7 @@ describe("ECDSAValidator", () => {
                 to: ecdsaValidator.address,
                 data,
             })
-        ).to.be.revertedWith("Validator is not enabled");
+        ).to.be.revertedWith("E500");
     });
 
     it("should validate instant transaction signature correctly", async () => {
@@ -286,9 +286,7 @@ describe("ECDSAValidator", () => {
         sign = hexConcat([ethers.constants.AddressZero, "0x03", sign]);
         op.signature = sign;
 
-        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
-            "SignatureHandler: invalid signature type"
-        );
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith("E202");
     });
 
     it("should fail for invalid signature length", async () => {
@@ -322,7 +320,7 @@ describe("ECDSAValidator", () => {
         sign = hexConcat([ethers.constants.AddressZero, "0x00", sign.slice(0, 6)]);
         op.signature = sign;
 
-        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith("Invalid signature length");
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith("E203");
 
         sign = hexConcat([ethers.constants.AddressZero, "0x01", sign.slice(0, 6)]);
         op.signature = sign;
@@ -476,9 +474,7 @@ describe("ECDSAValidator", () => {
 
         op.signature = sign;
 
-        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
-            "SignatureHandler: Invalid scheduled transaction gas fee"
-        );
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith("E201");
 
         op.maxFeePerGas = 100;
         op.maxPriorityFeePerGas = 200;
@@ -501,9 +497,7 @@ describe("ECDSAValidator", () => {
 
         op.signature = sign;
 
-        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith(
-            "SignatureHandler: Invalid scheduled transaction gas fee"
-        );
+        await expect(ecdsaValidator.validateSignature(op, userOpHash)).to.be.revertedWith("E201");
     });
 
     it("should check if EIP1271 signature is valid", async () => {

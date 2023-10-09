@@ -4,6 +4,8 @@ import { universalSingletonFactoryAddress as singletonFactoryAddress } from "./c
 export interface VersaAccountFactoryData {
     versaSingleton: string;
     defaultFallbackHandler: string;
+    entryPoint: string;
+    owner: string;
 }
 
 const singletonFactoryABI = ["function deploy(bytes _initCode,bytes32 _salt) returns (address createdContract)"];
@@ -15,7 +17,12 @@ async function getSingletonFactory() {
 export async function deployVersaAccountFactory(data: VersaAccountFactoryData, salt: string) {
     const singletonFactory = await getSingletonFactory();
     const VersaAccountFactory = await ethers.getContractFactory("VersaAccountFactory");
-    const initCode = VersaAccountFactory.getDeployTransaction(data.versaSingleton, data.defaultFallbackHandler).data!;
+    const initCode = VersaAccountFactory.getDeployTransaction(
+        data.versaSingleton,
+        data.defaultFallbackHandler,
+        data.entryPoint,
+        data.owner
+    ).data!;
     const address = await singletonFactory.callStatic.deploy(initCode, salt);
 
     let tx;

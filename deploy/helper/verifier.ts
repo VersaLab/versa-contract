@@ -1,6 +1,7 @@
-import hre from "hardhat";
+import hre, { ethers } from "hardhat";
 import mumbaiAddresses from "../addresses/polygonMumbai.json";
 import scrollSepoliaAddresses from "../addresses/scrollSepolia.json";
+import { deployConfig } from "./config";
 
 async function verify(address: string, constructorArguments?: any) {
     await hre.run("verify:verify", {
@@ -15,14 +16,16 @@ async function main() {
 
     switch (network?.chainId) {
         case 80001: {
-            await verify(mumbaiAddresses.versaSingleton, [mumbaiAddresses.entryPoint]);
+            await verify(mumbaiAddresses.versaSingleton, [deployConfig.entryPointAddress]);
             await verify(mumbaiAddresses.versaAccountFactory, [
                 mumbaiAddresses.versaSingleton,
                 mumbaiAddresses.compatibilityFallbackHandler,
+                deployConfig.entryPointAddress,
+                deployConfig.versaFactoryOwner,
             ]);
             await verify(mumbaiAddresses.versaVerifyingPaymaster, [
-                mumbaiAddresses.entryPoint,
-                mumbaiAddresses.verifyingPaymasterOwner,
+                deployConfig.entryPointAddress,
+                deployConfig.verifyingPaymasterOwner,
             ]);
             await verify(mumbaiAddresses.compatibilityFallbackHandler);
             await verify(mumbaiAddresses.ecdsaValidator);
@@ -32,14 +35,16 @@ async function main() {
             break;
         }
         case 534351: {
-            await verify(scrollSepoliaAddresses.versaSingleton, [scrollSepoliaAddresses.entryPoint]);
+            await verify(scrollSepoliaAddresses.versaSingleton, [deployConfig.entryPointAddress]);
             await verify(scrollSepoliaAddresses.versaAccountFactory, [
                 scrollSepoliaAddresses.versaSingleton,
                 scrollSepoliaAddresses.compatibilityFallbackHandler,
+                deployConfig.entryPointAddress,
+                deployConfig.versaFactoryOwner,
             ]);
             await verify(scrollSepoliaAddresses.versaVerifyingPaymaster, [
-                scrollSepoliaAddresses.entryPoint,
-                scrollSepoliaAddresses.verifyingPaymasterOwner,
+                deployConfig.entryPointAddress,
+                deployConfig.verifyingPaymasterOwner,
             ]);
             await verify(scrollSepoliaAddresses.compatibilityFallbackHandler);
             await verify(scrollSepoliaAddresses.ecdsaValidator);

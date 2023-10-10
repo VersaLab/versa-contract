@@ -729,18 +729,12 @@ describe("MultiSigValidator", () => {
         sign3 = ethers.utils.solidityPack(["bytes32", "bytes32", "uint8"], [splitSig3.r, splitSig3.s, splitSig3.v + 4]);
         sign = signer3 < signer1 ? hexConcat([sign3, sign1]) : hexConcat([sign1, sign3]);
 
-        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
-            "Invalid guardian"
-        );
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith("E210");
 
         sign = sign1;
-        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith(
-            "Signatures data too short"
-        );
+        await expect(multisigValidator.isValidSignature(messageHash, sign, wallet.address)).to.be.revertedWith("E203");
 
-        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith(
-            "Hash not approved"
-        );
+        await expect(multisigValidator.isValidSignature(messageHash, "0x", wallet.address)).to.be.revertedWith("E504");
     });
 
     it("should check contract signature", async () => {

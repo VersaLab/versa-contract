@@ -171,6 +171,14 @@ contract VersaVerifyingPaymaster is BasePaymaster {
             token.safeTransferFrom(account, address(this), actualTokenCost);
             balances[token] += actualTokenCost;
             emit UserOperationSponsored(account, address(token), actualTokenCost);
+        } else {
+            (bool success, bytes memory returndata) = address(token).call(
+                abi.encodeWithSelector(token.transferFrom.selector, account, address(this), actualTokenCost)
+            );
+            if (success && (returndata.length == 0 || abi.decode(returndata, (bool)))) {
+                balances[token] += actualTokenCost;
+                emit UserOperationSponsored(account, address(token), actualTokenCost);
+            }
         }
     }
 }

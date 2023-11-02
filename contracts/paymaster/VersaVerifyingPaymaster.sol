@@ -146,6 +146,8 @@ contract VersaVerifyingPaymaster is BasePaymaster {
      * Perform the post-operation to charge the sender for the gas.
      */
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal override {
+        (mode);
+
         (
             address account,
             IERC20Metadata token,
@@ -167,10 +169,8 @@ contract VersaVerifyingPaymaster is BasePaymaster {
         if (sponsorMode == SponsorMode.GAS_AND_FEE) {
             actualTokenCost = actualTokenCost + fee;
         }
-        if (mode != PostOpMode.postOpReverted) {
-            token.safeTransferFrom(account, address(this), actualTokenCost);
-            balances[token] += actualTokenCost;
-            emit UserOperationSponsored(account, address(token), actualTokenCost);
-        }
+        token.safeTransferFrom(account, address(this), actualTokenCost);
+        balances[token] += actualTokenCost;
+        emit UserOperationSponsored(account, address(token), actualTokenCost);
     }
 }

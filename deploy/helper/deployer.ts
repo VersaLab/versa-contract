@@ -27,7 +27,8 @@ export async function deployVersaAccountFactory(data: VersaAccountFactoryData, s
 
     let tx;
     const [signer] = await ethers.getSigners();
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4000000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
         console.log("Deploy failed, this contract with this salt should have been already deployed");
@@ -45,7 +46,9 @@ export async function deployVersaSingleton(entryPoint: string, salt: string) {
 
     let tx;
     const [signer] = await ethers.getSigners();
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4500000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
+
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
         console.log("Deploy failed, this contract with this salt should have been already deployed");
@@ -62,12 +65,14 @@ export async function deployVersaVerifyingPaymaster(entryPoint: string, verifyin
     const address = await singletonFactory.callStatic.deploy(initCode, salt);
 
     let tx;
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4000000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
+
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
         console.log("Deploy failed, this contract with this salt should have been already deployed");
     } else {
-        console.log("VersaSingleton deployed to:", address);
+        console.log("Versa verifying paymaster deployed to:", address);
     }
     return await ethers.getContractAt("VersaVerifyingPaymaster", address);
 }
@@ -80,7 +85,9 @@ export async function deployCompatibilityFallbackHandler(salt: string) {
 
     let tx;
     const [signer] = await ethers.getSigners();
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4000000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
+
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
         console.log("Deploy failed, this contract with this salt should have been already deployed");
@@ -98,7 +105,9 @@ export async function deploySpendingLimitHooks(salt: string) {
 
     let tx;
     const [signer] = await ethers.getSigners();
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4000000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
+
     await tx.wait();
     if (address == ethers.constants.AddressZero) {
         console.log("Deploy failed, this contract with this salt should have been already deployed");
@@ -116,7 +125,9 @@ export async function deployECDSAValidator(salt: string) {
 
     let tx;
     const [signer] = await ethers.getSigners();
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4000000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
+
     await tx.wait();
 
     if (address == ethers.constants.AddressZero) {
@@ -135,7 +146,9 @@ export async function deployMultiSigValidator(salt: string) {
 
     let tx;
     const [signer] = await ethers.getSigners();
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4000000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
+
     await tx.wait();
 
     if (address == ethers.constants.AddressZero) {
@@ -154,7 +167,9 @@ export async function deploySessionKeyValidator(salt: string) {
 
     let tx;
     const [signer] = await ethers.getSigners();
-    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 5000000 });
+    tx = await singletonFactory.deploy(initCode, salt, { gasLimit: 4500000 });
+    // tx = await singletonFactory.deploy(initCode, salt);
+
     await tx.wait();
 
     if (address == ethers.constants.AddressZero) {

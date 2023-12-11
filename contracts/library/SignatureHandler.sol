@@ -2,10 +2,12 @@
 pragma solidity ^0.8.19;
 
 import "@aa-template/contracts/interfaces/UserOperation.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 library SignatureHandler {
-    uint8 constant INSTANT_TRANSACTION = 0x00;
-    uint8 constant SCHEDULE_TRANSACTION = 0x01;
+    uint8 constant INSTANT_TX_SIG = 0x00;
+    uint8 constant SCHEDULE_TX_SIG = 0x01;
+    uint8 constant MULTICHAIN_OP_SIG = 0x02;
 
     uint8 constant SIG_TYPE_OFFSET = 20;
     uint8 constant SIG_TYPE_LENGTH = 1;
@@ -20,6 +22,10 @@ library SignatureHandler {
 
     uint8 constant INSTANT_SIG_OFFSET = 21;
     uint8 constant SCHEDULE_SIG_OFFSET = MAX_PRIORITY_FEE_OFFSET + FEE_LENGTH;
+
+    uint8 constant MERKLE_ROOT_OFFSET = 33;
+    uint8 constant MERKLE_PROOF_LEN_OFFSET = 65;
+    uint8 constant MERKLE_PROOF_OFFSET = 97;
 
     address constant ENTRYPOINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
@@ -36,15 +42,18 @@ library SignatureHandler {
 
     /*
         User operation's signature field(for ECDSA and Multisig validator):
-        +-----------------------------+-------------------------------------------------------------------------+
-        |       siganture type        |                        signature layout                                 |
-        +---------------------------------------------+---------------+-----------------------------------------+
-        | instant transaction (0x00)  | validatorAddr | signatureType |             signatureField              |
-        |                             |    20 bytes   |    1 byte     |                 n bytes                 |
-        +-------------------------------------------------------------------------+----------+------------------+
-        | scheduled transaction(0x01) | validatorAddr | signatureType | timeRange |  feeData |   signatureField |
-        |                             |    20 bytes   |    1 byte     | 12 bytes  | 64 bytes |     n bytes      |
-        +-----------------------------+---------------+---------------+-----------+----------+------------------+
+        +---------------------------+------------------------------------------------------------------------------------+
+        |       siganture type      |                        signature layout                                            |
+        +-------------------------------------------+---------------+----------------------------------------------------+
+        | instant tx sig (0x00)     | validatorAddr | signatureType |             signatureField                         |
+        |                           |    20 bytes   |    1 byte     |                 n bytes                            |
+        +-----------------------------------------------------------|-----------+-----------+----------------------------+
+        | scheduled tx sig (0x01)   | validatorAddr | signatureType | timeRange |  feeData  |  signatureField            |
+        |                           |    20 bytes   |    1 byte     | 12 bytes  | 64 bytes  |    n bytes                 |
+        +---------------------------+---------------+---------------+-----------+-----------+----------------------------+
+        | multi-chain tx sig (0x02) | validatorAddr | signatureType | timeRange |merkle root|proof len | proof |signature|
+        |                           |    20 bytes   |    1 byte     | 12 bytes  | 32 bytes  | 32 bytes |m bytes| n bytes |
+        +---------------------------+---------------+---------------+-----------+-----------+----------+-----------------+
         
         timeRange: validUntil(6 bytes) and validAfter(6 bytes)
         feeData:   maxFeePerGas(32 bytes) and maxPriorityFeePerGas(32 bytes)
@@ -63,10 +72,10 @@ library SignatureHandler {
         address validator = address(bytes20(userOp.signature[0:20]));
         splitedSig.signatureType = uint8(bytes1(userOp.signature[SIG_TYPE_OFFSET:SIG_TYPE_OFFSET + SIG_TYPE_LENGTH]));
         // For instant transactions, the signature start from the 22th bytes of the userOp.signature.
-        if (splitedSig.signatureType == INSTANT_TRANSACTION) {
+        if (splitedSig.signatureType == INSTANT_TX_SIG) {
             splitedSig.signature = userOp.signature[INSTANT_SIG_OFFSET:];
             splitedSig.hash = keccak256(abi.encode(userOpHash, validator));
-        } else if (splitedSig.signatureType == SCHEDULE_TRANSACTION) {
+        } else if (splitedSig.signatureType == SCHEDULE_TX_SIG) {
             // For scheduled transactions, decode the individual fields from the signature.
             splitedSig.validUntil = uint48(
                 bytes6(userOp.signature[VALID_UNTIL_OFFSET:VALID_UNTIL_OFFSET + TIME_LENGTH])
@@ -92,6 +101,33 @@ library SignatureHandler {
                 "SignatureHandler: Invalid scheduled transaction gas fee"
             );
             splitedSig.hash = keccak256(abi.encode(getScheduledOpHash(userOp), validator, extraData));
+        } else if (splitedSig.signatureType == MULTICHAIN_OP_SIG) {
+            // Decode validation time range
+            splitedSig.validUntil = uint48(
+                bytes6(userOp.signature[VALID_UNTIL_OFFSET:VALID_UNTIL_OFFSET + TIME_LENGTH])
+            );
+            splitedSig.validAfter = uint48(
+                bytes6(userOp.signature[VALID_AFTER_OFFSET:VALID_AFTER_OFFSET + TIME_LENGTH])
+            );
+            // Decode merkle root and proof
+            bytes32 userOpsRoot = bytes32(userOp.signature[MERKLE_ROOT_OFFSET:MERKLE_ROOT_OFFSET + 32]);
+            uint256 proofLength = uint256(
+                bytes32(userOp.signature[MERKLE_PROOF_LEN_OFFSET:MERKLE_PROOF_LEN_OFFSET + 32])
+            );
+
+            bytes32[] memory proof = new bytes32[](proofLength);
+            for (uint256 i; i < proofLength; ++i) {
+                proof[i] = bytes32(userOp.signature[MERKLE_PROOF_OFFSET + i * 32:MERKLE_PROOF_OFFSET + (i + 1) * 32]);
+            }
+            // Verify userOp hash belongs to the merkle tree
+            require(
+                MerkleProof.verify(proof, userOpsRoot, keccak256(bytes.concat(keccak256(abi.encode(userOpHash))))),
+                "SignatureHandler: UserOp is not in the merkle tree"
+            );
+            uint256 signatureOffset = MERKLE_PROOF_OFFSET + 32 * proofLength;
+            splitedSig.signature = userOp.signature[signatureOffset:];
+            bytes memory extraData = abi.encode(splitedSig.validUntil, splitedSig.validAfter);
+            splitedSig.hash = keccak256(abi.encode(userOpsRoot, validator, extraData));
         } else {
             revert("SignatureHandler: invalid signature type");
         }

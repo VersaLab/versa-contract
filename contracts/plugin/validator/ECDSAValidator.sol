@@ -78,10 +78,13 @@ contract ECDSAValidator is BaseValidator {
         // Instant transaction signature length: 20 bytes validator address + 1 byte sig type + 65 bytes signature
         // Scheduled transaction signature length: 20 bytes validator address + 1 byte sig type
         // + 12 bytes time range data + 64 bytes fee data + 65 bytes signature
-        // The signature type must be INSTANT_TRANSACTION or SCHEDULE_TRANSACTION here
+        // The signature type must be INSTANT_TX_SIG or SCHEDULE_TX_SIG here
+        // Multichain userOp signature: 20 bytes validator address + 1 byte sig type +
+        // + 12 bytes time range data + 32 bytes merkle root + at least 32 bytes proof data + 65 bytes signature
         if (
-            (splitedSig.signatureType == SignatureHandler.INSTANT_TRANSACTION && sigLength != 86) ||
-            (splitedSig.signatureType == SignatureHandler.SCHEDULE_TRANSACTION && sigLength != 162)
+            (splitedSig.signatureType == SignatureHandler.INSTANT_TX_SIG && sigLength != 86) ||
+            (splitedSig.signatureType == SignatureHandler.SCHEDULE_TX_SIG && sigLength != 162) ||
+            (splitedSig.signatureType == SignatureHandler.MULTICHAIN_OP_SIG && sigLength < 162)
         ) {
             revert("Invalid signature length");
         }

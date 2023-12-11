@@ -12,8 +12,8 @@ import {
 import { deployVersaWallet, getScheduledUserOpHash, getUserOpHash, entryPointAddress } from "../utils";
 import { enablePlugin, execute } from "../base/utils";
 import { arrayify, hexConcat, hexlify, keccak256, toUtf8Bytes } from "ethers/lib/utils";
-import * as helper from "@nomicfoundation/hardhat-network-helpers";
 import { numberToFixedHex } from "../base/utils";
+import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
 
 describe("MultiSigValidator", () => {
     let multisigValidator: MultiSigValidator;
@@ -552,6 +552,143 @@ describe("MultiSigValidator", () => {
             numberToFixedHex(0, 20),
         ]);
         expect(validationData).to.equal(expectedValidationData);
+    });
+
+    it("should validate multi-chain userOp signature correctly", async () => {
+        let sudoValidator = multisigValidator;
+        let threshold = 2;
+        let initData = abiCoder.encode(["address[]", "uint256"], [[signer1.address, signer2.address], threshold]);
+        await enablePlugin({
+            executor: wallet,
+            plugin: sudoValidator.address,
+            initData,
+            selector: "enableValidator",
+        });
+
+        let op = {
+            sender: wallet.address,
+            nonce: 2,
+            initCode: "0x",
+            callData: "0x",
+            callGasLimit: 2150000,
+            verificationGasLimit: 2150000,
+            preVerificationGas: 2150000,
+            maxFeePerGas: 0,
+            maxPriorityFeePerGas: 0,
+            paymasterAndData: "0x",
+            signature: "0x",
+        };
+
+        function getMultiChainUserOpLeaves(n: number) {
+            let leaves = [];
+            for (let i = 0; i < n; i++) {
+                let data = getUserOpHash(op, entryPointAddress, i);
+                leaves.push([data]);
+            }
+            return leaves;
+        }
+
+        let userOpHash1 = getUserOpHash(op, entryPointAddress, 0);
+        let userOpHash2 = getUserOpHash(op, entryPointAddress, 999);
+
+        let wrongUserOp = getUserOpHash(op, entryPointAddress, 1000);
+
+        let opsTree = StandardMerkleTree.of(getMultiChainUserOpLeaves(1000), ["bytes32"]);
+        let root = opsTree.root;
+        let proof = opsTree.getProof([userOpHash1]);
+
+        let validAfter = Math.floor(Date.now() / 1000);
+        let validUntil = validAfter + 3600;
+
+        let extraData = abiCoder.encode(["uint256", "uint256"], [validUntil, validAfter]);
+
+        // This remains unchanged for multichain userOps
+        let finalHash = keccak256(
+            abiCoder.encode(["bytes32", "address", "bytes"], [root, multisigValidator.address, extraData])
+        );
+
+        let userOpSigs = "0x";
+
+        let signers = [signer1, signer2];
+
+        signers.sort((a, b) => {
+            let addressA = a.address.toLocaleLowerCase();
+            let addressB = b.address.toLocaleLowerCase();
+            if (addressA < addressB) {
+                return -1;
+            } else if (addressA == addressB) {
+                return 0;
+            } else {
+                return 1;
+            }
+        });
+
+        const promises = signers.map(async (signer) => {
+            const signature = await signer.signMessage(arrayify(finalHash));
+            userOpSigs = hexConcat([userOpSigs, signature]);
+        });
+        await Promise.all(promises);
+
+        let combinedProof = "0x";
+        for (let i = 0; i < proof.length; i++) {
+            combinedProof = hexConcat([combinedProof, proof[i]]);
+        }
+
+        // +---------------------------+---------------+---------------+-----------+-----------+----------------------------+
+        // | multi-chain tx sig (0x02) | validatorAddr | signatureType | timeRange |merkle root|proof len | proof |signature|
+        // |                           |    20 bytes   |    1 byte     | 12 bytes  | 32 bytes  | 32 bytes |m bytes| n bytes |
+        // +---------------------------+---------------+---------------+-----------+-----------+----------+-----------------+
+
+        let sign = hexConcat([
+            multisigValidator.address,
+            "0x02",
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(validAfter, 6),
+            root,
+            numberToFixedHex(proof.length, 32),
+            combinedProof,
+            userOpSigs,
+        ]);
+
+        op.signature = sign;
+
+        const validationData = await multisigValidator.validateSignature(op, userOpHash1);
+        const expectedValidationData = hexConcat([
+            numberToFixedHex(validAfter, 6),
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(0, 20),
+        ]);
+        expect(validationData).to.equal(expectedValidationData);
+
+        let proof2 = opsTree.getProof([userOpHash2]);
+        let combinedProof2 = "0x";
+        for (let i = 0; i < proof2.length; i++) {
+            combinedProof2 = hexConcat([combinedProof2, proof2[i]]);
+        }
+        let sign2 = hexConcat([
+            multisigValidator.address,
+            "0x02",
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(validAfter, 6),
+            root,
+            numberToFixedHex(proof2.length, 32),
+            combinedProof2,
+            userOpSigs,
+        ]);
+        op.signature = sign2;
+
+        const validationData2 = await multisigValidator.validateSignature(op, userOpHash2);
+        const expectedValidationData2 = hexConcat([
+            numberToFixedHex(validAfter, 6),
+            numberToFixedHex(validUntil, 6),
+            numberToFixedHex(0, 20),
+        ]);
+        expect(validationData2).to.equal(expectedValidationData2);
+
+        // should reject wrong userOp
+        await expect(multisigValidator.validateSignature(op, wrongUserOp)).to.be.revertedWith(
+            "SignatureHandler: UserOp is not in the merkle tree"
+        );
     });
 
     it("should validate userOp signature correctly", async () => {

@@ -7,12 +7,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
+import "./TokenSwapHandler.sol";
 
 /**
  * @title VersaUniversalPaymaster
  * @dev A universal paymaster for sponsoring.
  */
-contract VersaUniversalPaymaster is BasePaymaster {
+contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
     using SafeERC20 for IERC20;
@@ -70,11 +71,34 @@ contract VersaUniversalPaymaster is BasePaymaster {
     );
     event MultiChainUniversalSponsored(address indexed sender, bytes32 sponsorInfoHash, uint256 cost);
 
+    event OperatorSet(address indexed oldOperator, address indexed newOperator);
+
+    address private _operator;
+
     uint256 public constant COST_OF_POST = 35000;
     mapping(bytes32 => MultiChainUniversalModeSponsorStatusData) public universalSponsorStatusData;
 
-    constructor(IEntryPoint _entryPoint, address _owner) BasePaymaster(_entryPoint) {
+    modifier onlyOperator {
+        require(msg.sender == operator(), "VersaUniversaPaymaster: Only operator");
+        _;
+    }
+
+    constructor(IEntryPoint _entryPoint, address _owner, address _newOperator, address _v2SwapRouter02, address _v3SwapRouter02, IWETH _weth)
+        BasePaymaster(_entryPoint)
+        TokenSwapHandler(_v2SwapRouter02, _v3SwapRouter02, _weth)
+    {
         _transferOwnership(_owner);
+        _setOperator(_newOperator);
+    }
+
+    function operator() public view returns(address) {
+        return _operator;
+    }
+
+    function _setOperator(address _newOperator) internal {
+        address oldOperator = operator();
+        _operator = _newOperator;
+        emit OperatorSet(oldOperator, _newOperator);
     }
 
     function packUserOpData(UserOperation calldata _userOp) internal pure returns (bytes32) {
@@ -188,7 +212,7 @@ contract VersaUniversalPaymaster is BasePaymaster {
         require(_multiChainUniversalModePaymentData.signature.length == 65, "E203");
         bytes32 _hash = getMultiChainUniversalModePaymentHash(_multiChainUniversalModePaymentData)
             .toEthSignedMessageHash();
-        if (_hash.recover(_multiChainUniversalModePaymentData.signature) != owner()) {
+        if (_hash.recover(_multiChainUniversalModePaymentData.signature) != operator()) {
             return false;
         }
         return true;
@@ -279,7 +303,7 @@ contract VersaUniversalPaymaster is BasePaymaster {
             return false;
         }
         require(signature.length == 65, "E203");
-        if (_hash.recover(signature) != owner()) {
+        if (_hash.recover(signature) != operator()) {
             return false;
         }
         return true;
@@ -357,12 +381,53 @@ contract VersaUniversalPaymaster is BasePaymaster {
         }
     }
 
-    function withdrawTokensTo(IERC20 _token, address _target, uint256 _amount) external onlyOwner {
-        if (address(_token) != address(0)) {
-            _token.safeTransfer(_target, _amount);
+    function setOperator(address newOperator) external onlyOwner {
+        _setOperator(newOperator);
+    }
+
+    struct TokenWithdrawInfo {
+        IERC20 token;
+        uint256 amount;
+    }
+
+    function _withdraw(TokenWithdrawInfo calldata _tokenWithdrawInfo, address _target) internal {
+        if (address(_tokenWithdrawInfo.token) != address(0)) {
+            _tokenWithdrawInfo.token.safeTransfer(_target, _tokenWithdrawInfo.amount);
         } else {
-            payable(_target).transfer(_amount);
+            payable(_target).transfer(_tokenWithdrawInfo.amount);
         }
+    }
+
+    function withdrawTokensTo(TokenWithdrawInfo calldata _tokenWithdrawInfo, address _target) external onlyOwner {
+        _withdraw(_tokenWithdrawInfo, _target);
+    }
+
+    function batchWithdrawTokensTo(TokenWithdrawInfo[] calldata _tokenWithdrawInfo, address _target) external onlyOwner {
+        uint256 i;
+
+        for (; i < _tokenWithdrawInfo.length; ++i) {
+            _withdraw(_tokenWithdrawInfo[i], _target);
+        }
+    }
+
+    function approveRouter(IERC20[] calldata tokens, uint256[] calldata amount) external onlyOperator {
+        _approveRouter(tokens, amount);
+    }
+
+    function convertTokensAndDeposit(V2SwapParas[] memory _v2SwapParas, V3SwapParas[] calldata _v3SwapParas) external onlyOperator returns (uint256 deposited) {
+        uint256 i;
+        uint256 ethOut;
+        for (; i < _v2SwapParas.length; ++i) {
+            ethOut += _convert(_v2SwapParas[i]);
+        }
+
+        uint256 wethOut;
+        for (i = 0; i < _v3SwapParas.length; ++i) {
+            wethOut += _convert(_v3SwapParas[i]);
+        }
+        WETH.withdraw(wethOut);
+        deposited = ethOut + wethOut;
+        this.deposit{value: deposited}();
     }
 
     receive() external payable {}

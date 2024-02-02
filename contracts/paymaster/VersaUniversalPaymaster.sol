@@ -91,7 +91,7 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
         _setOperator(_newOperator);
     }
 
-    function operator() public view returns(address) {
+    function operator() public view returns (address) {
         return _operator;
     }
 
@@ -408,6 +408,10 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
         for (; i < _tokenWithdrawInfo.length; ++i) {
             _withdraw(_tokenWithdrawInfo[i], _target);
         }
+    }
+
+    function setSwapRouter(address _v2SwapRouter02, address _v3SwapRouter02) external onlyOwner {
+        _setSwapRouter(_v2SwapRouter02, _v3SwapRouter02);
     }
 
     function approveRouter(IERC20[] calldata tokens, uint256[] calldata amount) external onlyOperator {

@@ -69,6 +69,12 @@ describe("VersaUniversaPaymaster", () => {
             await expect(versaUniversaPaymaster.connect(user).setOperator(user.address)).to.be.revertedWith(
                 "Ownable: caller is not the owner"
             );
+
+            await expect(
+                versaUniversaPaymaster
+                    .connect(user)
+                    .setSwapRouter(ethers.constants.AddressZero, ethers.constants.AddressZero)
+            ).to.be.revertedWith("Ownable: caller is not the owner");
         });
 
         it("only operator", async () => {
@@ -155,7 +161,7 @@ describe("VersaUniversaPaymaster", () => {
             expect(deposited).to.greaterThan(BigNumber.from(0));
         });
 
-        it("should convert through v2 and v3", async () => {
+        it("should convert through v2 and v3 and deposited to entrypoint", async () => {
             const v2SwapParas_1 = {
                 amountIn: ethers.utils.parseUnits("1000", 6),
                 amountOutMin: 100,
@@ -184,7 +190,35 @@ describe("VersaUniversaPaymaster", () => {
                 .connect(operator)
                 .callStatic.convertTokensAndDeposit([v2SwapParas_1, v2SwapParas_2], [v3SwapParas_1, v3SwapParas_2]);
 
+            await versaUniversaPaymaster
+                .connect(operator)
+                .convertTokensAndDeposit([v2SwapParas_1, v2SwapParas_2], [v3SwapParas_1, v3SwapParas_2]);
+
             expect(deposited).to.greaterThan(BigNumber.from(0));
+            expect(deposited).to.be.equal(await versaUniversaPaymaster.getDeposit());
+        });
+
+        it("amountIn can be type(uint256).max", async () => {
+            const v2SwapParas_1 = {
+                amountIn: ethers.constants.MaxUint256,
+                amountOutMin: 100,
+                path: [usdcAddress, weth],
+            };
+
+            const v3SwapParas_1 = {
+                path: ethers.utils.hexConcat([usdtAddress, numberToFixedHex(3000, 3), weth]),
+                amountIn: ethers.constants.MaxUint256,
+                amountOutMinimum: 100,
+            };
+
+            const deposited = await versaUniversaPaymaster
+                .connect(operator)
+                .callStatic.convertTokensAndDeposit([v2SwapParas_1], [v3SwapParas_1]);
+
+            await versaUniversaPaymaster.connect(operator).convertTokensAndDeposit([v2SwapParas_1], [v3SwapParas_1]);
+
+            expect(deposited).to.greaterThan(BigNumber.from(0));
+            expect(deposited).to.be.equal(await versaUniversaPaymaster.getDeposit());
         });
 
         it("should only convert to weth", async () => {

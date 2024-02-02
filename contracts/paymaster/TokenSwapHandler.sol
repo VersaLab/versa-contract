@@ -23,10 +23,6 @@ abstract contract TokenSwapHandler {
         v3SwapRouter02 = _v3SwapRouter02;
     }
 
-    function setSwapRouter(address _v2SwapRouter02, address _v3SwapRouter02) external virtual {
-        _setSwapRouter(_v2SwapRouter02, _v3SwapRouter02);
-    }
-
     function _approveRouter(IERC20[] calldata tokens, uint256[] calldata amount) internal virtual {
         uint256 len = tokens.length;
         require(len == amount.length, "TokenSwapHandler: Invalid para length");
@@ -66,13 +62,18 @@ abstract contract TokenSwapHandler {
     }
 
     function _convert(V3SwapParas calldata _swapInfo) internal returns (uint256) {
+        address inputToken = address(bytes20(_swapInfo.path[:20]));
         address outPutToken = address(bytes20(_swapInfo.path[_swapInfo.path.length - 20:]));
         require(outPutToken == address(WETH), "TokenSwapHandler: Only to wnative token allowed");
+
+        uint256 amountIn = _swapInfo.amountIn == type(uint256).max
+            ? IERC20(inputToken).balanceOf(address(this))
+            : _swapInfo.amountIn;
 
         uint256 amountOut = IUniswapV3Router02(v3SwapRouter02).exactInput(IUniswapV3Router02.ExactInputParams(
             _swapInfo.path,
             address(this),
-            _swapInfo.amountIn,
+            amountIn,
             _swapInfo.amountOutMinimum
         ));
         return amountOut;

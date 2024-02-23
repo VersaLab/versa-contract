@@ -9,7 +9,13 @@ import {
     MultiSigValidator__factory,
     VersaWallet,
 } from "../../typechain-types";
-import { deployVersaWallet, getScheduledUserOpHash, getUserOpHash, entryPointAddress } from "../utils";
+import {
+    deployVersaWallet,
+    getScheduledUserOpHash,
+    getUserOpHash,
+    entryPointAddress,
+    getEncodedMessageHash,
+} from "../utils";
 import { enablePlugin, execute } from "../base/utils";
 import { arrayify, hexConcat, hexlify, keccak256, toUtf8Bytes } from "ethers/lib/utils";
 import { numberToFixedHex } from "../base/utils";
@@ -846,10 +852,12 @@ describe("MultiSigValidator", () => {
             signature: "0x",
         };
         let entryPoint = ethers.constants.AddressZero;
-        let chainId = 1;
+        let chainId = 31337;
         let userOpHash = getUserOpHash(op, entryPoint, chainId);
 
-        let sign = await signer2.signMessage(arrayify(userOpHash));
+        let messageToSign = await getEncodedMessageHash(userOpHash, chainId, wallet_2.address);
+
+        let sign = await signer2.signMessage(arrayify(messageToSign));
         let signature =
             "0x" +
             "000000000000000000000000" +

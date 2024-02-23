@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { hexConcat, keccak256, solidityPack } from "ethers/lib/utils";
+import { BytesLike, hexConcat, keccak256, solidityPack, toUtf8Bytes } from "ethers/lib/utils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import {
     VersaWallet__factory,
@@ -226,4 +226,20 @@ export async function getFinalSalt(
         moduleInitData,
     ]);
     return keccak256(ethers.utils.solidityPack(["bytes32", "uint256"], [keccak256(finalSalt), salt]));
+}
+
+export async function getEncodedMessageHash(payload: string | BytesLike, chainid: number, wallet: string) {
+    const abiCoder = new ethers.utils.AbiCoder();
+
+    const DOMAIN_SEPARATOR_TYPEHASH = keccak256(toUtf8Bytes("EIP712Domain(uint256 chainId,address verifyingContract)"));
+    const VERSA_MSG_TYPEHASH = keccak256(toUtf8Bytes("VersaWalletMessage(bytes message)"));
+    const encodedMessage = keccak256(abiCoder.encode(["bytes32", "bytes32"], [VERSA_MSG_TYPEHASH, payload]));
+
+    const domainSeperator = keccak256(
+        abiCoder.encode(["bytes32", "uint256", "address"], [DOMAIN_SEPARATOR_TYPEHASH, chainid, wallet])
+    );
+    const encodedMessageHash = keccak256(
+        solidityPack(["bytes1", "bytes1", "bytes32", "bytes32"], ["0x19", "0x01", domainSeperator, encodedMessage])
+    );
+    return encodedMessageHash;
 }

@@ -1,9 +1,14 @@
+// SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.6.2;
 
 interface IUniswapV2Router02 {
-    function swapExactTokensForETH(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline)
-        external
-        returns (uint[] memory amounts);
+    function swapExactTokensForETH(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external returns (uint[] memory amounts);
 }
 
 interface IUniswapV3Router02 {
@@ -38,5 +43,3 @@ interface IUniswapV3Router02 {
     /// @return amountOut The amount of the received token
     function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
 }
-
-

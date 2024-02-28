@@ -5,15 +5,19 @@ import "./TokenCallbackHandler.sol";
 import "../interface/IERC1271.sol";
 import "../interface/IValidator.sol";
 import "../base/ValidatorManager.sol";
+import "../VersaWallet.sol";
 
 /**
  * @title CompatibilityFallbackHandler
  * @notice A contract that handles compatibility fallback operations for token callbacks.
  */
 contract CompatibilityFallbackHandler is TokenCallbackHandler, IERC1271 {
+    string private constant VERSA_NAME = "VersaWallet";
+
     bytes32 private constant VERSA_MSG_TYPEHASH = keccak256("VersaWalletMessage(bytes message)");
 
-    bytes32 private constant DOMAIN_SEPARATOR_TYPEHASH = keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
+    bytes32 private constant DOMAIN_SEPARATOR_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     /**
      * @notice Validates the provided signature for a given hash,
@@ -48,14 +52,7 @@ contract CompatibilityFallbackHandler is TokenCallbackHandler, IERC1271 {
      */
     function getMessageDataHashForVersa(address wallet, bytes32 hash) public view returns (bytes32) {
         bytes32 versaMessageHash = keccak256(abi.encode(VERSA_MSG_TYPEHASH, hash));
-        return keccak256(
-            abi.encodePacked(
-                bytes1(0x19),
-                bytes1(0x01),
-                versaDomainSeparator(wallet),
-                versaMessageHash
-            )
-        );
+        return keccak256(abi.encodePacked(bytes1(0x19), bytes1(0x01), versaDomainSeparator(wallet), versaMessageHash));
     }
 
     /**
@@ -64,14 +61,18 @@ contract CompatibilityFallbackHandler is TokenCallbackHandler, IERC1271 {
      * @return bytes32 The domain separator hash.
      */
     function versaDomainSeparator(address wallet) public view returns (bytes32) {
-        uint256 chainId;
-        /* solhint-disable no-inline-assembly */
-        /// @solidity memory-safe-assembly
-        assembly {
-            chainId := chainid()
-        }
-        /* solhint-enable no-inline-assembly */
+        string memory name = VERSA_NAME;
+        string memory version = VersaWallet(payable(wallet)).VERSA_VERSION();
 
-        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, block.chainid, wallet));
+        return
+            keccak256(
+                abi.encode(
+                    DOMAIN_SEPARATOR_TYPEHASH,
+                    keccak256(bytes(name)),
+                    keccak256(bytes(version)),
+                    block.chainid,
+                    wallet
+                )
+            );
     }
 }

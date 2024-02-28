@@ -934,7 +934,9 @@ describe("MultiSigValidator", () => {
         let chainId = 31337;
         let userOpHash = getUserOpHash(op, entryPoint, chainId);
 
-        let messageToSign = await getEncodedMessageHash(userOpHash, chainId, wallet_2.address);
+        const version = await wallet_2.VERSA_VERSION();
+
+        let messageToSign = await getEncodedMessageHash(userOpHash, chainId, wallet_2.address, version);
 
         let sign = await signer2.signMessage(arrayify(messageToSign));
         let signature =

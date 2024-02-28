@@ -228,15 +228,31 @@ export async function getFinalSalt(
     return keccak256(ethers.utils.solidityPack(["bytes32", "uint256"], [keccak256(finalSalt), salt]));
 }
 
-export async function getEncodedMessageHash(payload: string | BytesLike, chainid: number, wallet: string) {
+export async function getEncodedMessageHash(
+    payload: string | BytesLike,
+    chainid: number,
+    wallet: string,
+    version: string
+) {
     const abiCoder = new ethers.utils.AbiCoder();
 
-    const DOMAIN_SEPARATOR_TYPEHASH = keccak256(toUtf8Bytes("EIP712Domain(uint256 chainId,address verifyingContract)"));
+    const DOMAIN_SEPARATOR_TYPEHASH = keccak256(
+        toUtf8Bytes("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
+    );
     const VERSA_MSG_TYPEHASH = keccak256(toUtf8Bytes("VersaWalletMessage(bytes message)"));
     const encodedMessage = keccak256(abiCoder.encode(["bytes32", "bytes32"], [VERSA_MSG_TYPEHASH, payload]));
 
     const domainSeperator = keccak256(
-        abiCoder.encode(["bytes32", "uint256", "address"], [DOMAIN_SEPARATOR_TYPEHASH, chainid, wallet])
+        abiCoder.encode(
+            ["bytes32", "bytes32", "bytes32", "uint256", "address"],
+            [
+                DOMAIN_SEPARATOR_TYPEHASH,
+                keccak256(toUtf8Bytes("VersaWallet")),
+                keccak256(toUtf8Bytes(version)),
+                chainid,
+                wallet,
+            ]
+        )
     );
     const encodedMessageHash = keccak256(
         solidityPack(["bytes1", "bytes1", "bytes32", "bytes32"], ["0x19", "0x01", domainSeperator, encodedMessage])

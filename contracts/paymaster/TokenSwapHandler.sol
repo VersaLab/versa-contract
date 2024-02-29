@@ -28,8 +28,8 @@ abstract contract TokenSwapHandler {
         require(len == amount.length, "TokenSwapHandler: Invalid para length");
 
         for (uint256 i; i < len; ++i) {
-            IERC20(tokens[i]).safeApprove(v2SwapRouter02, amount[i]);
-            IERC20(tokens[i]).safeApprove(v3SwapRouter02, amount[i]);
+            tokens[i].safeApprove(v2SwapRouter02, amount[i]);
+            tokens[i].safeApprove(v3SwapRouter02, amount[i]);
         }
     }
 
@@ -39,7 +39,7 @@ abstract contract TokenSwapHandler {
         address[] path;
     }
 
-    function _convert(V2SwapParas memory _swapInfo) internal virtual returns (uint256) {
+    function _convert(V2SwapParas memory _swapInfo) internal returns (uint256) {
         IERC20 tokenIn = IERC20(_swapInfo.path[0]);
         if (_swapInfo.amountIn == type(uint256).max) {
             _swapInfo.amountIn = tokenIn.balanceOf(address(this));
@@ -70,12 +70,9 @@ abstract contract TokenSwapHandler {
             ? IERC20(inputToken).balanceOf(address(this))
             : _swapInfo.amountIn;
 
-        uint256 amountOut = IUniswapV3Router02(v3SwapRouter02).exactInput(IUniswapV3Router02.ExactInputParams(
-            _swapInfo.path,
-            address(this),
-            amountIn,
-            _swapInfo.amountOutMinimum
-        ));
+        uint256 amountOut = IUniswapV3Router02(v3SwapRouter02).exactInput(
+            IUniswapV3Router02.ExactInputParams(_swapInfo.path, address(this), amountIn, _swapInfo.amountOutMinimum)
+        );
         return amountOut;
     }
 }

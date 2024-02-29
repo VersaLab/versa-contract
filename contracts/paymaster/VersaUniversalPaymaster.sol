@@ -78,15 +78,19 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
     uint256 public constant COST_OF_POST = 35000;
     mapping(bytes32 => MultiChainUniversalModeSponsorStatusData) public universalSponsorStatusData;
 
-    modifier onlyOperator {
+    modifier onlyOperator() {
         require(msg.sender == operator(), "VersaUniversaPaymaster: Only operator");
         _;
     }
 
-    constructor(IEntryPoint _entryPoint, address _owner, address _newOperator, address _v2SwapRouter02, address _v3SwapRouter02, IWETH _weth)
-        BasePaymaster(_entryPoint)
-        TokenSwapHandler(_v2SwapRouter02, _v3SwapRouter02, _weth)
-    {
+    constructor(
+        IEntryPoint _entryPoint,
+        address _owner,
+        address _newOperator,
+        address _v2SwapRouter02,
+        address _v3SwapRouter02,
+        IWETH _weth
+    ) BasePaymaster(_entryPoint) TokenSwapHandler(_v2SwapRouter02, _v3SwapRouter02, _weth) {
         _transferOwnership(_owner);
         _setOperator(_newOperator);
     }
@@ -171,9 +175,9 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
             _userOps.length > 0 && _chainIds.length > 0 && _userOps.length == _chainIds.length,
             "VersaUniversaPaymaster: params length dismatch"
         );
-        uint dataLength = _userOps.length;
+        uint256 dataLength = _userOps.length;
         bytes32 packDataHash;
-        for (uint i = 0; i < dataLength; i++) {
+        for (uint256 i = 0; i < dataLength; ++i) {
             packDataHash = keccak256(abi.encode(packDataHash, packUserOpData(_userOps[i]), _chainIds[i]));
         }
         return keccak256(abi.encode(packDataHash, address(this)));
@@ -198,7 +202,7 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
     function parseMultiChainUniversalModePaymentData(
         bytes calldata _paymentData
     ) public pure returns (MultiChainUniversalModePaymentData memory) {
-        uint48 validUntil = uint48(bytes6(_paymentData[0:6]));
+        uint48 validUntil = uint48(bytes6(_paymentData[:6]));
         IERC20 token = IERC20(address(bytes20(_paymentData[6:26])));
         uint256 value = uint256(bytes32(_paymentData[26:58]));
         bytes32 sponsorInfoHash = bytes32(_paymentData[58:90]);
@@ -402,10 +406,11 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
         _withdraw(_tokenWithdrawInfo, _target);
     }
 
-    function batchWithdrawTokensTo(TokenWithdrawInfo[] calldata _tokenWithdrawInfo, address _target) external onlyOwner {
-        uint256 i;
-
-        for (; i < _tokenWithdrawInfo.length; ++i) {
+    function batchWithdrawTokensTo(
+        TokenWithdrawInfo[] calldata _tokenWithdrawInfo,
+        address _target
+    ) external onlyOwner {
+        for (uint256 i = 0; i < _tokenWithdrawInfo.length; ++i) {
             _withdraw(_tokenWithdrawInfo[i], _target);
         }
     }
@@ -418,7 +423,10 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
         _approveRouter(tokens, amount);
     }
 
-    function convertTokensAndDeposit(V2SwapParas[] memory _v2SwapParas, V3SwapParas[] calldata _v3SwapParas) external onlyOperator returns (uint256 deposited) {
+    function convertTokensAndDeposit(
+        V2SwapParas[] memory _v2SwapParas,
+        V3SwapParas[] calldata _v3SwapParas
+    ) external onlyOperator returns (uint256 deposited) {
         uint256 i;
         uint256 ethOut;
         for (; i < _v2SwapParas.length; ++i) {
@@ -431,7 +439,7 @@ contract VersaUniversalPaymaster is BasePaymaster, TokenSwapHandler {
         }
         WETH.withdraw(wethOut);
         deposited = ethOut + wethOut;
-        this.deposit{value: deposited}();
+        this.deposit{ value: deposited }();
     }
 
     receive() external payable {}
